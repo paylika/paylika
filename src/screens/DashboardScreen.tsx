@@ -51,8 +51,8 @@ export function DashboardScreen() {
 
   return (
     <View className="flex-1 bg-paper">
-      {/* Sticky header, content centered on wide screens */}
-      <View style={{ paddingTop: insets.top }} className="bg-paper items-center">
+      {/* Sticky header — full-width white bar, content centered on wide screens */}
+      <View style={{ paddingTop: insets.top }} className="bg-card items-center">
         <View style={{ width: "100%", maxWidth: maxW }}>
           <Header />
         </View>
