@@ -1,4 +1,5 @@
 import { View, Text, ActivityIndicator } from "react-native";
+import { useRouter } from "expo-router";
 import { Screen, PageTitle } from "@/components/Screen";
 import { Card, Button, Tag, Eyebrow } from "@/components/ui";
 import { Icon } from "@/components/Icon";
@@ -49,6 +50,7 @@ function OffreCard({ offre }: { offre: Offre }) {
 }
 
 export default function OffresScreen() {
+  const router = useRouter();
   const { data, loading, error } = useAsync(fetchOffres);
 
   return (
@@ -60,7 +62,12 @@ export default function OffresScreen() {
           subtitle="Vos paywalls : prix, périodicité et lien de partage."
         />
         <View style={{ minWidth: 150 }}>
-          <Button label="Créer une offre" icon="plus" variant="accent" />
+          <Button
+            label="Créer une offre"
+            icon="plus"
+            variant="accent"
+            onPress={() => router.push("/offres/nouvelle")}
+          />
         </View>
       </View>
 

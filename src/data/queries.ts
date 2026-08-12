@@ -85,6 +85,49 @@ export async function fetchSubscribers(): Promise<SubscriberRow[]> {
   });
 }
 
+export type Group = { id: string; name: string; kind: string };
+
+export async function fetchGroups(): Promise<Group[]> {
+  const { data, error } = await supabase
+    .from("groups")
+    .select("id, name, kind")
+    .order("created_at", { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as Group[];
+}
+
+export type NewOffer = {
+  planName: string;
+  price: number;
+  currency: string;
+  intervalDays: number;
+  groupId?: string;
+  newGroup?: { name: string; kind: string };
+};
+
+/** Create a group (if new) then the plan (offer). Requires anon INSERT policy. */
+export async function createOffer(input: NewOffer): Promise<void> {
+  let groupId = input.groupId;
+  if (!groupId && input.newGroup) {
+    const { data, error } = await supabase
+      .from("groups")
+      .insert({ name: input.newGroup.name, kind: input.newGroup.kind })
+      .select("id")
+      .single();
+    if (error) throw error;
+    groupId = data.id;
+  }
+  if (!groupId) throw new Error("Choisissez ou créez un groupe.");
+  const { error } = await supabase.from("plans").insert({
+    group_id: groupId,
+    name: input.planName,
+    price: input.price,
+    currency: input.currency,
+    interval_days: input.intervalDays,
+  });
+  if (error) throw error;
+}
+
 export type Money = {
   totalRevenue: number;
   commission: number; // Paylika 10%
