@@ -8,19 +8,39 @@ import Svg, {
 import { Card, Delta, Avatar, Button, Eyebrow, Tag, IconButton } from "./ui";
 import { Icon, type IconName } from "./Icon";
 import {
-  renewals,
-  stats,
-  smallStats,
-  accessGrid,
-  members,
+  renewals as mockRenewals,
+  members as mockMembers,
   spotlight,
   revenueBars,
   type Stat,
+  type Renewal,
+  type Member,
 } from "@/data/mock";
 import { colors } from "@/theme/colors";
 
+/** Group digits with a thin space: 1842 -> "1 842". */
+export function formatInt(n: number): string {
+  return Math.round(n)
+    .toString()
+    .replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+}
+
+/** Compact money label for chart bars: 30000 -> "30k". */
+function shortAmount(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(".0", "")}M`;
+  if (n >= 1000) return `${Math.round(n / 1000)}k`;
+  return `${Math.round(n)}`;
+}
+
+// Neutral fallback pattern when no live grid is supplied.
+const accessGridFallback: ("active" | "expiring" | "off")[] = Array.from(
+  { length: 40 },
+  (_, i) => (i % 5 === 2 ? "off" : i % 7 === 3 ? "expiring" : "active")
+);
+
 /** Dark "upcoming renewals" card, built as a vertical timeline. */
-export function RenewalsCard() {
+export function RenewalsCard({ items }: { items?: Renewal[] }) {
+  const data = items && items.length ? items : mockRenewals;
   return (
     <Card tone="dark">
       <View className="flex-row items-center justify-between">
@@ -31,7 +51,7 @@ export function RenewalsCard() {
           </Text>
         </View>
         <View className="flex-row items-center rounded-full bg-white/10 px-3 py-1.5">
-          <Text className="font-medium text-[12px] text-white">Cette semaine</Text>
+          <Text className="font-medium text-[12px] text-white">Échéances</Text>
           <View className="ml-1.5">
             <Icon name="chevron-down" size={13} color={colors.white} strokeWidth={2} />
           </View>
@@ -39,12 +59,12 @@ export function RenewalsCard() {
       </View>
 
       <View className="mt-5">
-        {renewals.map((item, i) => {
-          const last = i === renewals.length - 1;
+        {data.map((item, i) => {
+          const last = i === data.length - 1;
           const dotColor =
             item.tone === "due" ? colors.bordeaux[400] : colors.bordeaux[300];
           return (
-            <View key={item.title} className="flex-row">
+            <View key={`${item.title}-${i}`} className="flex-row">
               {/* time + timeline rail */}
               <View className="w-12 items-end pr-3 pt-0.5">
                 <Text className="font-medium text-[12px] text-white/45">
@@ -103,9 +123,13 @@ export function StatCard({ stat }: { stat: Stat }) {
         ) : null}
       </View>
       <View className="mt-2 flex-row items-center">
-        <Delta text={stat.delta} positive={stat.positive} />
+        {stat.delta ? <Delta text={stat.delta} positive={!!stat.positive} /> : null}
         {stat.caption ? (
-          <Text className="ml-2 font-sans text-[11px] text-ink-muted">{stat.caption}</Text>
+          <Text
+            className={`font-sans text-[11px] text-ink-muted ${stat.delta ? "ml-2" : ""}`}
+          >
+            {stat.caption}
+          </Text>
         ) : null}
       </View>
     </Card>
@@ -113,7 +137,14 @@ export function StatCard({ stat }: { stat: Stat }) {
 }
 
 /** Dark dot-grid access-status card. */
-export function AccessGridCard() {
+export function AccessGridCard({
+  grid,
+  activeCount,
+}: {
+  grid?: ("active" | "expiring" | "off")[];
+  activeCount?: number;
+}) {
+  const dots = grid && grid.length ? grid : accessGridFallback;
   const dotColor: Record<string, string> = {
     active: colors.bordeaux[400],
     expiring: colors.bordeaux[200],
@@ -133,13 +164,13 @@ export function AccessGridCard() {
 
       <View className="mt-3 flex-row items-baseline">
         <Text className="font-display text-[26px] text-white" style={{ letterSpacing: -0.6 }}>
-          1 128
+          {activeCount != null ? formatInt(activeCount) : "—"}
         </Text>
         <Text className="ml-2 font-medium text-[12px] text-white/50">accès actifs</Text>
       </View>
 
       <View className="mt-4 flex-row flex-wrap" style={{ gap: 7, maxWidth: 224 }}>
-        {accessGrid.map((d, i) => (
+        {dots.map((d, i) => (
           <View
             key={i}
             style={{ width: 13, height: 13, borderRadius: 6.5, backgroundColor: dotColor[d] }}
@@ -179,7 +210,11 @@ export function SmallStatCard({ stat, icon }: { stat: Stat; icon: IconName }) {
         {stat.value}
       </Text>
       <View className="mt-1">
-        <Delta text={stat.delta} positive={stat.positive} />
+        {stat.delta ? (
+          <Delta text={stat.delta} positive={!!stat.positive} />
+        ) : stat.caption ? (
+          <Text className="font-sans text-[11px] text-ink-muted">{stat.caption}</Text>
+        ) : null}
       </View>
     </Card>
   );
@@ -216,7 +251,8 @@ export function SpotlightCard() {
 }
 
 /** Recent subscribers card. */
-export function MembersCard() {
+export function MembersCard({ items }: { items?: Member[] }) {
+  const members = items && items.length ? items : mockMembers;
   return (
     <Card>
       <View className="flex-row items-center justify-between">
@@ -262,16 +298,28 @@ export function MembersCard() {
   );
 }
 
-/** Revenue-growth SVG bar chart. */
-export function RevenueCard() {
+/** Revenue SVG bar chart (revenue by group, or any labelled series). */
+export function RevenueCard({
+  bars,
+  headline,
+  subtitle,
+  title = "Revenus par groupe",
+}: {
+  bars?: { label: string; value: number; highlight?: boolean }[];
+  headline?: string;
+  subtitle?: string;
+  title?: string;
+}) {
+  const data = bars && bars.length ? bars : revenueBars;
+  const isMoney = !!bars;
   const W = 320;
   const H = 168;
   const padX = 6;
   const yTop = 34;
   const yBase = 132;
-  const maxScale = 82;
-  const slot = (W - padX * 2) / revenueBars.length;
-  const barW = 26;
+  const max = Math.max(...data.map((b) => b.value), 1);
+  const slot = (W - padX * 2) / data.length;
+  const barW = Math.min(30, slot * 0.55);
 
   return (
     <Card>
@@ -279,30 +327,25 @@ export function RevenueCard() {
         <View>
           <Eyebrow>Performance</Eyebrow>
           <Text className="mt-1 font-display text-[18px] text-ink" style={{ letterSpacing: -0.3 }}>
-            Croissance des revenus
+            {title}
           </Text>
         </View>
         <View className="flex-row items-center rounded-full bg-night px-3 py-1.5">
-          <Text className="font-medium text-[12px] text-white">Ce semestre</Text>
-          <View className="ml-1.5">
-            <Icon name="chevron-down" size={13} color={colors.white} strokeWidth={2} />
-          </View>
+          <Text className="font-medium text-[12px] text-white">Total</Text>
         </View>
       </View>
 
       <View className="mt-4 flex-row items-baseline">
-        <Text className="font-display-x text-[38px] text-ink" style={{ letterSpacing: -1.4 }}>
-          +43,81
+        <Text className="font-display-x text-[34px] text-ink" style={{ letterSpacing: -1.2 }}>
+          {headline ?? "+43,81%"}
         </Text>
-        <Text className="ml-1 font-display text-[20px] text-bordeaux-600">%</Text>
       </View>
       <Text className="mt-1 font-sans text-[13px] text-ink-muted">
-        Une meilleure rétention des abonnés fait grimper vos revenus.
+        {subtitle ?? "Une meilleure rétention des abonnés fait grimper vos revenus."}
       </Text>
 
       <View className="mt-4">
         <Svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`}>
-          {/* gridlines */}
           {[0, 0.5, 1].map((g) => {
             const y = yBase - g * (yBase - yTop);
             return (
@@ -319,13 +362,13 @@ export function RevenueCard() {
               />
             );
           })}
-          {revenueBars.map((b, i) => {
+          {data.map((b, i) => {
             const cx = padX + slot * i + slot / 2;
-            const bh = (b.value / maxScale) * (yBase - yTop);
+            const bh = Math.max((b.value / max) * (yBase - yTop), 3);
             const y = yBase - bh;
             return (
               <Rect
-                key={b.label}
+                key={`b-${i}`}
                 x={cx - barW / 2}
                 y={y}
                 width={barW}
@@ -335,13 +378,13 @@ export function RevenueCard() {
               />
             );
           })}
-          {revenueBars.map((b, i) => {
+          {data.map((b, i) => {
             const cx = padX + slot * i + slot / 2;
-            const bh = (b.value / maxScale) * (yBase - yTop);
+            const bh = Math.max((b.value / max) * (yBase - yTop), 3);
             const y = yBase - bh;
             return (
               <SvgText
-                key={`v-${b.label}`}
+                key={`v-${i}`}
                 x={cx}
                 y={y - 8}
                 fontSize={11}
@@ -349,15 +392,15 @@ export function RevenueCard() {
                 fill={b.highlight ? colors.bordeaux[600] : colors.muted}
                 textAnchor="middle"
               >
-                {`${b.value}%`}
+                {isMoney ? shortAmount(b.value) : `${b.value}%`}
               </SvgText>
             );
           })}
-          {revenueBars.map((b, i) => {
+          {data.map((b, i) => {
             const cx = padX + slot * i + slot / 2;
             return (
               <SvgText
-                key={`l-${b.label}`}
+                key={`l-${i}`}
                 x={cx}
                 y={yBase + 20}
                 fontSize={11}

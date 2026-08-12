@@ -41,8 +41,8 @@ export type Stat = {
   label: string;
   value: string;
   unit?: string;
-  delta: string;
-  positive: boolean;
+  delta?: string;
+  positive?: boolean;
   caption?: string;
 };
 

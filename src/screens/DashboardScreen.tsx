@@ -2,7 +2,8 @@ import { View, Text, ScrollView, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Header } from "@/components/Header";
 import { Button, Eyebrow } from "@/components/ui";
-import { stats, smallStats } from "@/data/mock";
+import { stats as mockStats, smallStats as mockSmallStats, type Stat } from "@/data/mock";
+import { useDashboard } from "@/data/useDashboard";
 import {
   RenewalsCard,
   StatCard,
@@ -11,6 +12,7 @@ import {
   SpotlightCard,
   MembersCard,
   RevenueCard,
+  formatInt,
 } from "@/components/cards";
 
 function TitleBlock() {
@@ -43,11 +45,65 @@ function ActionButtons() {
   );
 }
 
+function ErrorBanner({ message }: { message: string }) {
+  return (
+    <View className="rounded-2xl bg-bordeaux-50 border border-bordeaux-200 px-4 py-3">
+      <Text className="font-semibold text-[13px] text-bordeaux-700">
+        Connexion Supabase impossible
+      </Text>
+      <Text className="mt-0.5 font-sans text-[12px] text-bordeaux-700/80">{message}</Text>
+    </View>
+  );
+}
+
 export function DashboardScreen() {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
-  const wide = width >= 900; // desktop / large tablet → multi-column grid
+  const wide = width >= 900;
   const maxW = wide ? 1180 : 520;
+
+  const { data, error } = useDashboard();
+
+  // Live stats from Supabase, falling back to demo data until loaded.
+  const stats: Stat[] = data
+    ? [
+        {
+          label: "Membres actifs",
+          value: formatInt(data.activeMembers),
+          caption: `sur ${formatInt(data.totalSubscribers)} abonnés`,
+        },
+        {
+          label: "Revenus (30 j)",
+          value: formatInt(data.monthlyRevenue),
+          unit: data.currency,
+          caption: "encaissés",
+        },
+      ]
+    : mockStats;
+
+  const smallStats: Stat[] = data
+    ? [
+        {
+          label: "Total abonnés",
+          value: formatInt(data.totalSubscribers),
+          caption: "au total",
+        },
+        {
+          label: "Taux de churn",
+          value: `${data.churnPct}%`,
+          caption: `${data.expiredCount} expiré${data.expiredCount > 1 ? "s" : ""}`,
+        },
+      ]
+    : mockSmallStats;
+
+  const revenueHeadline = data
+    ? `${formatInt(data.totalRevenue)} ${data.currency}`
+    : undefined;
+  const revenueSubtitle = data
+    ? `Réparti sur ${data.revenueByGroup.length} groupe${
+        data.revenueByGroup.length > 1 ? "s" : ""
+      }.`
+    : undefined;
 
   return (
     <View className="flex-1 bg-paper">
@@ -71,7 +127,6 @@ export function DashboardScreen() {
             }}
           >
             {wide ? (
-              /* ---------- WEB / DESKTOP: multi-column dashboard ---------- */
               <>
                 <View className="flex-row items-end justify-between" style={{ gap: 16 }}>
                   <TitleBlock />
@@ -79,22 +134,21 @@ export function DashboardScreen() {
                     <ActionButtons />
                   </View>
                 </View>
+                {error ? <ErrorBanner message={error} /> : null}
 
-                {/* Row 1 */}
                 <View className="flex-row" style={{ gap: 16 }}>
                   <View style={{ flex: 1.5 }}>
-                    <RenewalsCard />
+                    <RenewalsCard items={data?.renewals} />
                   </View>
                   <View style={{ flex: 1, gap: 16 }}>
                     <StatCard stat={stats[0]} />
                     <StatCard stat={stats[1]} />
                   </View>
                   <View style={{ flex: 1.1 }}>
-                    <AccessGridCard />
+                    <AccessGridCard grid={data?.accessGrid} activeCount={data?.activeMembers} />
                   </View>
                 </View>
 
-                {/* Row 2 */}
                 <View className="flex-row" style={{ gap: 16 }}>
                   <View style={{ flex: 1 }}>
                     <SpotlightCard />
@@ -108,31 +162,39 @@ export function DashboardScreen() {
                         <SmallStatCard stat={smallStats[1]} icon="trend-down" />
                       </View>
                     </View>
-                    <MembersCard />
+                    <MembersCard items={data?.members} />
                   </View>
                   <View style={{ flex: 1.5 }}>
-                    <RevenueCard />
+                    <RevenueCard
+                      bars={data?.revenueByGroup}
+                      headline={revenueHeadline}
+                      subtitle={revenueSubtitle}
+                    />
                   </View>
                 </View>
               </>
             ) : (
-              /* ---------- MOBILE: single column ---------- */
               <>
                 <TitleBlock />
+                {error ? <ErrorBanner message={error} /> : null}
                 <ActionButtons />
-                <RenewalsCard />
+                <RenewalsCard items={data?.renewals} />
                 <View className="flex-row" style={{ gap: 14 }}>
                   <StatCard stat={stats[0]} />
                   <StatCard stat={stats[1]} />
                 </View>
-                <AccessGridCard />
+                <AccessGridCard grid={data?.accessGrid} activeCount={data?.activeMembers} />
                 <SpotlightCard />
                 <View className="flex-row" style={{ gap: 14 }}>
                   <SmallStatCard stat={smallStats[0]} icon="users" />
                   <SmallStatCard stat={smallStats[1]} icon="trend-down" />
                 </View>
-                <MembersCard />
-                <RevenueCard />
+                <MembersCard items={data?.members} />
+                <RevenueCard
+                  bars={data?.revenueByGroup}
+                  headline={revenueHeadline}
+                  subtitle={revenueSubtitle}
+                />
               </>
             )}
           </View>
