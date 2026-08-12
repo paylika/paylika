@@ -1,7 +1,6 @@
-import { View, Text, ScrollView, useWindowDimensions } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Header } from "@/components/Header";
+import { View, Text } from "react-native";
 import { Button, Eyebrow } from "@/components/ui";
+import { Screen, useWide } from "@/components/Screen";
 import { stats as mockStats, smallStats as mockSmallStats, type Stat } from "@/data/mock";
 import { useDashboard } from "@/data/useDashboard";
 import {
@@ -57,14 +56,9 @@ function ErrorBanner({ message }: { message: string }) {
 }
 
 export function DashboardScreen() {
-  const insets = useSafeAreaInsets();
-  const { width } = useWindowDimensions();
-  const wide = width >= 900;
-  const maxW = wide ? 1180 : 520;
-
+  const wide = useWide();
   const { data, error } = useDashboard();
 
-  // Live stats from Supabase, falling back to demo data until loaded.
   const stats: Stat[] = data
     ? [
         {
@@ -106,100 +100,78 @@ export function DashboardScreen() {
     : undefined;
 
   return (
-    <View className="flex-1 bg-paper">
-      {/* Sticky header — full-width white bar, content centered on wide screens */}
-      <View style={{ paddingTop: insets.top }} className="bg-card items-center">
-        <View style={{ width: "100%", maxWidth: maxW }}>
-          <Header />
-        </View>
-      </View>
+    <Screen>
+      {wide ? (
+        <>
+          <View className="flex-row items-end justify-between" style={{ gap: 16 }}>
+            <TitleBlock />
+            <View style={{ width: 340 }}>
+              <ActionButtons />
+            </View>
+          </View>
+          {error ? <ErrorBanner message={error} /> : null}
 
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <View className="items-center">
-          <View
-            style={{
-              width: "100%",
-              maxWidth: maxW,
-              paddingHorizontal: 20,
-              paddingTop: 18,
-              paddingBottom: insets.bottom + 40,
-              gap: 16,
-            }}
-          >
-            {wide ? (
-              <>
-                <View className="flex-row items-end justify-between" style={{ gap: 16 }}>
-                  <TitleBlock />
-                  <View style={{ width: 340 }}>
-                    <ActionButtons />
-                  </View>
-                </View>
-                {error ? <ErrorBanner message={error} /> : null}
+          <View className="flex-row" style={{ gap: 16 }}>
+            <View style={{ flex: 1.5 }}>
+              <RenewalsCard items={data?.renewals} />
+            </View>
+            <View style={{ flex: 1, gap: 16 }}>
+              <StatCard stat={stats[0]} />
+              <StatCard stat={stats[1]} />
+            </View>
+            <View style={{ flex: 1.1 }}>
+              <AccessGridCard grid={data?.accessGrid} activeCount={data?.activeMembers} />
+            </View>
+          </View>
 
-                <View className="flex-row" style={{ gap: 16 }}>
-                  <View style={{ flex: 1.5 }}>
-                    <RenewalsCard items={data?.renewals} />
-                  </View>
-                  <View style={{ flex: 1, gap: 16 }}>
-                    <StatCard stat={stats[0]} />
-                    <StatCard stat={stats[1]} />
-                  </View>
-                  <View style={{ flex: 1.1 }}>
-                    <AccessGridCard grid={data?.accessGrid} activeCount={data?.activeMembers} />
-                  </View>
-                </View>
-
-                <View className="flex-row" style={{ gap: 16 }}>
-                  <View style={{ flex: 1 }}>
-                    <SpotlightCard />
-                  </View>
-                  <View style={{ flex: 1.1, gap: 16 }}>
-                    <View className="flex-row" style={{ gap: 16 }}>
-                      <View style={{ flex: 1 }}>
-                        <SmallStatCard stat={smallStats[0]} icon="users" />
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <SmallStatCard stat={smallStats[1]} icon="trend-down" />
-                      </View>
-                    </View>
-                    <MembersCard items={data?.members} />
-                  </View>
-                  <View style={{ flex: 1.5 }}>
-                    <RevenueCard
-                      bars={data?.revenueByGroup}
-                      headline={revenueHeadline}
-                      subtitle={revenueSubtitle}
-                    />
-                  </View>
-                </View>
-              </>
-            ) : (
-              <>
-                <TitleBlock />
-                {error ? <ErrorBanner message={error} /> : null}
-                <ActionButtons />
-                <RenewalsCard items={data?.renewals} />
-                <View className="flex-row" style={{ gap: 14 }}>
-                  <StatCard stat={stats[0]} />
-                  <StatCard stat={stats[1]} />
-                </View>
-                <AccessGridCard grid={data?.accessGrid} activeCount={data?.activeMembers} />
-                <SpotlightCard />
-                <View className="flex-row" style={{ gap: 14 }}>
+          <View className="flex-row" style={{ gap: 16 }}>
+            <View style={{ flex: 1 }}>
+              <SpotlightCard />
+            </View>
+            <View style={{ flex: 1.1, gap: 16 }}>
+              <View className="flex-row" style={{ gap: 16 }}>
+                <View style={{ flex: 1 }}>
                   <SmallStatCard stat={smallStats[0]} icon="users" />
+                </View>
+                <View style={{ flex: 1 }}>
                   <SmallStatCard stat={smallStats[1]} icon="trend-down" />
                 </View>
-                <MembersCard items={data?.members} />
-                <RevenueCard
-                  bars={data?.revenueByGroup}
-                  headline={revenueHeadline}
-                  subtitle={revenueSubtitle}
-                />
-              </>
-            )}
+              </View>
+              <MembersCard items={data?.members} />
+            </View>
+            <View style={{ flex: 1.5 }}>
+              <RevenueCard
+                bars={data?.revenueByGroup}
+                headline={revenueHeadline}
+                subtitle={revenueSubtitle}
+              />
+            </View>
           </View>
-        </View>
-      </ScrollView>
-    </View>
+        </>
+      ) : (
+        <>
+          <TitleBlock />
+          {error ? <ErrorBanner message={error} /> : null}
+          <ActionButtons />
+          <RenewalsCard items={data?.renewals} />
+          <View className="flex-row" style={{ gap: 14 }}>
+            <StatCard stat={stats[0]} />
+            <StatCard stat={stats[1]} />
+          </View>
+          <AccessGridCard grid={data?.accessGrid} activeCount={data?.activeMembers} />
+          <SpotlightCard />
+          <View className="flex-row" style={{ gap: 14 }}>
+            <SmallStatCard stat={smallStats[0]} icon="users" />
+            <SmallStatCard stat={smallStats[1]} icon="trend-down" />
+          </View>
+          <MembersCard items={data?.members} />
+          <RevenueCard
+            bars={data?.revenueByGroup}
+            headline={revenueHeadline}
+            subtitle={revenueSubtitle}
+          />
+        </>
+      )}
+    </Screen>
   );
 }

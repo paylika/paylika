@@ -1,7 +1,8 @@
-import "./global.css";
+import "../global.css";
 
-import { StatusBar } from "expo-status-bar";
 import { View } from "react-native";
+import { Slot } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import {
   useFonts,
@@ -15,9 +16,9 @@ import {
   SpaceGrotesk_600SemiBold,
   SpaceGrotesk_700Bold,
 } from "@expo-google-fonts/space-grotesk";
-import { DashboardScreen } from "@/screens/DashboardScreen";
+import { TopBar } from "@/components/TopBar";
 
-export default function App() {
+export default function RootLayout() {
   const [fontsLoaded] = useFonts({
     BricolageGrotesque_600SemiBold,
     BricolageGrotesque_700Bold,
@@ -31,11 +32,14 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <StatusBar style="dark" />
-      {fontsLoaded ? (
-        <DashboardScreen />
-      ) : (
-        <View className="flex-1 bg-paper" />
-      )}
+      <View className="flex-1 bg-paper">
+        {fontsLoaded ? (
+          <>
+            <TopBar />
+            <Slot />
+          </>
+        ) : null}
+      </View>
     </SafeAreaProvider>
   );
 }

@@ -3,6 +3,7 @@
     "name": "Paylika",
     "slug": "paylika",
     "version": "1.0.0",
+    "scheme": "paylika",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -20,7 +21,8 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-font"
+      "expo-font",
+      "expo-router"
     ]
   }
 }
