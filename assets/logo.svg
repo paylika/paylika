@@ -1,0 +1,13 @@
+<svg width="512" height="512" viewBox="0 0 120 140" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="paylikaBordeaux" x1="40" y1="18" x2="108" y2="126" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#A81E38"/>
+      <stop offset="0.55" stop-color="#7B1126"/>
+      <stop offset="1" stop-color="#5E0C1B"/>
+    </linearGradient>
+  </defs>
+  <path d="M48 104 C41 111 41 122 51 126 C47 120 49 113 54 109 Z" fill="#4B0A17"/>
+  <path d="M48 34 C48 26 54 20 62 20 H76 C96 20 110 35 110 55 C110 75 95 88 76 88 V116 C76 122 72 126 65 126 H59 C52 126 48 122 48 115 Z" fill="url(#paylikaBordeaux)"/>
+  <path d="M56 80 Q71 57 95 53" stroke="#FFFFFF" stroke-width="16" stroke-linecap="round" fill="none"/>
+  <polygon points="93 38 116 53 93 68" fill="#FFFFFF"/>
+</svg>
