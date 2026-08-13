@@ -2,15 +2,10 @@ import { useState } from "react";
 import { View, Text, ScrollView, Pressable } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Card, Button, Eyebrow } from "@/components/ui";
+import { Card, Button } from "@/components/ui";
 import { Input } from "@/components/form";
-import { Logo, Icon } from "@/components/Icon";
-import { colors } from "@/theme/colors";
-import {
-  signInWithEmail,
-  signUpWithEmail,
-  signInWithGoogle,
-} from "@/lib/auth";
+import { Logo } from "@/components/Icon";
+import { signInWithEmail, signUpWithEmail } from "@/lib/auth";
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
@@ -49,15 +44,6 @@ export default function LoginScreen() {
     }
   }
 
-  async function google() {
-    setError(null);
-    try {
-      await signInWithGoogle();
-    } catch (e: any) {
-      setError(e?.message ?? "Google indisponible.");
-    }
-  }
-
   return (
     <ScrollView
       className="flex-1 bg-paper"
@@ -83,23 +69,6 @@ export default function LoginScreen() {
 
         <Card>
           <View style={{ gap: 14 }}>
-            {/* Google */}
-            <Pressable
-              onPress={google}
-              className="flex-row items-center justify-center rounded-2xl border border-ink/10 bg-card py-3.5"
-            >
-              <Icon name="spark" size={16} color={colors.bordeaux[600]} />
-              <Text className="ml-2 font-semibold text-[14px] text-ink">
-                Continuer avec Google
-              </Text>
-            </Pressable>
-
-            <View className="flex-row items-center" style={{ gap: 10 }}>
-              <View className="h-[1px] flex-1 bg-ink/10" />
-              <Text className="font-sans text-[11px] text-ink-muted">ou</Text>
-              <View className="h-[1px] flex-1 bg-ink/10" />
-            </View>
-
             <Input
               label="Email"
               value={email}
@@ -111,6 +80,7 @@ export default function LoginScreen() {
               value={password}
               onChangeText={setPassword}
               placeholder="••••••••"
+              secureTextEntry
             />
 
             {error ? (

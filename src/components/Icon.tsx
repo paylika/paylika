@@ -1,14 +1,11 @@
+import { Image } from "react-native";
 import Svg, {
   Path,
   Circle,
   Line,
   Rect,
   Polyline,
-  Polygon,
   G,
-  Defs,
-  LinearGradient,
-  Stop,
 } from "react-native-svg";
 import { colors } from "@/theme/colors";
 
@@ -208,50 +205,16 @@ export function Icon({
  *  - standalone: bordeaux body + white arrow (transparent background)
  *  - tile:       bordeaux rounded tile + white body + bordeaux arrow
  */
-const P_BODY =
-  "M48 34 C48 26 54 20 62 20 H76 C96 20 110 35 110 55 C110 75 95 88 76 88 V116 C76 122 72 126 65 126 H59 C52 126 48 122 48 115 Z";
-const P_FOLD = "M48 104 C41 111 41 122 51 126 C47 120 49 113 54 109 Z";
-const ARROW_SHAFT = "M56 80 Q71 57 95 53";
-const ARROW_HEAD = "93 38 116 53 93 68";
+// Official Paylika mark — the real logo asset (transparent PNG), not a trace.
+const MARK = require("../../assets/mark-square.png");
 
-export function Logo({
-  size = 34,
-  tile = false,
-}: {
-  size?: number;
-  tile?: boolean;
-}) {
-  const gid = tile ? "paylikaBxTile" : "paylikaBx";
-  const bordeaux = `url(#${gid})`;
-  const bodyFill = tile ? colors.white : bordeaux;
-  const arrowFill = tile ? bordeaux : colors.white;
+export function Logo({ size = 34 }: { size?: number }) {
   return (
-    <Svg width={size} height={size} viewBox="0 0 120 140">
-      <Defs>
-        <LinearGradient id={gid} x1="40" y1="18" x2="108" y2="126" gradientUnits="userSpaceOnUse">
-          <Stop offset="0" stopColor="#A81E38" />
-          <Stop offset="0.55" stopColor={colors.bordeaux[600]} />
-          <Stop offset="1" stopColor="#5E0C1B" />
-        </LinearGradient>
-      </Defs>
-
-      {tile && <Rect x={-4} y={4} width={128} height={132} rx={30} fill={bordeaux} />}
-
-      {/* folded ribbon curl (behind the stem) */}
-      {!tile && <Path d={P_FOLD} fill={colors.bordeaux[800]} />}
-
-      {/* P body */}
-      <Path d={P_BODY} fill={bodyFill} />
-
-      {/* white arrow: curved shaft + head */}
-      <Path
-        d={ARROW_SHAFT}
-        stroke={arrowFill}
-        strokeWidth={16}
-        strokeLinecap="round"
-        fill="none"
-      />
-      <Polygon points={ARROW_HEAD} fill={arrowFill} />
-    </Svg>
+    <Image
+      source={MARK}
+      style={{ width: size, height: size }}
+      resizeMode="contain"
+      accessibilityLabel="Paylika"
+    />
   );
 }

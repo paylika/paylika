@@ -17,6 +17,7 @@ export function Input({
   keyboardType = "default",
   suffix,
   autoFocus,
+  secureTextEntry,
 }: {
   label?: string;
   value: string;
@@ -25,6 +26,7 @@ export function Input({
   keyboardType?: "default" | "numeric";
   suffix?: string;
   autoFocus?: boolean;
+  secureTextEntry?: boolean;
 }) {
   return (
     <View>
@@ -37,8 +39,10 @@ export function Input({
           placeholderTextColor={colors.muted}
           keyboardType={keyboardType}
           autoFocus={autoFocus}
+          secureTextEntry={secureTextEntry}
           className="flex-1 font-sans text-[15px] text-ink"
-          style={{ paddingVertical: 0 }}
+          // @ts-expect-error web-only: remove the focus outline (RN Web)
+          style={{ paddingVertical: 0, outlineStyle: "none" }}
         />
         {suffix ? (
           <Text className="ml-2 font-medium text-[13px] text-ink-muted">{suffix}</Text>

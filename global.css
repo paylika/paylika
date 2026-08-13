@@ -16,3 +16,11 @@ body,
   display: flex;
   flex-direction: column;
 }
+
+/* Remove the browser's focus outline on inputs (we use our own borders). */
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
