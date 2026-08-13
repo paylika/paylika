@@ -35,6 +35,34 @@ Vérifier : `https://api.telegram.org/bot<TOKEN>/getWebhookInfo`
 
 ---
 
+## Paiement — PayDunya (2 fonctions)
+
+Fonctions : `paydunya-create/` (génère le lien de paiement) et `paydunya-webhook/` (IPN : confirme
+le paiement, crée l'abonnement + le paiement avec commission 10 %, envoie le lien d'accès Telegram).
+
+### Prérequis
+1. Enrichir `payments` : exécuter [`../payments_schema.sql`](../payments_schema.sql) dans le SQL Editor.
+2. Compte PayDunya → récupérer les clés d'un service (mode **test** d'abord).
+
+### Secrets (Dashboard → Edge Functions → Secrets)
+- `PAYDUNYA_MASTER_KEY`
+- `PAYDUNYA_PRIVATE_KEY`  (utiliser la clé **test** pour commencer)
+- `PAYDUNYA_TOKEN`
+- (`TELEGRAM_BOT_TOKEN` déjà défini)
+
+### Déployer (dashboard, comme le webhook Telegram)
+Créer `paydunya-create` puis `paydunya-webhook`, coller chaque `index.ts`, **Deploy**.
+Le webhook PayDunya n'utilise pas le header secret (PayDunya n'en envoie pas) : la fonction
+**re-confirme** chaque facture via l'API PayDunya avant d'agir.
+
+### Tester
+Ouvrir dans le navigateur :
+```
+https://xkdiodbppotyiyldlwbg.functions.supabase.co/paydunya-create?offer=<planId>&tg=<telegramUserId>
+```
+→ redirige vers la page PayDunya (test). Après paiement test, le webhook crée l'abonnement,
+le paiement, et envoie le lien d'accès en privé sur Telegram.
+
 ## Alternative : CLI (si tu préfères le terminal)
 ```bash
 supabase login
