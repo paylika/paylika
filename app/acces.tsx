@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState } from "react";
-import { View, Text, ActivityIndicator, Pressable } from "react-native";
+import { useCallback, useState } from "react";
+import { View, Text, ActivityIndicator, Pressable, Linking } from "react-native";
+import { useFocusEffect } from "expo-router";
 import { Screen, PageTitle } from "@/components/Screen";
-import { Card, Tag, Eyebrow } from "@/components/ui";
+import { Card, Tag, Eyebrow, Button } from "@/components/ui";
 import { Chip } from "@/components/form";
 import { Icon } from "@/components/Icon";
 import { colors } from "@/theme/colors";
@@ -9,16 +10,29 @@ import {
   fetchConnections,
   fetchGroups,
   linkConnection,
+  unlinkConnection,
   type Connection,
   type Group,
 } from "@/data/queries";
 
+const BOT_URL = "https://t.me/Paylikabot";
+
+function Step({ n, text }: { n: number; text: string }) {
+  return (
+    <View className="flex-row items-start" style={{ gap: 10 }}>
+      <View className="h-6 w-6 items-center justify-center rounded-full bg-bordeaux-50">
+        <Text className="font-bold text-[12px] text-bordeaux-700">{n}</Text>
+      </View>
+      <Text className="flex-1 font-sans text-[13px] text-ink-soft">{text}</Text>
+    </View>
+  );
+}
+
 export default function AccesScreen() {
   const [connections, setConnections] = useState<Connection[] | null>(null);
   const [groups, setGroups] = useState<Group[]>([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [linkingChat, setLinkingChat] = useState<number | null>(null);
+  const [busyChat, setBusyChat] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -28,70 +42,86 @@ export default function AccesScreen() {
       setGroups(grps);
     } catch (e: any) {
       setError(e?.message ?? "Erreur de chargement");
-    } finally {
-      setLoading(false);
     }
   }, []);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load]),
+  );
 
-  async function onLink(chatId: number, groupId: string) {
-    setLinkingChat(chatId);
+  async function act(chatId: number, fn: () => Promise<void>) {
+    setBusyChat(chatId);
     try {
-      await linkConnection(chatId, groupId);
+      await fn();
       await load();
     } catch (e: any) {
-      setError(e?.message ?? "Liaison impossible");
+      setError(e?.message ?? "Action impossible");
     } finally {
-      setLinkingChat(null);
+      setBusyChat(null);
     }
   }
 
-  const groupName = (id: string | null) =>
-    groups.find((g) => g.id === id)?.name ?? "—";
+  const groupName = (id: string | null) => groups.find((g) => g.id === id)?.name ?? "—";
+  const linkedCount = (connections ?? []).filter((c) => c.groupId).length;
 
   return (
     <Screen>
       <PageTitle
         eyebrow="Gérer"
         title="Accès & Bot"
-        subtitle="Vos groupes Telegram connectés à @Paylikabot."
+        subtitle="Connectez vos groupes Telegram à @Paylikabot."
       />
 
-      {/* How-to card */}
+      {/* Bot status */}
       <Card tone="dark">
-        <View className="flex-row items-center" style={{ gap: 10 }}>
-          <View className="h-11 w-11 items-center justify-center rounded-2xl bg-bordeaux-600">
-            <Icon name="send" size={22} color={colors.white} />
+        <View className="flex-row items-center" style={{ gap: 12 }}>
+          <View className="h-12 w-12 items-center justify-center rounded-2xl bg-bordeaux-600">
+            <Icon name="send" size={24} color={colors.white} />
           </View>
           <View className="flex-1">
-            <Text className="font-display-semi text-[15px] text-white">
-              Connecter un groupe
-            </Text>
-            <Text className="mt-0.5 font-sans text-[12px] text-white/55">
-              Ajoute @Paylikabot comme admin de ton groupe → il apparaît ici.
-            </Text>
+            <Text className="font-display-semi text-[16px] text-white">@Paylikabot</Text>
+            <View className="mt-1 flex-row items-center" style={{ gap: 6 }}>
+              <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: colors.forest }} />
+              <Text className="font-medium text-[12px] text-white/60">
+                En ligne · {linkedCount} groupe{linkedCount > 1 ? "s" : ""} relié{linkedCount > 1 ? "s" : ""}
+              </Text>
+            </View>
           </View>
+        </View>
+        <View className="mt-4" style={{ maxWidth: 220 }}>
+          <Button label="Ouvrir le bot" icon="arrow-up-right" variant="accent" onPress={() => Linking.openURL(BOT_URL)} />
         </View>
       </Card>
 
-      {loading ? (
+      {/* How to connect */}
+      <Card>
+        <Eyebrow>Connecter un groupe</Eyebrow>
+        <View className="mt-3" style={{ gap: 12 }}>
+          <Step n={1} text="Ajoutez @Paylikabot comme administrateur de votre groupe Telegram." />
+          <Step n={2} text="Donnez-lui les droits « Inviter via lien » et « Bannir des utilisateurs »." />
+          <Step n={3} text="Le groupe apparaît ci-dessous — reliez-le à une offre." />
+        </View>
+      </Card>
+
+      {/* Connected groups */}
+      {error ? (
+        <Card>
+          <Text className="font-sans text-[12px] text-bordeaux-700">{error}</Text>
+        </Card>
+      ) : null}
+
+      {connections === null ? (
         <Card>
           <View className="items-center py-6">
             <ActivityIndicator color={colors.bordeaux[600]} />
           </View>
         </Card>
-      ) : error ? (
-        <Card>
-          <Text className="font-semibold text-[13px] text-bordeaux-700">Erreur</Text>
-          <Text className="mt-1 font-sans text-[12px] text-ink-muted">{error}</Text>
-        </Card>
-      ) : connections && connections.length ? (
+      ) : connections.length ? (
         connections.map((c) => {
           const linked = !!c.groupId;
-          const isLinking = linkingChat === c.chatId;
+          const busy = busyChat === c.chatId;
           return (
             <Card key={c.chatId}>
               <View className="flex-row items-center justify-between">
@@ -103,32 +133,35 @@ export default function AccesScreen() {
                     {linked ? `Relié à ${groupName(c.groupId)}` : "Pas encore relié"}
                   </Text>
                 </View>
-                <Tag tone={linked ? "bordeaux" : "sand"}>
-                  {linked ? "Connecté" : "À relier"}
-                </Tag>
+                <Tag tone={linked ? "bordeaux" : "sand"}>{linked ? "Connecté" : "À relier"}</Tag>
               </View>
 
-              {!linked ? (
-                <View className="mt-4 border-t border-ink/[0.06] pt-3">
-                  <Eyebrow>Relier à une offre</Eyebrow>
-                  {isLinking ? (
-                    <View className="py-3">
-                      <ActivityIndicator color={colors.bordeaux[600]} />
-                    </View>
-                  ) : (
+              <View className="mt-4 border-t border-ink/[0.06] pt-3">
+                {busy ? (
+                  <ActivityIndicator color={colors.bordeaux[600]} />
+                ) : linked ? (
+                  <Pressable
+                    onPress={() => act(c.chatId, () => unlinkConnection(c.chatId))}
+                    className="self-start rounded-full bg-sand px-3.5 py-2"
+                  >
+                    <Text className="font-semibold text-[12px] text-ink">Délier</Text>
+                  </Pressable>
+                ) : (
+                  <>
+                    <Eyebrow>Relier à une offre</Eyebrow>
                     <View className="mt-2 flex-row flex-wrap" style={{ gap: 8 }}>
                       {groups.map((g) => (
                         <Chip
                           key={g.id}
                           label={g.name}
                           active={false}
-                          onPress={() => onLink(c.chatId, g.id)}
+                          onPress={() => act(c.chatId, () => linkConnection(c.chatId, g.id))}
                         />
                       ))}
                     </View>
-                  )}
-                </View>
-              ) : null}
+                  </>
+                )}
+              </View>
             </Card>
           );
         })
@@ -136,7 +169,7 @@ export default function AccesScreen() {
         <Card>
           <Eyebrow>Aucun groupe connecté</Eyebrow>
           <Text className="mt-2 font-sans text-[13px] text-ink-muted">
-            Ajoute @Paylikabot comme admin d'un groupe pour le voir apparaître ici.
+            Ajoutez @Paylikabot comme admin d'un groupe pour le voir apparaître ici.
           </Text>
         </Card>
       )}
