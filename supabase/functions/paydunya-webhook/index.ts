@@ -23,6 +23,11 @@ const PAYDUNYA_HEADERS = {
   "PAYDUNYA-TOKEN": Deno.env.get("PAYDUNYA_TOKEN") ?? "",
 };
 
+const PD_BASE =
+  (Deno.env.get("PAYDUNYA_MODE") ?? "test") === "live"
+    ? "https://app.paydunya.com/api/v1"
+    : "https://app.paydunya.com/sandbox-api/v1";
+
 const TG_TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN");
 const tg = (method: string, payload: Record<string, unknown>) =>
   fetch(`https://api.telegram.org/bot${TG_TOKEN}/${method}`, {

@@ -34,7 +34,8 @@ export function TopBar() {
   const router = useRouter();
   const pathname = usePathname();
   const { width } = useWindowDimensions();
-  const maxW = maxWidthFor(width >= 900);
+  const wide = width >= 900;
+  const maxW = maxWidthFor(wide);
 
   return (
     <View
@@ -52,7 +53,9 @@ export function TopBar() {
           />
           <View className="flex-row items-center" style={{ gap: 8 }}>
             <IconButton name="bell" tone="sand" size={40} />
-            <Avatar initials="AB" size={40} tone="ink" />
+            <Pressable onPress={() => router.push("/reglages" as any)}>
+              <Avatar initials="AB" size={40} tone="ink" />
+            </Pressable>
           </View>
         </View>
 
@@ -67,40 +70,42 @@ export function TopBar() {
           </View>
         </View>
 
-        {/* Tabs */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          className="mt-4"
-          contentContainerStyle={{ gap: 22 }}
-        >
-          {TABS.map((tab) => {
-            const active = isActive(pathname, tab.path);
-            return (
-              <Pressable
-                key={tab.path}
-                onPress={() => router.push(tab.path as any)}
-                className="pb-2"
-              >
-                <Text
-                  className={`font-semibold text-[14px] ${
-                    active ? "text-ink" : "text-ink-muted"
-                  }`}
+        {/* Tabs — desktop/tablet only; mobile uses the floating bottom nav */}
+        {wide ? (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            className="mt-4"
+            contentContainerStyle={{ gap: 22 }}
+          >
+            {TABS.map((tab) => {
+              const active = isActive(pathname, tab.path);
+              return (
+                <Pressable
+                  key={tab.path}
+                  onPress={() => router.push(tab.path as any)}
+                  className="pb-2"
                 >
-                  {tab.label}
-                </Text>
-                <View
-                  style={{
-                    height: 2.5,
-                    borderRadius: 2,
-                    marginTop: 6,
-                    backgroundColor: active ? colors.bordeaux[600] : "transparent",
-                  }}
-                />
-              </Pressable>
-            );
-          })}
-        </ScrollView>
+                  <Text
+                    className={`font-semibold text-[14px] ${
+                      active ? "text-ink" : "text-ink-muted"
+                    }`}
+                  >
+                    {tab.label}
+                  </Text>
+                  <View
+                    style={{
+                      height: 2.5,
+                      borderRadius: 2,
+                      marginTop: 6,
+                      backgroundColor: active ? colors.bordeaux[600] : "transparent",
+                    }}
+                  />
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        ) : null}
       </View>
     </View>
   );

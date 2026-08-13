@@ -25,7 +25,8 @@ export function Screen({ children }: { children: ReactNode }) {
             maxWidth: maxWidthFor(wide),
             paddingHorizontal: 20,
             paddingTop: 18,
-            paddingBottom: insets.bottom + 40,
+            // extra room on mobile so content clears the floating bottom nav
+            paddingBottom: insets.bottom + (wide ? 40 : 104),
             gap: 16,
           }}
         >

@@ -1,6 +1,12 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  content: ["./App.tsx", "./src/**/*.{js,jsx,ts,tsx}"],
+  content: [
+    "./app/**/*.{js,jsx,ts,tsx}",
+    "./src/**/*.{js,jsx,ts,tsx}",
+  ],
+  // Class-based dark mode (app is light-only) — avoids NativeWind's web
+  // "Cannot manually set color scheme" crash when the device theme is dark.
+  darkMode: "class",
   presets: [require("nativewind/preset")],
   theme: {
     extend: {

@@ -22,8 +22,34 @@ const PAYDUNYA_HEADERS = {
   "Content-Type": "application/json",
 };
 
+// PAYDUNYA_MODE = "test" (sandbox, défaut) ou "live" (production).
+const PD_BASE =
+  (Deno.env.get("PAYDUNYA_MODE") ?? "test") === "live"
+    ? "https://app.paydunya.com/api/v1"
+    : "https://app.paydunya.com/sandbox-api/v1";
+
 Deno.serve(async (req) => {
   const url = new URL(req.url);
+
+  // Diagnostic (dev) : vérifie que les secrets sont bien lus, sans exposer les valeurs.
+  if (url.searchParams.get("debug") === "keys") {
+    const mk = Deno.env.get("PAYDUNYA_MASTER_KEY") ?? "";
+    const pk = Deno.env.get("PAYDUNYA_PRIVATE_KEY") ?? "";
+    const tk = Deno.env.get("PAYDUNYA_TOKEN") ?? "";
+    const info = (v: string) => ({
+      present: v.length > 0,
+      length: v.length,
+      hasWhitespace: /\s/.test(v),
+      head: v.slice(0, 4),
+    });
+    return Response.json({
+      version: "diag-1",
+      master: info(mk),
+      private: info(pk),
+      token: info(tk),
+    });
+  }
+
   const planId = url.searchParams.get("offer");
   const tg = url.searchParams.get("tg"); // telegram user id (optionnel)
 
@@ -67,14 +93,18 @@ Deno.serve(async (req) => {
   };
 
   const res = await fetch(
-    "https://app.paydunya.com/api/v1/checkout-invoice/create",
+    `${PD_BASE}/checkout-invoice/create`,
     { method: "POST", headers: PAYDUNYA_HEADERS, body: JSON.stringify(body) },
   );
   const data = await res.json();
 
   if (data.response_code !== "00" || !data.response_text) {
     console.error("PayDunya create error:", JSON.stringify(data));
-    return new Response("Création du paiement impossible.", { status: 502 });
+    // DEBUG (dev): renvoie l'erreur PayDunya dans le corps pour diagnostic.
+    return new Response(JSON.stringify(data), {
+      status: 502,
+      headers: { "content-type": "application/json" },
+    });
   }
 
   // Redirige le navigateur vers la page de paiement PayDunya.

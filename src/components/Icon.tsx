@@ -30,7 +30,10 @@ export type IconName =
   | "chevron-down"
   | "pencil"
   | "dots"
-  | "send";
+  | "send"
+  | "home"
+  | "wallet"
+  | "tag";
 
 /**
  * Hand-drawn stroke icon set for paylika.
@@ -159,6 +162,25 @@ export function Icon({
         <G {...stroke}>
           <Path d="M21 4 3 11l6 2 2 6 10-15Z" />
           <Line x1={9} y1={13} x2={13} y2={9} />
+        </G>
+      )}
+      {name === "home" && (
+        <G {...stroke}>
+          <Path d="M4 11 12 4l8 7" />
+          <Path d="M6 10v9h12v-9" />
+        </G>
+      )}
+      {name === "wallet" && (
+        <G {...stroke}>
+          <Rect x={3} y={6} width={18} height={13} rx={3.5} />
+          <Line x1={3} y1={10.5} x2={21} y2={10.5} />
+          <Circle cx={16.5} cy={14.5} r={1.3} fill={color} stroke="none" />
+        </G>
+      )}
+      {name === "tag" && (
+        <G {...stroke}>
+          <Path d="M4 4h7l9 9-7 7-9-9V4z" />
+          <Circle cx={8} cy={8} r={1.4} fill={color} stroke="none" />
         </G>
       )}
     </Svg>

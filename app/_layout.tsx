@@ -1,6 +1,6 @@
 import "../global.css";
 
-import { View } from "react-native";
+import { View, useWindowDimensions } from "react-native";
 import { Slot } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -17,8 +17,12 @@ import {
   SpaceGrotesk_700Bold,
 } from "@expo-google-fonts/space-grotesk";
 import { TopBar } from "@/components/TopBar";
+import { BottomNav } from "@/components/BottomNav";
+import { useWide } from "@/components/Screen";
 
 export default function RootLayout() {
+  const wide = useWide();
+  const { height } = useWindowDimensions();
   const [fontsLoaded] = useFonts({
     BricolageGrotesque_600SemiBold,
     BricolageGrotesque_700Bold,
@@ -32,11 +36,12 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <StatusBar style="dark" />
-      <View className="flex-1 bg-paper">
+      <View className="bg-paper" style={{ height }}>
         {fontsLoaded ? (
           <>
             <TopBar />
             <Slot />
+            {!wide ? <BottomNav /> : null}
           </>
         ) : null}
       </View>
