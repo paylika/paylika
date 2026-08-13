@@ -128,6 +128,35 @@ export async function createOffer(input: NewOffer): Promise<void> {
   if (error) throw error;
 }
 
+export type Connection = {
+  chatId: number;
+  title: string | null;
+  groupId: string | null;
+  status: string;
+};
+
+export async function fetchConnections(): Promise<Connection[]> {
+  const { data, error } = await supabase
+    .from("telegram_connections")
+    .select("chat_id, title, group_id, status")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map((c: any) => ({
+    chatId: c.chat_id,
+    title: c.title,
+    groupId: c.group_id,
+    status: c.status,
+  }));
+}
+
+export async function linkConnection(chatId: number, groupId: string): Promise<void> {
+  const { error } = await supabase
+    .from("telegram_connections")
+    .update({ group_id: groupId, status: "linked" })
+    .eq("chat_id", chatId);
+  if (error) throw error;
+}
+
 export type Money = {
   totalRevenue: number;
   commission: number; // Paylika 10%
