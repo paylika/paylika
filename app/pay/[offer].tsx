@@ -124,6 +124,14 @@ export default function PayScreen() {
                   </View>
                 </View>
                 <View className="items-end">
+                  {plan.comparePrice ? (
+                    <Text
+                      className="font-medium text-[13px] text-ink-muted"
+                      style={{ textDecorationLine: "line-through" }}
+                    >
+                      {formatInt(plan.comparePrice)}
+                    </Text>
+                  ) : null}
                   <Text className="font-display-x text-[26px] text-ink" style={{ letterSpacing: -1 }}>
                     {formatInt(plan.price)}
                   </Text>

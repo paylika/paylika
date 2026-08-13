@@ -1,9 +1,10 @@
+import { useEffect } from "react";
 import { View, Text } from "react-native";
 import { useRouter } from "expo-router";
 import { Card, Button, Eyebrow } from "@/components/ui";
 import { Screen, useWide } from "@/components/Screen";
 import { useDashboard } from "@/data/useDashboard";
-import { useAsync, fetchMoney } from "@/data/queries";
+import { useAsync, fetchMoney, countOffers } from "@/data/queries";
 import {
   RenewalsCard,
   StatCard,
@@ -53,6 +54,19 @@ export function DashboardScreen() {
   const router = useRouter();
   const { data } = useDashboard();
   const { data: money } = useAsync(fetchMoney);
+
+  // Onboarding : un nouveau compte (aucune offre) est orienté vers la création.
+  useEffect(() => {
+    let alive = true;
+    countOffers()
+      .then((n) => {
+        if (alive && n === 0) router.replace("/offres/nouvelle?first=1");
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [router]);
 
   const kpis: Stat[] = [
     {

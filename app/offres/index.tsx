@@ -5,16 +5,9 @@ import { Screen, PageTitle } from "@/components/Screen";
 import { Card, Button, Tag, Eyebrow } from "@/components/ui";
 import { Icon } from "@/components/Icon";
 import { colors } from "@/theme/colors";
-import { fetchOffres, deleteOffer, type Offre } from "@/data/queries";
+import { fetchOffres, deleteOffer, intervalLabel, type Offre } from "@/data/queries";
 import { formatInt } from "@/components/cards";
 import { copyOrShare } from "@/lib/clipboard";
-
-function intervalLabel(days: number): string {
-  if (days >= 360) return "an";
-  if (days >= 85 && days <= 95) return "trimestre";
-  if (days >= 28 && days <= 31) return "mois";
-  return `${days} j`;
-}
 
 const BOT = "https://t.me/Paylikabot";
 
@@ -51,6 +44,14 @@ function OffreCard({
           </View>
         </View>
         <View className="items-end">
+          {offre.comparePrice ? (
+            <Text
+              className="font-medium text-[12px] text-ink-muted"
+              style={{ textDecorationLine: "line-through" }}
+            >
+              {formatInt(offre.comparePrice)}
+            </Text>
+          ) : null}
           <Text className="font-display text-[20px] text-ink" style={{ letterSpacing: -0.5 }}>
             {formatInt(offre.price)}
           </Text>

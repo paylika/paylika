@@ -32,12 +32,29 @@ export function useAsync<T>(fn: () => Promise<T>) {
   return { data, loading, error };
 }
 
+export const PERIODICITIES: { label: string; days: number }[] = [
+  { label: "Journalier", days: 1 },
+  { label: "Hebdomadaire", days: 7 },
+  { label: "Mensuel", days: 30 },
+  { label: "Trimestriel", days: 90 },
+  { label: "Semestriel", days: 180 },
+  { label: "Annuel", days: 365 },
+];
+
+export function intervalLabel(days: number): string {
+  const m = PERIODICITIES.find((p) => p.days === days);
+  if (m) return m.label;
+  return `${days} j`;
+}
+
 export type Offre = {
   id: string;
   name: string;
   price: number;
+  comparePrice: number | null;
   currency: string;
   interval_days: number;
+  groupId: string;
   groupName: string;
   groupKind: string;
 };
@@ -45,15 +62,17 @@ export type Offre = {
 export async function fetchOffres(): Promise<Offre[]> {
   const { data, error } = await supabase
     .from("plans")
-    .select("id, name, price, currency, interval_days, groups(name, kind)")
+    .select("id, name, price, compare_price, currency, interval_days, group_id, groups(name, kind)")
     .order("created_at", { ascending: true });
   if (error) throw error;
   return (data ?? []).map((p: any) => ({
     id: p.id,
     name: p.name,
     price: Number(p.price) || 0,
+    comparePrice: p.compare_price != null ? Number(p.compare_price) : null,
     currency: p.currency,
     interval_days: p.interval_days,
+    groupId: p.group_id,
     groupName: p.groups?.name ?? "—",
     groupKind: p.groups?.kind ?? "telegram",
   }));
@@ -169,16 +188,16 @@ export async function fetchGroups(): Promise<Group[]> {
   return (data ?? []) as Group[];
 }
 
+export type Tier = { intervalDays: number; price: number; comparePrice?: number | null };
 export type NewOffer = {
-  planName: string;
-  price: number;
+  offerName: string;
   currency: string;
-  intervalDays: number;
   groupId?: string;
   newGroup?: { name: string; kind: string };
+  tiers: Tier[];
 };
 
-/** Create a group (if new) then the plan (offer). Requires anon INSERT policy. */
+/** Create a group (if new) then one plan per tier. */
 export async function createOffer(input: NewOffer): Promise<void> {
   let groupId = input.groupId;
   if (!groupId && input.newGroup) {
@@ -191,20 +210,33 @@ export async function createOffer(input: NewOffer): Promise<void> {
     groupId = data.id;
   }
   if (!groupId) throw new Error("Choisissez ou créez un groupe.");
-  const { error } = await supabase.from("plans").insert({
+  if (!input.tiers.length) throw new Error("Ajoutez au moins une formule.");
+
+  const rows = input.tiers.map((t) => ({
     group_id: groupId,
-    name: input.planName,
-    price: input.price,
+    name: `${input.offerName} — ${intervalLabel(t.intervalDays)}`,
+    price: t.price,
+    compare_price: t.comparePrice ?? null,
     currency: input.currency,
-    interval_days: input.intervalDays,
-  });
+    interval_days: t.intervalDays,
+  }));
+  const { error } = await supabase.from("plans").insert(rows);
   if (error) throw error;
+}
+
+/** Count of offers (plans) — for onboarding detection. */
+export async function countOffers(): Promise<number> {
+  const { count, error } = await supabase
+    .from("plans")
+    .select("id", { count: "exact", head: true });
+  if (error) throw error;
+  return count ?? 0;
 }
 
 export async function fetchOffre(id: string): Promise<Offre | null> {
   const { data, error } = await supabase
     .from("plans")
-    .select("id, name, price, currency, interval_days, group_id, groups(name, kind)")
+    .select("id, name, price, compare_price, currency, interval_days, group_id, groups(name, kind)")
     .eq("id", id)
     .maybeSingle();
   if (error) throw error;
@@ -214,8 +246,10 @@ export async function fetchOffre(id: string): Promise<Offre | null> {
     id: p.id,
     name: p.name,
     price: Number(p.price) || 0,
+    comparePrice: p.compare_price != null ? Number(p.compare_price) : null,
     currency: p.currency,
     interval_days: p.interval_days,
+    groupId: p.group_id,
     groupName: p.groups?.name ?? "—",
     groupKind: p.groups?.kind ?? "telegram",
   };
