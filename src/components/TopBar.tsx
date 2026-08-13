@@ -18,7 +18,7 @@ const LOGO = require("../../assets/logo-trimmed.png");
 const TABS: { label: string; path: string }[] = [
   { label: "Accueil", path: "/" },
   { label: "Offres", path: "/offres" },
-  { label: "Abonnés", path: "/abonnes" },
+  { label: "Statistiques", path: "/stats" },
   { label: "Accès", path: "/acces" },
   { label: "Argent", path: "/argent" },
   { label: "Réglages", path: "/reglages" },

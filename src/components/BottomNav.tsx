@@ -7,7 +7,7 @@ import { colors } from "@/theme/colors";
 const TABS: { label: string; path: string; icon: IconName }[] = [
   { label: "Accueil", path: "/", icon: "home" },
   { label: "Offres", path: "/offres", icon: "tag" },
-  { label: "Abonnés", path: "/abonnes", icon: "users" },
+  { label: "Stats", path: "/stats", icon: "chart" },
   { label: "Accès", path: "/acces", icon: "send" },
   { label: "Argent", path: "/argent", icon: "wallet" },
 ];

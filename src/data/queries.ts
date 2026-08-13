@@ -385,6 +385,141 @@ export async function createPayout(input: {
   if (error) throw error;
 }
 
+export type OfferStat = {
+  id: string;
+  name: string;
+  groupName: string;
+  price: number;
+  intervalDays: number;
+  active: number;
+  total: number;
+  revenue: number;
+  share: number; // % of total revenue
+};
+
+export type Bars = { label: string; value: number; highlight?: boolean }[];
+
+export type Stats = {
+  totalSubscribers: number;
+  activeMembers: number;
+  expiredCount: number;
+  churnPct: number;
+  totalRevenue: number;
+  netRevenue: number;
+  commission: number;
+  mrr: number; // monthly recurring revenue (net of nothing — gross monthly)
+  arpu: number; // net revenue per subscriber
+  currency: string;
+  membersByGroup: Bars;
+  revenueByGroup: Bars;
+  offers: OfferStat[];
+};
+
+function toBars(m: Map<string, number>): Bars {
+  return [...m.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6)
+    .map(([label, value], i) => ({
+      label: label.length > 8 ? label.slice(0, 8) + "…" : label,
+      value,
+      highlight: i === 0,
+    }));
+}
+
+export async function fetchStats(): Promise<Stats> {
+  const [plansRes, subsRes, paymentsRes, subsCountRes] = await Promise.all([
+    supabase
+      .from("plans")
+      .select("id, name, price, interval_days, group_id, groups(name, kind)")
+      .order("created_at"),
+    supabase.from("subscriptions").select("id, plan_id, group_id, status"),
+    supabase
+      .from("payments")
+      .select("amount, currency, subscriptions(plan_id, groups(name))"),
+    supabase.from("subscribers").select("id", { count: "exact", head: true }),
+  ]);
+  if (plansRes.error) throw plansRes.error;
+  if (subsRes.error) throw subsRes.error;
+  if (paymentsRes.error) throw paymentsRes.error;
+
+  const plans = (plansRes.data ?? []) as any[];
+  const subs = (subsRes.data ?? []) as any[];
+  const payments = (paymentsRes.data ?? []) as any[];
+
+  const totalSubscribers = subsCountRes.count ?? subs.length;
+  const activeMembers = subs.filter((s) => s.status === "active").length;
+  const expiredCount = subs.filter((s) => s.status === "expired").length;
+  const totalSubs = subs.length || 1;
+  const churnPct = Math.round((expiredCount / totalSubs) * 1000) / 10;
+
+  let totalRevenue = 0;
+  let currency = "XOF";
+  const revByGroup = new Map<string, number>();
+  const revByPlan = new Map<string, number>();
+  for (const p of payments) {
+    const amt = Number(p.amount) || 0;
+    if (p.currency) currency = p.currency;
+    totalRevenue += amt;
+    const g = p.subscriptions?.groups?.name ?? "Autre";
+    revByGroup.set(g, (revByGroup.get(g) ?? 0) + amt);
+    const pl = p.subscriptions?.plan_id;
+    if (pl) revByPlan.set(pl, (revByPlan.get(pl) ?? 0) + amt);
+  }
+  const commission = Math.round(totalRevenue * 0.1);
+  const netRevenue = totalRevenue - commission;
+
+  const planById = new Map(plans.map((p) => [p.id, p]));
+  let mrr = 0;
+  const memByGroup = new Map<string, number>();
+  for (const s of subs) {
+    if (s.status !== "active") continue;
+    const pl = planById.get(s.plan_id);
+    if (pl) {
+      const months = Math.max(1, (pl.interval_days || 30) / 30);
+      mrr += (Number(pl.price) || 0) / months;
+      const g = pl.groups?.name ?? "Autre";
+      memByGroup.set(g, (memByGroup.get(g) ?? 0) + 1);
+    }
+  }
+  mrr = Math.round(mrr);
+  const arpu = totalSubscribers ? Math.round(netRevenue / totalSubscribers) : 0;
+
+  const offers: OfferStat[] = plans
+    .map((pl) => {
+      const active = subs.filter((s) => s.plan_id === pl.id && s.status === "active").length;
+      const total = subs.filter((s) => s.plan_id === pl.id).length;
+      const revenue = revByPlan.get(pl.id) ?? 0;
+      return {
+        id: pl.id,
+        name: pl.name,
+        groupName: pl.groups?.name ?? "—",
+        price: Number(pl.price) || 0,
+        intervalDays: pl.interval_days,
+        active,
+        total,
+        revenue,
+        share: totalRevenue ? Math.round((revenue / totalRevenue) * 100) : 0,
+      };
+    })
+    .sort((a, b) => b.revenue - a.revenue);
+
+  return {
+    totalSubscribers,
+    activeMembers,
+    expiredCount,
+    churnPct,
+    totalRevenue,
+    netRevenue,
+    commission,
+    mrr,
+    arpu,
+    currency,
+    membersByGroup: toBars(memByGroup),
+    revenueByGroup: toBars(revByGroup),
+    offers,
+  };
+}
+
 export type Notif = {
   id: string;
   kind: "expired" | "expiring" | "payment";

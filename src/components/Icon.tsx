@@ -33,7 +33,8 @@ export type IconName =
   | "send"
   | "home"
   | "wallet"
-  | "tag";
+  | "tag"
+  | "chart";
 
 /**
  * Hand-drawn stroke icon set for paylika.
@@ -181,6 +182,13 @@ export function Icon({
         <G {...stroke}>
           <Path d="M4 4h7l9 9-7 7-9-9V4z" />
           <Circle cx={8} cy={8} r={1.4} fill={color} stroke="none" />
+        </G>
+      )}
+      {name === "chart" && (
+        <G fill={color}>
+          <Rect x={4} y={11} width={3.6} height={9} rx={1.2} />
+          <Rect x={10.2} y={6} width={3.6} height={14} rx={1.2} />
+          <Rect x={16.4} y={14} width={3.6} height={6} rx={1.2} />
         </G>
       )}
     </Svg>
