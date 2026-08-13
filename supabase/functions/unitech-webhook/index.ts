@@ -74,9 +74,11 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const status = evt.status ?? evt.event;
-    const completed = status === "completed" || evt.event === "payment_completed";
-    if (completed && evt.reference) {
+    const completed =
+      evt.status === "completed" ||
+      evt.event === "payment_success" ||
+      evt.event === "payment_completed";
+    if (completed) {
       await grantAccess(evt);
     }
   } catch (e) {
@@ -97,13 +99,31 @@ async function grantAccess(evt: any) {
     .maybeSingle();
   if (seen) return;
 
-  const { data: intent } = await admin
-    .from("payment_intents")
-    .select("plan_id, group_id, telegram_user_id, amount")
-    .eq("reference", reference)
-    .maybeSingle();
+  const cols = "plan_id, group_id, telegram_user_id, amount, reference";
+  let intent: any = null;
+  // 1) par référence
+  intent = (await admin.from("payment_intents").select(cols).eq("reference", reference).maybeSingle()).data;
+  // 2) par transaction_id
+  if (!intent && evt.transaction_id != null) {
+    intent = (await admin
+      .from("payment_intents")
+      .select(cols)
+      .eq("transaction_id", String(evt.transaction_id))
+      .maybeSingle()).data;
+  }
+  // 3) repli : dernier intent 'pending' du même montant
+  if (!intent && evt.amount != null) {
+    intent = (await admin
+      .from("payment_intents")
+      .select(cols)
+      .eq("status", "pending")
+      .eq("amount", Number(evt.amount))
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle()).data;
+  }
   if (!intent?.plan_id) {
-    console.error("intent introuvable pour", reference);
+    console.error("intent introuvable pour", reference, evt.transaction_id);
     return;
   }
 
@@ -179,7 +199,7 @@ async function grantAccess(evt: any) {
   await admin
     .from("payment_intents")
     .update({ status: "completed" })
-    .eq("reference", reference);
+    .eq("reference", intent.reference ?? reference);
 
   // Accès Telegram : lien d'invitation à usage unique en privé.
   if (intent.group_id && chatId) {
