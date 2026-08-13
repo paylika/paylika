@@ -1,72 +1,32 @@
-# Paylika — Edge Function bot Telegram
+# Paylika — Edge Functions
 
-Webhook Telegram : [`telegram-webhook/index.ts`](telegram-webhook/index.ts) (fichier autonome).
-Gère `/start`, les demandes d'adhésion (approuve seulement les abonnés actifs) et
-l'enregistrement des chats où le bot est admin.
+Déploiement : Dashboard Supabase → Edge Functions → Create/Update → coller le `index.ts`
+→ **Deploy** → **Verify JWT off**. Secrets : Edge Functions → Secrets.
 
-## Voie recommandée : tout depuis le dashboard (sans terminal)
+## Fonctions
 
-### 1. Tables Telegram
-SQL Editor → exécuter [`../telegram_schema.sql`](../telegram_schema.sql).
+| Fonction | Rôle | Secrets |
+|---|---|---|
+| `telegram-webhook` | Bot @Paylikabot : /start (+ deep-link offre → bouton Payer), approbation des adhésions, détection des groupes | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET` |
+| `unitech-create` | Crée un paiement UniTech (Wave/OM) → URL de paiement, mappe la référence → offre | `UNITECH_API_KEY` |
+| `unitech-webhook` | Confirmation paiement (HMAC) → crée l'abonnement + paiement (commission 10 %) + envoie le lien d'accès Telegram | `UNITECH_API_KEY`, `TELEGRAM_BOT_TOKEN` |
+| `paylika-cron` | Planifié : **kick-out** des expirés, **rappels** J-3, **exécution des retraits** (UniTech) | `UNITECH_API_KEY`, `TELEGRAM_BOT_TOKEN`, `CRON_SECRET` |
 
-### 2. Créer la fonction
-Dashboard → **Edge Functions** → **Create function** → nom `telegram-webhook` →
-coller tout le contenu de [`telegram-webhook/index.ts`](telegram-webhook/index.ts) → **Deploy**.
+`SUPABASE_URL` et `SUPABASE_SERVICE_ROLE_KEY` sont injectés automatiquement.
 
-### 3. Secrets
-Dashboard → **Edge Functions** → **Secrets** (ou Project Settings → Edge Functions) :
-- `TELEGRAM_BOT_TOKEN` = le token BotFather (le nouveau, régénéré)
-- `TELEGRAM_WEBHOOK_SECRET` = une chaîne aléatoire que tu choisis (ex. 32 caractères)
+## Schémas SQL (SQL Editor)
+- `../schema.sql`, `../schema_v2.sql` — tables app + policies dev
+- `../telegram_schema.sql` — telegram_users, telegram_connections
+- `../payments_schema.sql` — colonnes provider/commission
+- `../unitech_schema.sql` — payment_intents (mapping paiement→offre)
+- `../cron_schedule.sql` — planifie `paylika-cron` (pg_cron)
 
-> `SUPABASE_URL` et `SUPABASE_SERVICE_ROLE_KEY` sont injectés automatiquement.
+## Webhook UniTech
+Dans le dashboard UniTech → Webhooks → URL :
+`https://xkdiodbppotyiyldlwbg.functions.supabase.co/unitech-webhook`
+Événements : paiement réussi / échoué / expiré.
 
-### 4. Brancher le webhook Telegram (dans le navigateur)
-Colle cette URL dans la barre d'adresse (remplace `<TOKEN>` et `<SECRET>`) :
-```
-https://api.telegram.org/bot<TOKEN>/setWebhook?url=https://xkdiodbppotyiyldlwbg.functions.supabase.co/telegram-webhook&secret_token=<SECRET>&allowed_updates=["message","chat_join_request","my_chat_member"]
-```
-Réponse attendue : `{"ok":true,"result":true,...}`.
-
-Vérifier : `https://api.telegram.org/bot<TOKEN>/getWebhookInfo`
-
-### 5. Tester
-- `t.me/Paylikabot` → **Démarrer** → message de bienvenue + 1 ligne dans `telegram_users`.
-- Ajouter le bot comme **admin** d'un groupe test → 1 ligne dans `telegram_connections`.
-
----
-
-## Paiement — PayDunya (2 fonctions)
-
-Fonctions : `paydunya-create/` (génère le lien de paiement) et `paydunya-webhook/` (IPN : confirme
-le paiement, crée l'abonnement + le paiement avec commission 10 %, envoie le lien d'accès Telegram).
-
-### Prérequis
-1. Enrichir `payments` : exécuter [`../payments_schema.sql`](../payments_schema.sql) dans le SQL Editor.
-2. Compte PayDunya → récupérer les clés d'un service (mode **test** d'abord).
-
-### Secrets (Dashboard → Edge Functions → Secrets)
-- `PAYDUNYA_MASTER_KEY`
-- `PAYDUNYA_PRIVATE_KEY`  (utiliser la clé **test** pour commencer)
-- `PAYDUNYA_TOKEN`
-- (`TELEGRAM_BOT_TOKEN` déjà défini)
-
-### Déployer (dashboard, comme le webhook Telegram)
-Créer `paydunya-create` puis `paydunya-webhook`, coller chaque `index.ts`, **Deploy**.
-Le webhook PayDunya n'utilise pas le header secret (PayDunya n'en envoie pas) : la fonction
-**re-confirme** chaque facture via l'API PayDunya avant d'agir.
-
-### Tester
-Ouvrir dans le navigateur :
-```
-https://xkdiodbppotyiyldlwbg.functions.supabase.co/paydunya-create?offer=<planId>&tg=<telegramUserId>
-```
-→ redirige vers la page PayDunya (test). Après paiement test, le webhook crée l'abonnement,
-le paiement, et envoie le lien d'accès en privé sur Telegram.
-
-## Alternative : CLI (si tu préfères le terminal)
-```bash
-supabase login
-supabase link --project-ref xkdiodbppotyiyldlwbg
-supabase secrets set TELEGRAM_BOT_TOKEN=... TELEGRAM_WEBHOOK_SECRET=...
-supabase functions deploy telegram-webhook --no-verify-jwt
-```
+## Cron
+1. Déployer `paylika-cron` (JWT off).
+2. Secret `CRON_SECRET` (chaîne aléatoire).
+3. Exécuter `../cron_schedule.sql` (en remplaçant `TON_CRON_SECRET`).
