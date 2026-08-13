@@ -40,27 +40,45 @@ function json(obj: unknown, status = 200) {
   });
 }
 
+/** POST to PayDunya and parse defensively (returns JSON or raw text). */
+async function pdPost(path: string, payload: unknown) {
+  const res = await fetch(`${PD_BASE}/${path}`, {
+    method: "POST",
+    headers: H,
+    body: JSON.stringify(payload),
+  });
+  const text = await res.text();
+  let data: any = null;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    // non-JSON response (HTML error page, etc.)
+  }
+  return { status: res.status, data, text };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
 
-  let body: any;
   try {
-    body = await req.json();
-  } catch {
-    return json({ error: "Requête invalide." }, 400);
-  }
+    let body: any;
+    try {
+      body = await req.json();
+    } catch {
+      return json({ error: "Requête invalide." }, 400);
+    }
 
-  const { offer, tg, operator, fullName, phone, email } = body ?? {};
-  if (!offer || !operator || !phone) {
-    return json({ error: "Champs manquants (offre, opérateur, numéro)." }, 400);
-  }
+    const { offer, tg, operator, fullName, phone, email } = body ?? {};
+    if (!offer || !operator || !phone) {
+      return json({ error: "Champs manquants (offre, opérateur, numéro)." }, 400);
+    }
 
-  const { data: plan } = await admin
-    .from("plans")
-    .select("id, name, price, group_id, interval_days")
-    .eq("id", offer)
-    .maybeSingle();
-  if (!plan) return json({ error: "Offre introuvable." }, 404);
+    const { data: plan } = await admin
+      .from("plans")
+      .select("id, name, price, group_id, interval_days")
+      .eq("id", offer)
+      .maybeSingle();
+    if (!plan) return json({ error: "Offre introuvable." }, 404);
 
   // 1) Créer la facture.
   const invoiceBody = {
@@ -91,54 +109,60 @@ Deno.serve(async (req) => {
     },
   };
 
-  const inv = await fetch(`${PD_BASE}/checkout-invoice/create`, {
-    method: "POST",
-    headers: H,
-    body: JSON.stringify(invoiceBody),
-  }).then((r) => r.json());
+    const inv = await pdPost("checkout-invoice/create", invoiceBody);
+    if (inv.data?.response_code !== "00" || !inv.data?.token) {
+      return json(
+        { error: "Création de la facture impossible.", detail: inv.data ?? inv.text },
+        502,
+      );
+    }
+    const token = inv.data.token;
 
-  if (inv.response_code !== "00" || !inv.token) {
-    console.error("invoice error", JSON.stringify(inv));
-    return json({ error: "Création de la facture impossible.", detail: inv }, 502);
+    // 2) Déclencher le paiement sur l'opérateur.
+    let endpoint = "";
+    let payload: Record<string, unknown> = {};
+    if (operator === "wave") {
+      endpoint = "softpay/wave-senegal";
+      payload = {
+        wave_senegal_fullName: fullName || "Client Paylika",
+        wave_senegal_email: email || "client@paylika.app",
+        wave_senegal_phone: phone,
+        wave_senegal_payment_token: token,
+      };
+    } else if (operator === "orange_money") {
+      endpoint = "softpay/orange-money-senegal";
+      payload = {
+        customer_name: fullName || "Client Paylika",
+        customer_email: email || "client@paylika.app",
+        phone_number: phone,
+        customer_address: "Dakar",
+        invoice_token: token,
+      };
+    } else {
+      return json({ error: "Opérateur non supporté." }, 400);
+    }
+
+    const sp = await pdPost(endpoint, payload);
+    if (!sp.data) {
+      // non-JSON → SOFTPAY probablement pas activé, ou endpoint indisponible.
+      return json(
+        {
+          error: "SOFTPAY indisponible pour cet opérateur.",
+          status: sp.status,
+          detail: sp.text?.slice(0, 300),
+        },
+        502,
+      );
+    }
+
+    return json({
+      ok: sp.data.success === true || sp.data.success === "true" || !!sp.data.url,
+      url: sp.data.url ?? null,
+      message: sp.data.message ?? "",
+      token,
+      raw: sp.data,
+    });
+  } catch (e) {
+    return json({ error: "Erreur serveur.", detail: String(e) }, 500);
   }
-  const token = inv.token;
-
-  // 2) Déclencher le paiement sur l'opérateur.
-  let endpoint = "";
-  let payload: Record<string, unknown> = {};
-  if (operator === "wave") {
-    endpoint = "softpay/wave-senegal";
-    payload = {
-      wave_senegal_fullName: fullName || "Client Paylika",
-      wave_senegal_email: email || "client@paylika.app",
-      wave_senegal_phone: phone,
-      wave_senegal_payment_token: token,
-    };
-  } else if (operator === "orange_money") {
-    endpoint = "softpay/orange-money-senegal";
-    payload = {
-      customer_name: fullName || "Client Paylika",
-      customer_email: email || "client@paylika.app",
-      phone_number: phone,
-      customer_address: "Dakar",
-      invoice_token: token,
-    };
-  } else {
-    return json({ error: "Opérateur non supporté." }, 400);
-  }
-
-  const sp = await fetch(`${PD_BASE}/${endpoint}`, {
-    method: "POST",
-    headers: H,
-    body: JSON.stringify(payload),
-  }).then((r) => r.json());
-
-  // Wave renvoie généralement { success, url } (URL Wave à ouvrir).
-  return json({
-    ok: sp.success === true || sp.success === "true" || !!sp.url,
-    url: sp.url ?? null,
-    message: sp.message ?? "",
-    token,
-    raw: sp,
-  });
 });

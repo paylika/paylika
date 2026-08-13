@@ -16,8 +16,8 @@ import { colors } from "@/theme/colors";
 import { fetchOffre, type Offre } from "@/data/queries";
 import { formatInt } from "@/components/cards";
 
-const SOFTPAY_URL =
-  "https://xkdiodbppotyiyldlwbg.functions.supabase.co/paydunya-softpay";
+const CREATE_URL =
+  "https://xkdiodbppotyiyldlwbg.functions.supabase.co/unitech-create";
 
 function redirect(url: string) {
   if (Platform.OS === "web" && typeof window !== "undefined") {
@@ -38,14 +38,11 @@ export default function PayScreen() {
   const [operator, setOperator] = useState<"wave" | "orange_money">("wave");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [pending, setPending] = useState(false);
 
   useEffect(() => {
     (async () => {
       try {
         setPlan(await fetchOffre(String(offer)));
-      } catch {
-        setError("Offre introuvable.");
       } finally {
         setLoading(false);
       }
@@ -53,34 +50,29 @@ export default function PayScreen() {
   }, [offer]);
 
   const phoneOk = phone.replace(/\D/g, "").length >= 9;
-  const valid = phoneOk && fullName.trim().length > 0;
 
   async function pay() {
-    if (!valid || submitting) return;
+    if (!phoneOk || submitting) return;
     setSubmitting(true);
     setError(null);
     try {
-      const res = await fetch(SOFTPAY_URL, {
+      const res = await fetch(CREATE_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           offer: String(offer),
           tg: tg ?? "",
           operator,
-          fullName: fullName.trim(),
           phone: phone.replace(/\s/g, ""),
+          fullName: fullName.trim(),
         }),
       });
       const data = await res.json();
-      if (data.url) {
+      if (data.ok && data.url) {
         redirect(data.url);
         return;
       }
-      if (data.ok) {
-        setPending(true);
-      } else {
-        setError(data.error || data.message || "Paiement impossible. Réessayez.");
-      }
+      setError(data.error || "Paiement impossible. Réessayez.");
     } catch {
       setError("Connexion impossible. Réessayez.");
     } finally {
@@ -101,7 +93,6 @@ export default function PayScreen() {
       }}
     >
       <View style={{ width: "100%", maxWidth: 440, gap: 16 }}>
-        {/* Brand */}
         <View className="items-center">
           <Logo size={44} />
           <Text className="mt-2 font-display text-[22px] text-ink" style={{ letterSpacing: -0.5 }}>
@@ -117,24 +108,10 @@ export default function PayScreen() {
           </Card>
         ) : !plan ? (
           <Card>
-            <Text className="font-sans text-[13px] text-ink-muted">
-              {error ?? "Offre introuvable."}
-            </Text>
-          </Card>
-        ) : pending ? (
-          <Card>
-            <Eyebrow>Presque fini</Eyebrow>
-            <Text className="mt-2 font-display-semi text-[18px] text-ink">
-              Confirmez sur votre téléphone
-            </Text>
-            <Text className="mt-2 font-sans text-[13px] text-ink-muted">
-              Validez la demande de paiement reçue sur votre mobile. Dès la
-              confirmation, votre accès au groupe arrive sur Telegram. ✅
-            </Text>
+            <Text className="font-sans text-[13px] text-ink-muted">Offre introuvable.</Text>
           </Card>
         ) : (
           <>
-            {/* Offer summary */}
             <Card>
               <View className="flex-row items-start justify-between">
                 <View className="flex-1 pr-3">
@@ -155,7 +132,6 @@ export default function PayScreen() {
               </View>
             </Card>
 
-            {/* Payment form */}
             <Card>
               <View style={{ gap: 16 }}>
                 <Segmented
@@ -168,7 +144,7 @@ export default function PayScreen() {
                   ]}
                 />
                 <Input
-                  label="Nom complet"
+                  label="Nom complet (optionnel)"
                   value={fullName}
                   onChangeText={setFullName}
                   placeholder="Ex. Awa Ndiaye"
@@ -185,12 +161,12 @@ export default function PayScreen() {
                 ) : null}
                 <Button
                   label={submitting ? "Traitement…" : `Payer ${formatInt(plan.price)} ${plan.currency}`}
-                  icon="check"
+                  icon="arrow-up-right"
                   variant="accent"
                   onPress={pay}
                 />
                 <Text className="text-center font-sans text-[11px] text-ink-muted">
-                  Paiement sécurisé · l'accès est envoyé sur Telegram après confirmation.
+                  Vous serez redirigé vers {operator === "wave" ? "Wave" : "Orange Money"} pour confirmer. L'accès arrive sur Telegram.
                 </Text>
               </View>
             </Card>
