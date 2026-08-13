@@ -62,7 +62,9 @@ Deno.serve(async (req) => {
         amount: Number(plan.price),
         customer_number: String(phone).replace(/\s/g, ""),
         description: `Abonnement Paylika : ${plan.name}`,
-        callback_success: `${FUNCTIONS_BASE}/unitech-webhook`,
+        // Redirection navigateur après paiement → retour sur Telegram (propre).
+        // La notification serveur passe par le webhook configuré côté UniTech.
+        callback_success: "https://t.me/Paylikabot",
         callback_cancel: "https://t.me/Paylikabot",
       }),
     });
