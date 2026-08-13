@@ -52,7 +52,22 @@ export function TopBar() {
             accessibilityLabel="Paylika"
           />
           <View className="flex-row items-center" style={{ gap: 8 }}>
-            <IconButton name="bell" tone="sand" size={40} />
+            <Pressable onPress={() => router.push("/notifications" as any)}>
+              <IconButton name="bell" tone="sand" size={40} />
+              <View
+                style={{
+                  position: "absolute",
+                  top: 8,
+                  right: 8,
+                  width: 8,
+                  height: 8,
+                  borderRadius: 4,
+                  backgroundColor: colors.bordeaux[600],
+                  borderWidth: 1.5,
+                  borderColor: colors.card,
+                }}
+              />
+            </Pressable>
             <Pressable onPress={() => router.push("/reglages" as any)}>
               <Avatar initials="AB" size={40} tone="ink" />
             </Pressable>

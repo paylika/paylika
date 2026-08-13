@@ -384,3 +384,57 @@ export async function createPayout(input: {
   });
   if (error) throw error;
 }
+
+export type Notif = {
+  id: string;
+  kind: "expired" | "expiring" | "payment";
+  title: string;
+  subtitle: string;
+  date: string | null;
+};
+
+/** Derived activity feed for the notifications view. */
+export async function fetchNotifications(): Promise<Notif[]> {
+  const [subs, money] = await Promise.all([fetchSubscribers(), fetchMoney()]);
+  const now = Date.now();
+  const notifs: Notif[] = [];
+
+  for (const s of subs) {
+    if (s.status === "expired") {
+      notifs.push({
+        id: `exp-${s.id}`,
+        kind: "expired",
+        title: `${s.name} — accès expiré`,
+        subtitle: `${s.groupName} · à relancer`,
+        date: s.expiresAt,
+      });
+    } else if (s.status === "active" && s.expiresAt) {
+      const days = (new Date(s.expiresAt).getTime() - now) / 86400000;
+      if (days <= 3) {
+        notifs.push({
+          id: `soon-${s.id}`,
+          kind: "expiring",
+          title: `${s.name} — expire bientôt`,
+          subtitle: `${s.groupName} · dans ${Math.max(0, Math.ceil(days))} j`,
+          date: s.expiresAt,
+        });
+      }
+    }
+  }
+
+  for (const t of money.transactions.filter((t) => t.kind === "in").slice(0, 6)) {
+    notifs.push({
+      id: t.id,
+      kind: "payment",
+      title: "Paiement reçu",
+      subtitle: t.label,
+      date: t.date,
+    });
+  }
+
+  return notifs.sort((a, b) => {
+    const da = a.date ? new Date(a.date).getTime() : 0;
+    const db = b.date ? new Date(b.date).getTime() : 0;
+    return db - da;
+  });
+}

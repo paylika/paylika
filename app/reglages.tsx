@@ -1,6 +1,7 @@
-import { View, Text } from "react-native";
+import { View, Text, Pressable, Linking } from "react-native";
+import { useRouter } from "expo-router";
 import { Screen, PageTitle } from "@/components/Screen";
-import { Card, Tag } from "@/components/ui";
+import { Card, Tag, Avatar } from "@/components/ui";
 import { Icon, type IconName } from "@/components/Icon";
 import { colors } from "@/theme/colors";
 
@@ -9,17 +10,20 @@ function SettingRow({
   title,
   subtitle,
   status,
+  onPress,
   last,
 }: {
   icon: IconName;
   title: string;
   subtitle: string;
   status: "connecté" | "à connecter" | "bientôt";
+  onPress?: () => void;
   last?: boolean;
 }) {
   const tone = status === "connecté" ? "bordeaux" : "sand";
   return (
-    <View
+    <Pressable
+      onPress={onPress}
       className={`flex-row items-center py-3.5 ${last ? "" : "border-b border-ink/[0.06]"}`}
     >
       <View className="h-9 w-9 items-center justify-center rounded-full bg-bordeaux-50">
@@ -30,11 +34,15 @@ function SettingRow({
         <Text className="mt-0.5 font-sans text-[12px] text-ink-muted">{subtitle}</Text>
       </View>
       <Tag tone={tone as "bordeaux" | "sand"}>{status}</Tag>
-    </View>
+      <View className="ml-2">
+        <Icon name="chevron-right" size={16} color={colors.muted} />
+      </View>
+    </Pressable>
   );
 }
 
 export default function ReglagesScreen() {
+  const router = useRouter();
   return (
     <Screen>
       <PageTitle
@@ -43,18 +51,42 @@ export default function ReglagesScreen() {
         subtitle="Connexions, moyens de paiement et branding."
       />
 
+      {/* Profile card */}
+      <Card>
+        <View className="flex-row items-center">
+          <Avatar initials="AB" size={52} tone="bordeaux" />
+          <View className="ml-3 flex-1">
+            <Text className="font-display-semi text-[16px] text-ink">Mon compte</Text>
+            <Text className="mt-0.5 font-sans text-[12px] text-ink-muted">
+              insadioufjr@gmail.com
+            </Text>
+          </View>
+          <Tag tone="sand">Propriétaire</Tag>
+        </View>
+      </Card>
+
+      {/* Connections */}
       <Card>
         <SettingRow
           icon="send"
           title="Bot Telegram"
-          subtitle="@PaylikaBot — gestion des accès"
-          status="à connecter"
+          subtitle="@Paylikabot — gestion des accès"
+          status="connecté"
+          onPress={() => router.push("/acces" as any)}
         />
         <SettingRow
           icon="arrow-up-right"
           title="Moyen de paiement"
-          subtitle="Wave, Orange Money, PayDunya…"
+          subtitle="PayDunya (Wave, Orange Money…)"
           status="à connecter"
+          onPress={() => Linking.openURL("https://paydunya.com")}
+        />
+        <SettingRow
+          icon="wallet"
+          title="Retraits"
+          subtitle="Solde et historique des retraits"
+          status="connecté"
+          onPress={() => router.push("/argent" as any)}
         />
         <SettingRow
           icon="user"

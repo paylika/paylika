@@ -7,6 +7,7 @@ import { Icon } from "@/components/Icon";
 import { colors } from "@/theme/colors";
 import { fetchOffres, deleteOffer, type Offre } from "@/data/queries";
 import { formatInt } from "@/components/cards";
+import { copyOrShare } from "@/lib/clipboard";
 
 function intervalLabel(days: number): string {
   if (days >= 360) return "an";
@@ -14,6 +15,8 @@ function intervalLabel(days: number): string {
   if (days >= 28 && days <= 31) return "mois";
   return `${days} j`;
 }
+
+const BOT = "https://t.me/Paylikabot";
 
 function OffreCard({
   offre,
@@ -25,6 +28,17 @@ function OffreCard({
   onDelete: () => void;
 }) {
   const [confirming, setConfirming] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const payLink = `${BOT}?start=${offre.id}`;
+
+  async function copy() {
+    const r = await copyOrShare(payLink);
+    if (r !== "failed") {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1600);
+    }
+  }
+
   return (
     <Card>
       <View className="flex-row items-start justify-between">
@@ -46,33 +60,40 @@ function OffreCard({
         </View>
       </View>
 
-      <View className="mt-4 flex-row items-center justify-between border-t border-ink/[0.06] pt-3">
-        <View className="flex-row items-center" style={{ gap: 6 }}>
-          <Icon name="send" size={15} color={colors.bordeaux[600]} />
-          <Text className="font-medium text-[12px] text-bordeaux-700">
-            paylika.me/{offre.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 16)}
+      {/* Copyable payment link */}
+      <Pressable
+        onPress={copy}
+        className="mt-4 flex-row items-center justify-between rounded-2xl bg-paper border border-ink/[0.07] px-3.5 py-3"
+      >
+        <View className="flex-1 flex-row items-center pr-2" style={{ gap: 6 }}>
+          <Icon name="send" size={14} color={colors.bordeaux[600]} />
+          <Text numberOfLines={1} className="flex-1 font-medium text-[12px] text-bordeaux-700">
+            t.me/Paylikabot?start={offre.id.slice(0, 8)}…
           </Text>
         </View>
+        <View className="flex-row items-center rounded-full bg-bordeaux-600 px-3 py-1.5" style={{ gap: 4 }}>
+          {copied ? <Icon name="check" size={12} color={colors.white} strokeWidth={2.6} /> : null}
+          <Text className="font-semibold text-[11px] text-white">
+            {copied ? "Copié" : "Copier"}
+          </Text>
+        </View>
+      </Pressable>
 
+      {/* Actions */}
+      <View className="mt-3 flex-row items-center justify-end">
         {confirming ? (
           <View className="flex-row items-center" style={{ gap: 8 }}>
             <Text className="font-medium text-[12px] text-ink-muted">Supprimer ?</Text>
             <Pressable onPress={onDelete} className="rounded-full bg-bordeaux-600 px-3 py-1.5">
               <Text className="font-semibold text-[12px] text-white">Oui</Text>
             </Pressable>
-            <Pressable
-              onPress={() => setConfirming(false)}
-              className="rounded-full bg-sand px-3 py-1.5"
-            >
+            <Pressable onPress={() => setConfirming(false)} className="rounded-full bg-sand px-3 py-1.5">
               <Text className="font-semibold text-[12px] text-ink">Non</Text>
             </Pressable>
           </View>
         ) : (
           <View className="flex-row items-center" style={{ gap: 6 }}>
-            <Pressable
-              onPress={onEdit}
-              className="h-8 w-8 items-center justify-center rounded-full bg-sand"
-            >
+            <Pressable onPress={onEdit} className="h-8 w-8 items-center justify-center rounded-full bg-sand">
               <Icon name="pencil" size={15} color={colors.ink} />
             </Pressable>
             <Pressable

@@ -14,6 +14,10 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN");
 const WEBHOOK_SECRET = Deno.env.get("TELEGRAM_WEBHOOK_SECRET");
 const API = `https://api.telegram.org/bot${TOKEN}`;
+const FUNCTIONS_BASE = (Deno.env.get("SUPABASE_URL") ?? "").replace(
+  ".supabase.co",
+  ".functions.supabase.co",
+);
 
 // Service-role client — bypasses RLS (server-side only).
 const admin = createClient(
@@ -73,6 +77,11 @@ Deno.serve(async (req) => {
 async function handleStart(message: any) {
   const from = message.from;
   const chatId = message.chat.id;
+
+  // "/start <offerId>" — deep-link payload from an offer's payment link.
+  const parts = (message.text ?? "").split(" ");
+  const payload = parts.length > 1 ? parts[1].trim() : "";
+
   await admin.from("telegram_users").upsert(
     {
       telegram_user_id: from.id,
@@ -82,10 +91,28 @@ async function handleStart(message: any) {
     },
     { onConflict: "telegram_user_id" },
   );
-  await sendMessage(
-    chatId,
-    "👋 Bienvenue sur <b>Paylika</b>.\n\nVotre accès sera géré automatiquement une fois votre paiement confirmé.",
-  );
+
+  if (payload) {
+    // Offer deep link → present a "Pay" button (routes through paydunya-create).
+    const payUrl =
+      `${FUNCTIONS_BASE}/paydunya-create?offer=${encodeURIComponent(payload)}` +
+      `&tg=${from.id}`;
+    await tg("sendMessage", {
+      chat_id: chatId,
+      text:
+        "💳 <b>Paylika</b>\n\nPour accéder au groupe, effectuez votre paiement ci-dessous. " +
+        "Dès qu'il est confirmé, vous recevrez votre lien d'accès ici même.",
+      parse_mode: "HTML",
+      reply_markup: {
+        inline_keyboard: [[{ text: "Payer maintenant", url: payUrl }]],
+      },
+    });
+  } else {
+    await sendMessage(
+      chatId,
+      "👋 Bienvenue sur <b>Paylika</b>.\n\nVotre accès sera géré automatiquement une fois votre paiement confirmé.",
+    );
+  }
 }
 
 async function handleJoinRequest(reqEvt: any) {
