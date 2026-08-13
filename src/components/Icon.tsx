@@ -27,6 +27,7 @@ export type IconName =
   | "trend-up"
   | "spark"
   | "chevron-right"
+  | "chevron-left"
   | "chevron-down"
   | "pencil"
   | "dots"
@@ -142,6 +143,9 @@ export function Icon({
       )}
       {name === "chevron-right" && (
         <Polyline points="9 5 16 12 9 19" {...stroke} />
+      )}
+      {name === "chevron-left" && (
+        <Polyline points="15 5 8 12 15 19" {...stroke} />
       )}
       {name === "chevron-down" && (
         <Polyline points="5 9 12 16 19 9" {...stroke} />

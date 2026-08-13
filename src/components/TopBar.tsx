@@ -3,17 +3,14 @@ import {
   Text,
   Pressable,
   ScrollView,
-  Image,
   useWindowDimensions,
 } from "react-native";
 import { usePathname, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Avatar, IconButton } from "./ui";
-import { Icon } from "./Icon";
+import { Avatar } from "./ui";
+import { Icon, Logo } from "./Icon";
 import { colors } from "@/theme/colors";
 import { maxWidthFor } from "./Screen";
-
-const LOGO = require("../../assets/logo-trimmed.png");
 
 const TABS: { label: string; path: string }[] = [
   { label: "Accueil", path: "/" },
@@ -28,7 +25,21 @@ function isActive(pathname: string, path: string) {
   return path === "/" ? pathname === "/" : pathname.startsWith(path);
 }
 
-/** Persistent top bar: brand + search + tab navigation (expo-router). */
+function Brand() {
+  return (
+    <View className="flex-row items-center">
+      <Logo size={30} />
+      <Text
+        className="ml-2 font-display text-[21px] text-ink"
+        style={{ letterSpacing: -0.5 }}
+      >
+        Pay<Text className="text-bordeaux-600">lika</Text>
+      </Text>
+    </View>
+  );
+}
+
+/** Persistent top bar: brand (or back) + search + tab navigation. */
 export function TopBar() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -37,23 +48,31 @@ export function TopBar() {
   const wide = width >= 900;
   const maxW = maxWidthFor(wide);
 
+  // A sub-page is any route that isn't one of the top-level tabs.
+  const isSubPage = !TABS.some((t) => t.path === pathname);
+  const goBack = () => (router.canGoBack() ? router.back() : router.replace("/"));
+
   return (
-    <View
-      style={{ paddingTop: insets.top }}
-      className="bg-card items-center border-b border-ink/[0.06]"
-    >
+    <View style={{ paddingTop: insets.top }} className="bg-paper items-center">
       <View style={{ width: "100%", maxWidth: maxW }} className="px-5 pt-2 pb-1">
-        {/* Brand + actions */}
+        {/* Brand / back + actions */}
         <View className="flex-row items-center justify-between">
-          <Image
-            source={LOGO}
-            resizeMode="contain"
-            style={{ width: 118, height: 32 }}
-            accessibilityLabel="Paylika"
-          />
+          <View className="flex-row items-center" style={{ gap: 10 }}>
+            {isSubPage ? (
+              <Pressable
+                onPress={goBack}
+                className="h-10 w-10 items-center justify-center rounded-full bg-card border border-ink/[0.07]"
+              >
+                <Icon name="chevron-left" size={20} color={colors.ink} strokeWidth={2} />
+              </Pressable>
+            ) : null}
+            <Brand />
+          </View>
           <View className="flex-row items-center" style={{ gap: 8 }}>
             <Pressable onPress={() => router.push("/notifications" as any)}>
-              <IconButton name="bell" tone="sand" size={40} />
+              <View className="h-10 w-10 items-center justify-center rounded-full bg-card border border-ink/[0.07]">
+                <Icon name="bell" size={19} color={colors.ink} />
+              </View>
               <View
                 style={{
                   position: "absolute",
@@ -64,7 +83,7 @@ export function TopBar() {
                   borderRadius: 4,
                   backgroundColor: colors.bordeaux[600],
                   borderWidth: 1.5,
-                  borderColor: colors.card,
+                  borderColor: colors.paper,
                 }}
               />
             </Pressable>
@@ -75,7 +94,7 @@ export function TopBar() {
         </View>
 
         {/* Search */}
-        <View className="mt-4 flex-row items-center rounded-2xl bg-paper border border-ink/[0.08] px-4 py-3">
+        <View className="mt-4 flex-row items-center rounded-2xl bg-card border border-ink/[0.07] px-4 py-3">
           <Icon name="search" size={18} color={colors.muted} />
           <Text className="ml-3 flex-1 font-sans text-[14px] text-ink-muted">
             Rechercher un abonné, un groupe…
