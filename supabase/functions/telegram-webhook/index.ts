@@ -18,6 +18,8 @@ const FUNCTIONS_BASE = (Deno.env.get("SUPABASE_URL") ?? "").replace(
   ".supabase.co",
   ".functions.supabase.co",
 );
+// Public Paylika web app (branded checkout page).
+const APP_URL = Deno.env.get("PAYLIKA_APP_URL") ?? "https://paylika.paylika-app.workers.dev";
 
 // Service-role client — bypasses RLS (server-side only).
 const admin = createClient(
@@ -93,10 +95,8 @@ async function handleStart(message: any) {
   );
 
   if (payload) {
-    // Offer deep link → present a "Pay" button (routes through paydunya-create).
-    const payUrl =
-      `${FUNCTIONS_BASE}/paydunya-create?offer=${encodeURIComponent(payload)}` +
-      `&tg=${from.id}`;
+    // Offer deep link → present a "Pay" button (Paylika branded checkout page).
+    const payUrl = `${APP_URL}/pay/${encodeURIComponent(payload)}?tg=${from.id}`;
     await tg("sendMessage", {
       chat_id: chatId,
       text:
