@@ -1,0 +1,10 @@
+{
+  // Cloudflare Workers static-assets deploy for the Expo web build.
+  "name": "paylika",
+  "compatibility_date": "2025-01-01",
+  "assets": {
+    "directory": "./dist",
+    // serve index.html for unknown routes (client-side routing / deep links)
+    "not_found_handling": "single-page-application"
+  }
+}
