@@ -1,17 +1,45 @@
-// Paylika — Telegram webhook (Supabase Edge Function).
+// Paylika — Telegram webhook (Supabase Edge Function, self-contained single file
+// so it can be pasted straight into the Supabase dashboard function editor).
 //
-// Receives Telegram updates and:
-//  1. /start        -> capture the user (chat_id + telegram id) so we can DM them later
-//  2. join request  -> approve only if the user has an ACTIVE subscription for that group
-//  3. my_chat_member-> register a chat where the bot was made admin (to link it in-app)
+// Handles:
+//  1. /start         -> capture the user (chat_id + telegram id) to DM them later
+//  2. join request   -> approve only if the user has an ACTIVE subscription for that group
+//  3. my_chat_member -> register a chat where the bot became admin (to link it in-app)
 //
-// Deploy:  supabase functions deploy telegram-webhook --no-verify-jwt
-// Secrets: TELEGRAM_BOT_TOKEN, TELEGRAM_WEBHOOK_SECRET  (see supabase/functions/README.md)
+// Secrets required: TELEGRAM_BOT_TOKEN, TELEGRAM_WEBHOOK_SECRET
+// (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are injected automatically.)
 
-import { admin } from "../_shared/supabase.ts";
-import { sendMessage, approveJoin, declineJoin } from "../_shared/telegram.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+const TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN");
 const WEBHOOK_SECRET = Deno.env.get("TELEGRAM_WEBHOOK_SECRET");
+const API = `https://api.telegram.org/bot${TOKEN}`;
+
+// Service-role client — bypasses RLS (server-side only).
+const admin = createClient(
+  Deno.env.get("SUPABASE_URL")!,
+  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+  { auth: { persistSession: false, autoRefreshToken: false } },
+);
+
+async function tg(method: string, payload: Record<string, unknown>) {
+  if (!TOKEN) throw new Error("TELEGRAM_BOT_TOKEN manquant.");
+  const res = await fetch(`${API}/${method}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!data.ok) console.error("Telegram error:", method, JSON.stringify(data));
+  return data;
+}
+
+const sendMessage = (chat_id: number, text: string) =>
+  tg("sendMessage", { chat_id, text, parse_mode: "HTML" });
+const approveJoin = (chat_id: number, user_id: number) =>
+  tg("approveChatJoinRequest", { chat_id, user_id });
+const declineJoin = (chat_id: number, user_id: number) =>
+  tg("declineChatJoinRequest", { chat_id, user_id });
 
 Deno.serve(async (req) => {
   // Only Telegram (with our shared secret header) may call this.
@@ -36,18 +64,15 @@ Deno.serve(async (req) => {
       await handleMyChatMember(update.my_chat_member);
     }
   } catch (e) {
-    // Never fail the response, or Telegram will retry-storm.
-    console.error("handler error:", e);
+    console.error("handler error:", e); // never fail the response
   }
 
   return new Response("ok");
 });
 
-/** /start — remember who this user is so we can message them later. */
 async function handleStart(message: any) {
   const from = message.from;
   const chatId = message.chat.id;
-
   await admin.from("telegram_users").upsert(
     {
       telegram_user_id: from.id,
@@ -57,32 +82,23 @@ async function handleStart(message: any) {
     },
     { onConflict: "telegram_user_id" },
   );
-
-  // TODO: read the deep-link payload ("/start <offerId>") to route straight to payment.
   await sendMessage(
     chatId,
     "👋 Bienvenue sur <b>Paylika</b>.\n\nVotre accès sera géré automatiquement une fois votre paiement confirmé.",
   );
 }
 
-/** Approve a join request only if the user has an active subscription for that group. */
-async function handleJoinRequest(req: any) {
-  const chatId = req.chat.id;
-  const userId = req.from.id;
+async function handleJoinRequest(reqEvt: any) {
+  const chatId = reqEvt.chat.id;
+  const userId = reqEvt.from.id;
 
-  // Which Paylika group is this Telegram chat linked to?
   const { data: conn } = await admin
     .from("telegram_connections")
     .select("group_id")
     .eq("chat_id", chatId)
     .maybeSingle();
+  if (!conn?.group_id) return; // chat not linked yet
 
-  if (!conn?.group_id) {
-    // Chat not linked yet — leave the request pending (owner links it in-app first).
-    return;
-  }
-
-  // Find the subscriber behind this Telegram user.
   const { data: sub } = await admin
     .from("subscribers")
     .select("id")
@@ -102,20 +118,13 @@ async function handleJoinRequest(req: any) {
     active = !!subscription;
   }
 
-  if (active) {
-    await approveJoin(chatId, userId);
-  } else {
-    await declineJoin(chatId, userId);
-    // TODO: DM the user a payment link (requires they have /started the bot).
-  }
+  if (active) await approveJoin(chatId, userId);
+  else await declineJoin(chatId, userId);
 }
 
-/** Register / update a chat where the bot's admin status changed. */
 async function handleMyChatMember(evt: any) {
   const chat = evt.chat;
-  const status = evt.new_chat_member?.status;
-  const isAdmin = status === "administrator";
-
+  const isAdmin = evt.new_chat_member?.status === "administrator";
   await admin.from("telegram_connections").upsert(
     {
       chat_id: chat.id,

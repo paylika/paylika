@@ -1,65 +1,44 @@
-# Paylika — Edge Functions (bot Telegram)
+# Paylika — Edge Function bot Telegram
 
-Webhook Telegram : `telegram-webhook/`. Il gère `/start`, les demandes d'adhésion
-(approuve seulement les abonnés actifs) et l'enregistrement des chats où le bot est admin.
+Webhook Telegram : [`telegram-webhook/index.ts`](telegram-webhook/index.ts) (fichier autonome).
+Gère `/start`, les demandes d'adhésion (approuve seulement les abonnés actifs) et
+l'enregistrement des chats où le bot est admin.
 
-## Prérequis (une fois)
+## Voie recommandée : tout depuis le dashboard (sans terminal)
 
-1. **Tables Telegram** : exécuter [`../telegram_schema.sql`](../telegram_schema.sql) dans le SQL Editor.
-2. **CLI Supabase** (Windows) :
-   ```bash
-   scoop bucket add supabase https://github.com/supabase/scoop-bucket.git
-   scoop install supabase
-   ```
-   ou en local : `npm install --save-dev supabase` puis préfixer par `npx`.
-3. **Lier le projet** :
-   ```bash
-   supabase login
-   supabase link --project-ref xkdiodbppotyiyldlwbg
-   ```
+### 1. Tables Telegram
+SQL Editor → exécuter [`../telegram_schema.sql`](../telegram_schema.sql).
 
-## Secrets (jamais dans le code / le chat)
+### 2. Créer la fonction
+Dashboard → **Edge Functions** → **Create function** → nom `telegram-webhook` →
+coller tout le contenu de [`telegram-webhook/index.ts`](telegram-webhook/index.ts) → **Deploy**.
 
-Génère un secret de webhook **localement** (ne le colle pas dans le chat) :
-```bash
-openssl rand -hex 32
+### 3. Secrets
+Dashboard → **Edge Functions** → **Secrets** (ou Project Settings → Edge Functions) :
+- `TELEGRAM_BOT_TOKEN` = le token BotFather (le nouveau, régénéré)
+- `TELEGRAM_WEBHOOK_SECRET` = une chaîne aléatoire que tu choisis (ex. 32 caractères)
+
+> `SUPABASE_URL` et `SUPABASE_SERVICE_ROLE_KEY` sont injectés automatiquement.
+
+### 4. Brancher le webhook Telegram (dans le navigateur)
+Colle cette URL dans la barre d'adresse (remplace `<TOKEN>` et `<SECRET>`) :
 ```
-
-Puis enregistre les secrets côté Supabase :
-```bash
-supabase secrets set TELEGRAM_BOT_TOKEN=<ton_nouveau_token_botfather>
-supabase secrets set TELEGRAM_WEBHOOK_SECRET=<le_hex_généré_ci-dessus>
+https://api.telegram.org/bot<TOKEN>/setWebhook?url=https://xkdiodbppotyiyldlwbg.functions.supabase.co/telegram-webhook&secret_token=<SECRET>&allowed_updates=["message","chat_join_request","my_chat_member"]
 ```
-> `SUPABASE_URL` et `SUPABASE_SERVICE_ROLE_KEY` sont injectés automatiquement — rien à faire.
+Réponse attendue : `{"ok":true,"result":true,...}`.
 
-## Déploiement
+Vérifier : `https://api.telegram.org/bot<TOKEN>/getWebhookInfo`
 
+### 5. Tester
+- `t.me/Paylikabot` → **Démarrer** → message de bienvenue + 1 ligne dans `telegram_users`.
+- Ajouter le bot comme **admin** d'un groupe test → 1 ligne dans `telegram_connections`.
+
+---
+
+## Alternative : CLI (si tu préfères le terminal)
 ```bash
+supabase login
+supabase link --project-ref xkdiodbppotyiyldlwbg
+supabase secrets set TELEGRAM_BOT_TOKEN=... TELEGRAM_WEBHOOK_SECRET=...
 supabase functions deploy telegram-webhook --no-verify-jwt
 ```
-`--no-verify-jwt` car Telegram appelle la fonction sans JWT (on la protège via le
-header secret `x-telegram-bot-api-secret-token`).
-
-L'URL de la fonction sera :
-```
-https://xkdiodbppotyiyldlwbg.functions.supabase.co/telegram-webhook
-```
-
-## Brancher le webhook Telegram
-
-Dis à Telegram d'envoyer les updates à la fonction (remplace `<TOKEN>` et `<SECRET>`) :
-```bash
-curl "https://api.telegram.org/bot<TOKEN>/setWebhook?url=https://xkdiodbppotyiyldlwbg.functions.supabase.co/telegram-webhook&secret_token=<SECRET>&allowed_updates=[\"message\",\"chat_join_request\",\"my_chat_member\"]"
-```
-
-Vérifier :
-```bash
-curl "https://api.telegram.org/bot<TOKEN>/getWebhookInfo"
-```
-
-## Tester
-
-1. Ouvre `t.me/Paylikabot` → **Démarrer** → tu dois recevoir le message de bienvenue,
-   et une ligne apparaît dans `public.telegram_users`.
-2. Ajoute le bot comme **admin** d'un groupe test → une ligne apparaît dans
-   `public.telegram_connections` (status `pending`).
