@@ -1,9 +1,10 @@
 import { View, Text, Pressable, Linking } from "react-native";
 import { useRouter } from "expo-router";
 import { Screen, PageTitle } from "@/components/Screen";
-import { Card, Tag, Avatar } from "@/components/ui";
+import { Card, Tag, Avatar, Button } from "@/components/ui";
 import { Icon, type IconName } from "@/components/Icon";
 import { colors } from "@/theme/colors";
+import { useAuth, signOut } from "@/lib/auth";
 
 function SettingRow({
   icon,
@@ -43,6 +44,15 @@ function SettingRow({
 
 export default function ReglagesScreen() {
   const router = useRouter();
+  const { session } = useAuth();
+  const email = session?.user?.email ?? "—";
+  const initials = (email[0] ?? "P").toUpperCase();
+
+  async function logout() {
+    await signOut();
+    router.replace("/login");
+  }
+
   return (
     <Screen>
       <PageTitle
@@ -54,12 +64,10 @@ export default function ReglagesScreen() {
       {/* Profile card */}
       <Card>
         <View className="flex-row items-center">
-          <Avatar initials="AB" size={52} tone="bordeaux" />
+          <Avatar initials={initials} size={52} tone="bordeaux" />
           <View className="ml-3 flex-1">
             <Text className="font-display-semi text-[16px] text-ink">Mon compte</Text>
-            <Text className="mt-0.5 font-sans text-[12px] text-ink-muted">
-              insadioufjr@gmail.com
-            </Text>
+            <Text className="mt-0.5 font-sans text-[12px] text-ink-muted">{email}</Text>
           </View>
           <Tag tone="sand">Propriétaire</Tag>
         </View>
@@ -96,6 +104,8 @@ export default function ReglagesScreen() {
           last
         />
       </Card>
+
+      <Button label="Se déconnecter" icon="close" variant="outline" onPress={logout} />
     </Screen>
   );
 }

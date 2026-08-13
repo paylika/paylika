@@ -1,7 +1,8 @@
 import "../global.css";
 
+import { useEffect } from "react";
 import { View, useWindowDimensions } from "react-native";
-import { Slot, usePathname } from "expo-router";
+import { Slot, usePathname, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import {
@@ -19,13 +20,51 @@ import {
 import { TopBar } from "@/components/TopBar";
 import { BottomNav } from "@/components/BottomNav";
 import { useWide } from "@/components/Screen";
+import { AuthProvider, useAuth } from "@/lib/auth";
 
-export default function RootLayout() {
+function AppShell() {
   const wide = useWide();
   const pathname = usePathname();
+  const router = useRouter();
   const { height } = useWindowDimensions();
-  // Standalone pages (no owner chrome): the public customer checkout.
-  const standalone = pathname.startsWith("/pay");
+  const { session, loading } = useAuth();
+
+  const isPay = pathname.startsWith("/pay"); // public customer checkout
+  const isLogin = pathname === "/login";
+
+  useEffect(() => {
+    if (loading || isPay) return;
+    if (!session && !isLogin) router.replace("/login");
+    if (session && isLogin) router.replace("/");
+  }, [loading, session, pathname, isPay, isLogin, router]);
+
+  let content = null;
+  if (isPay) {
+    content = <Slot />; // no auth, no owner chrome
+  } else if (loading) {
+    content = null; // brief splash
+  } else if (isLogin) {
+    content = <Slot />;
+  } else if (!session) {
+    content = null; // redirecting to /login
+  } else {
+    content = (
+      <>
+        <TopBar />
+        <Slot />
+        {!wide ? <BottomNav /> : null}
+      </>
+    );
+  }
+
+  return (
+    <View className="bg-paper" style={{ height }}>
+      {content}
+    </View>
+  );
+}
+
+export default function RootLayout() {
   const [fontsLoaded] = useFonts({
     BricolageGrotesque_600SemiBold,
     BricolageGrotesque_700Bold,
@@ -36,22 +75,14 @@ export default function RootLayout() {
     SpaceGrotesk_700Bold,
   });
 
+  if (!fontsLoaded) return null;
+
   return (
     <SafeAreaProvider>
       <StatusBar style="dark" />
-      <View className="bg-paper" style={{ height }}>
-        {fontsLoaded ? (
-          standalone ? (
-            <Slot />
-          ) : (
-            <>
-              <TopBar />
-              <Slot />
-              {!wide ? <BottomNav /> : null}
-            </>
-          )
-        ) : null}
-      </View>
+      <AuthProvider>
+        <AppShell />
+      </AuthProvider>
     </SafeAreaProvider>
   );
 }
