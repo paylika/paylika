@@ -75,7 +75,7 @@ const PER_LABELS: Record<number, string> = {
   180: "Par 6 mois",
   365: "Par an",
 };
-const perLabel = (d: number) => PER_LABELS[d] ?? `Par ${d} j`;
+const perLabel = (d: number) => (d <= 0 ? "Paiement unique" : PER_LABELS[d] ?? `Par ${d} j`);
 
 const COUNTRIES: { code: string; label: string; operators: string[] }[] = [
   { code: "SN", label: "Sénégal", operators: ["wave", "orange_money"] },
@@ -255,18 +255,20 @@ export default function PayScreen() {
           <>
             {/* Offre + formules */}
             <Card>
-              <Eyebrow>Abonnement</Eyebrow>
+              <Eyebrow>{info.tiers.every((t) => t.intervalDays <= 0) ? "Paiement" : "Abonnement"}</Eyebrow>
               <Text className="mt-1 font-display-semi text-[19px] text-ink">{info.offerName}</Text>
 
               <View className="mt-4" style={{ gap: 8 }}>
                 {info.tiers.map((t) => {
                   const active = t.id === tier.id;
                   const badge =
-                    t.id === popularId
-                      ? { text: "Plus populaire", color: colors.bordeaux[600] }
-                      : t.id === bestId
-                        ? { text: "Meilleure offre", color: colors.forest }
-                        : null;
+                    info.tiers.length < 2
+                      ? null
+                      : t.id === popularId
+                        ? { text: "Plus populaire", color: colors.bordeaux[600] }
+                        : t.id === bestId
+                          ? { text: "Meilleure offre", color: colors.forest }
+                          : null;
                   return (
                     <Pressable
                       key={t.id}
