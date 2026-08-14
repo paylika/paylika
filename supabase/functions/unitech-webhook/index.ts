@@ -321,6 +321,42 @@ async function debugLast(): Promise<Response> {
     ? `⚠️ COLONNE MANQUANTE — exécute payments_schema.sql PUIS multi_tenant.sql : ${probe.error.message}`
     : "OK (toutes les colonnes présentes)";
 
+  // Derniers paiements RÉELLEMENT enregistrés (toutes références confondues) :
+  // tranche le faux négatif dû à une référence webhook ≠ référence intent.
+  const { data: recent } = await admin
+    .from("payments")
+    .select("provider_ref, amount, status, paid_at")
+    .order("paid_at", { ascending: false })
+    .limit(3);
+  trace.recent_payments = recent?.length ? recent : "AUCUN — la table payments est vide.";
+
+  // Si vraiment aucun paiement, on tente une insertion-sonde pour capturer
+  // l'erreur SQL exacte, puis on la supprime.
+  if (!recent?.length && intent?.plan_id) {
+    const { data: pl } = await admin
+      .from("plans")
+      .select("owner_id")
+      .eq("id", intent.plan_id)
+      .maybeSingle();
+    const probeRef = "debug-probe-cleanup";
+    const { error: insErr } = await admin.from("payments").insert({
+      owner_id: pl?.owner_id ?? null,
+      amount: 1,
+      currency: "XOF",
+      method: "debug",
+      provider: "debug",
+      provider_ref: probeRef,
+      commission: 0,
+      net_amount: 1,
+      status: "completed",
+      paid_at: new Date().toISOString(),
+    });
+    trace.insert_probe = insErr
+      ? `ÉCHEC: ${insErr.message} | details: ${insErr.details ?? ""} | hint: ${insErr.hint ?? ""} | code: ${insErr.code ?? ""}`
+      : "OK (l'insertion fonctionne — le souci vient d'ailleurs)";
+    if (!insErr) await admin.from("payments").delete().eq("provider_ref", probeRef);
+  }
+
   return new Response(JSON.stringify(trace, null, 2), {
     headers: { "content-type": "application/json; charset=utf-8" },
   });
