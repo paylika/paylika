@@ -197,13 +197,14 @@ export type NewOffer = {
   tiers: Tier[];
 };
 
-/** Create a group (if new) then one plan per tier. */
-export async function createOffer(input: NewOffer): Promise<void> {
+/** Create a group (if new) then one plan per tier. Returns created plan ids. */
+export async function createOffer(input: NewOffer): Promise<string[]> {
+  const owner = await currentUserId();
   let groupId = input.groupId;
   if (!groupId && input.newGroup) {
     const { data, error } = await supabase
       .from("groups")
-      .insert({ name: input.newGroup.name, kind: input.newGroup.kind })
+      .insert({ name: input.newGroup.name, kind: input.newGroup.kind, owner_id: owner })
       .select("id")
       .single();
     if (error) throw error;
@@ -213,6 +214,7 @@ export async function createOffer(input: NewOffer): Promise<void> {
   if (!input.tiers.length) throw new Error("Ajoutez au moins une formule.");
 
   const rows = input.tiers.map((t) => ({
+    owner_id: owner,
     group_id: groupId,
     name: `${input.offerName} — ${intervalLabel(t.intervalDays)}`,
     price: t.price,
@@ -220,8 +222,9 @@ export async function createOffer(input: NewOffer): Promise<void> {
     currency: input.currency,
     interval_days: t.intervalDays,
   }));
-  const { error } = await supabase.from("plans").insert(rows);
+  const { data, error } = await supabase.from("plans").insert(rows).select("id");
   if (error) throw error;
+  return (data ?? []).map((r: any) => r.id as string);
 }
 
 /** Count of offers (plans) — for onboarding detection. */

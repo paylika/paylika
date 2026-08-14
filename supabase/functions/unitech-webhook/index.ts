@@ -36,6 +36,33 @@ async function hmacHex(secret: string, message: string): Promise<string> {
 }
 
 Deno.serve(async (req) => {
+  // Diagnostic (dev) : état du dernier paiement (?debug=last).
+  const dbgUrl = new URL(req.url);
+  if (dbgUrl.searchParams.get("debug") === "last") {
+    const { data: intent } = await admin
+      .from("payment_intents")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    let plan: any = null;
+    let conn: any = null;
+    let tu: any = null;
+    if (intent?.plan_id) {
+      plan = (await admin.from("plans").select("id, name, group_id, owner_id").eq("id", intent.plan_id).maybeSingle()).data;
+      if (plan?.group_id) {
+        conn = (await admin.from("telegram_connections").select("chat_id, status, owner_id").eq("group_id", plan.group_id).maybeSingle()).data;
+      }
+    }
+    if (intent?.telegram_user_id) {
+      tu = (await admin.from("telegram_users").select("chat_id").eq("telegram_user_id", intent.telegram_user_id).maybeSingle()).data;
+    }
+    return new Response(
+      JSON.stringify({ intent, plan, connection: conn, telegram_user: tu }, null, 2),
+      { headers: { "content-type": "application/json" } },
+    );
+  }
+
   // Redirection navigateur après paiement → page de remerciement.
   if (req.method === "GET") {
     return new Response(
