@@ -41,6 +41,7 @@ Deno.serve(async (req) => {
     const dbg = new URL(req.url).searchParams.get("debug");
     if (dbg === "last") return await debugLast();
     if (dbg === "resend") return await debugResend();
+    if (dbg === "members") return await debugMembers();
   }
   // Redirection navigateur après paiement → page de remerciement.
   if (req.method === "GET") {
@@ -399,4 +400,39 @@ async function debugResend(): Promise<Response> {
     JSON.stringify({ ok: true, sent_to_chat: chatId, group_id: intent.group_id }, null, 2),
     { headers: { "content-type": "application/json; charset=utf-8" } },
   );
+}
+
+/** Diagnostic roster (GET ?debug=members) : le bot enregistre-t-il les membres ? */
+async function debugMembers(): Promise<Response> {
+  const trace: Record<string, unknown> = {};
+
+  // 1) Config webhook Telegram : le type "message" est-il bien livré ?
+  const info = await tg("getWebhookInfo", {});
+  trace.telegram_webhook = {
+    url: info?.result?.url ?? null,
+    allowed_updates: info?.result?.allowed_updates ?? "(défaut = tous sauf chat_member)",
+    pending_update_count: info?.result?.pending_update_count ?? 0,
+    last_error: info?.result?.last_error_message ?? null,
+  };
+
+  // 2) group_members réellement enregistrés (toutes lignes, via service_role).
+  const { data: members, error } = await admin
+    .from("group_members")
+    .select("group_id, owner_id, first_name, username, last_seen, in_group")
+    .order("last_seen", { ascending: false })
+    .limit(10);
+  trace.group_members = error ? `ERREUR: ${error.message}` : members ?? [];
+  trace.group_members_count = members?.length ?? 0;
+
+  // 3) Groupes + leur owner_id (pour comparer avec l'owner des membres → RLS).
+  const { data: groups } = await admin
+    .from("groups")
+    .select("id, name, owner_id")
+    .order("created_at", { ascending: false })
+    .limit(10);
+  trace.groups = groups ?? [];
+
+  return new Response(JSON.stringify(trace, null, 2), {
+    headers: { "content-type": "application/json; charset=utf-8" },
+  });
 }
