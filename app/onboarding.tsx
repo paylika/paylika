@@ -140,8 +140,8 @@ export default function Onboarding() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Step 2
-  const [offerName, setOfferName] = useState("");
+  // Step 2 — le nom de l'offre = le nom du groupe/canal connecté.
+  const [groupName, setGroupName] = useState("");
   const [tiers, setTiers] = useState<Record<number, TierState>>({});
 
   // Step 3
@@ -169,6 +169,7 @@ export default function Onboarding() {
     try {
       const gid = await connectGroup(c.chatId, c.title ?? "Mon groupe");
       setGroupId(gid);
+      setGroupName(c.title ?? "Mon groupe");
       setStep(2);
     } catch (e: any) {
       setError(e?.message ?? "Impossible de relier ce groupe.");
@@ -180,7 +181,7 @@ export default function Onboarding() {
   const num = (s: string) => parseInt((s ?? "").replace(/\D/g, ""), 10) || 0;
   const selectedDays = Object.keys(tiers).map(Number);
   const validTiers = selectedDays.filter((d) => num(tiers[d].price) > 0);
-  const canCreate = offerName.trim().length > 0 && validTiers.length > 0 && groupId;
+  const canCreate = validTiers.length > 0 && !!groupId;
 
   function toggle(days: number) {
     setTiers((prev) => {
@@ -197,7 +198,7 @@ export default function Onboarding() {
     setError(null);
     try {
       const ids = await createOffer({
-        offerName: offerName.trim(),
+        offerName: groupName || "Offre",
         currency: "XOF",
         groupId: groupId!,
         tiers: validTiers.map((d) => ({
@@ -324,14 +325,11 @@ export default function Onboarding() {
               <Text className="mt-1 font-sans text-[12px] text-ink-muted">
                 Cochez les périodicités que vous proposez et fixez leurs prix.
               </Text>
-              <View className="mt-4">
-                <Input
-                  label="Nom de l'offre"
-                  value={offerName}
-                  onChangeText={setOfferName}
-                  placeholder="Ex. Accès VIP"
-                  autoFocus
-                />
+              <View className="mt-4 flex-row items-center rounded-2xl bg-sand px-4 py-3" style={{ gap: 8 }}>
+                <Icon name="send" size={15} color={colors.bordeaux[600]} />
+                <Text className="flex-1 font-semibold text-[14px] text-ink" numberOfLines={1}>
+                  {groupName || "Votre groupe"}
+                </Text>
               </View>
             </Card>
 

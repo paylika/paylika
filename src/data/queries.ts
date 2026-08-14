@@ -60,7 +60,7 @@ export async function fetchOffres(): Promise<Offre[]> {
   const { data, error } = await supabase
     .from("plans")
     .select("id, name, price, compare_price, currency, interval_days, group_id, groups(name, kind)")
-    .order("created_at", { ascending: true });
+    .order("created_at", { ascending: false });
   if (error) throw error;
   return (data ?? []).map((p: any) => ({
     id: p.id,

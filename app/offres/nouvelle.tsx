@@ -83,7 +83,6 @@ export default function NouvelleOffreScreen() {
   const onboarding = first === "1";
   const { data: groups, loading: groupsLoading } = useAsync(fetchGroups);
 
-  const [offerName, setOfferName] = useState("");
   const [groupChoice, setGroupChoice] = useState<string>(NEW);
   const [newGroupName, setNewGroupName] = useState("");
   const [tiers, setTiers] = useState<TierForm[]>([{ days: 30, price: "", compare: "" }]);
@@ -91,11 +90,13 @@ export default function NouvelleOffreScreen() {
   const [error, setError] = useState<string | null>(null);
 
   const creatingNewGroup = groupChoice === NEW;
+  // Le nom de l'offre = le nom du groupe/canal (nouveau ou existant).
+  const selectedGroupName = groups?.find((g) => g.id === groupChoice)?.name ?? "";
+  const offerName = creatingNewGroup ? newGroupName.trim() : selectedGroupName;
   const num = (s: string) => parseInt(s.replace(/\D/g, ""), 10) || 0;
   const validTiers = tiers.filter((t) => num(t.price) > 0);
   const valid =
-    offerName.trim().length > 0 &&
-    (creatingNewGroup ? newGroupName.trim().length > 0 : true) &&
+    (creatingNewGroup ? newGroupName.trim().length > 0 : !!groupChoice) &&
     validTiers.length > 0;
 
   function updateTier(i: number, t: TierForm) {
@@ -118,7 +119,7 @@ export default function NouvelleOffreScreen() {
     setError(null);
     try {
       await createOffer({
-        offerName: offerName.trim(),
+        offerName: offerName || "Offre",
         currency: "XOF",
         groupId: creatingNewGroup ? undefined : groupChoice,
         newGroup: creatingNewGroup ? { name: newGroupName.trim(), kind: "telegram" } : undefined,
@@ -149,15 +150,11 @@ export default function NouvelleOffreScreen() {
 
       <Card>
         <View style={{ gap: 16 }}>
-          <Input
-            label="Nom de l'offre"
-            value={offerName}
-            onChangeText={setOfferName}
-            placeholder="Ex. Accès VIP Crypto"
-            autoFocus
-          />
           <View>
-            <FieldLabel>Groupe</FieldLabel>
+            <FieldLabel>Groupe / canal</FieldLabel>
+            <Text className="mb-2 font-sans text-[11px] text-ink-muted">
+              Son nom devient le nom de l'offre.
+            </Text>
             {groupsLoading ? (
               <ActivityIndicator color={colors.bordeaux[600]} />
             ) : (
@@ -171,10 +168,11 @@ export default function NouvelleOffreScreen() {
           </View>
           {creatingNewGroup ? (
             <Input
-              label="Nom du nouveau groupe Telegram"
+              label="Nom du groupe / canal Telegram"
               value={newGroupName}
               onChangeText={setNewGroupName}
               placeholder="Ex. Crypto Signals VIP"
+              autoFocus
             />
           ) : null}
         </View>

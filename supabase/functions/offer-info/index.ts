@@ -20,26 +20,50 @@ const CORS = {
 const json = (o: unknown, s = 200) =>
   new Response(JSON.stringify(o), { status: s, headers: { ...CORS, "content-type": "application/json" } });
 
+const PERIODS: Record<number, string> = {
+  1: "Journalier",
+  7: "Hebdomadaire",
+  30: "Mensuel",
+  90: "Trimestriel",
+  180: "Semestriel",
+  365: "Annuel",
+};
+const periodLabel = (d: number) => PERIODS[d] ?? `${d} j`;
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   const id = new URL(req.url).searchParams.get("id");
   if (!id) return json({ error: "id manquant" }, 400);
 
-  const { data } = await admin
+  const { data: base } = await admin
     .from("plans")
-    .select("id, name, price, compare_price, currency, interval_days, groups(name)")
+    .select("id, name, price, compare_price, currency, interval_days, group_id, groups(name)")
     .eq("id", id)
     .maybeSingle();
-  if (!data) return json({ error: "Offre introuvable" }, 404);
+  if (!base) return json({ error: "Offre introuvable" }, 404);
+  const b: any = base;
 
-  const p: any = data;
-  return json({
+  // Toutes les formules de la même offre (= même groupe), triées par durée.
+  const { data: sibs } = await admin
+    .from("plans")
+    .select("id, price, compare_price, interval_days")
+    .eq("group_id", b.group_id)
+    .order("interval_days", { ascending: true });
+
+  const list: any[] = sibs?.length ? sibs : [b];
+  const tiers = list.map((p) => ({
     id: p.id,
-    name: p.name,
+    label: periodLabel(p.interval_days),
+    intervalDays: p.interval_days,
     price: Number(p.price) || 0,
     comparePrice: p.compare_price != null ? Number(p.compare_price) : null,
-    currency: p.currency,
-    intervalDays: p.interval_days,
-    groupName: p.groups?.name ?? "—",
+  }));
+
+  return json({
+    id: b.id,
+    offerName: b.groups?.name ?? b.name,
+    groupName: b.groups?.name ?? "—",
+    currency: b.currency,
+    tiers,
   });
 });
