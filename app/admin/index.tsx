@@ -116,7 +116,11 @@ export default function AdminScreen() {
           <Kpi label="MRR plateforme" value={`${formatInt(ov.mrr)}`} sub={`${cur}/mois`} />
           <Kpi label="Propriétaires" value={`${ov.owners}`} />
           <Kpi label="Groupes" value={`${ov.groups}`} />
-          <Kpi label="Abonnés actifs" value={`${ov.activeSubscribers}`} sub={`sur ${ov.subscribers} au total`} />
+          <Kpi
+            label="Abonnés actifs"
+            value={`${ov.activeSubscribers}`}
+            sub={ov.subscribers > ov.activeSubscribers ? `sur ${ov.subscribers} au total` : undefined}
+          />
         </View>
       ) : (
         <Card>

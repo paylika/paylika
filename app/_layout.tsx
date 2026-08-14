@@ -2,7 +2,7 @@ import "../global.css";
 
 import { useEffect } from "react";
 import { View, useWindowDimensions } from "react-native";
-import { Slot, usePathname, useRouter } from "expo-router";
+import { Slot, usePathname, useRouter, useLocalSearchParams } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import {
@@ -26,6 +26,8 @@ function AppShell() {
   const wide = useWide();
   const pathname = usePathname();
   const router = useRouter();
+  const params = useLocalSearchParams<{ next?: string }>();
+  const nextParam = typeof params.next === "string" ? params.next : "";
   const { height } = useWindowDimensions();
   const { session, loading } = useAuth();
 
@@ -35,9 +37,13 @@ function AppShell() {
 
   useEffect(() => {
     if (loading || isPay) return;
-    if (!session && !isLogin) router.replace("/login");
-    if (session && isLogin) router.replace("/");
-  }, [loading, session, pathname, isPay, isLogin, router]);
+    if (!session && !isLogin) {
+      // Garde la destination pour y revenir après connexion.
+      const q = pathname && pathname !== "/" ? `?next=${encodeURIComponent(pathname)}` : "";
+      router.replace(`/login${q}` as any);
+    }
+    if (session && isLogin) router.replace((nextParam || "/") as any);
+  }, [loading, session, pathname, isPay, isLogin, nextParam, router]);
 
   let content = null;
   if (isPay) {

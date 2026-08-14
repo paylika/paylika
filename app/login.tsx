@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { View, Text, ScrollView, Pressable } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Card, Button } from "@/components/ui";
 import { Input } from "@/components/form";
@@ -10,6 +10,8 @@ import { signInWithEmail, signUpWithEmail } from "@/lib/auth";
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { next } = useLocalSearchParams<{ next?: string }>();
+  const dest = typeof next === "string" && next ? next : "/";
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -27,14 +29,14 @@ export default function LoginScreen() {
     try {
       if (mode === "signin") {
         await signInWithEmail(email.trim(), password);
-        router.replace("/");
+        router.replace(dest as any);
       } else {
         const { needsConfirmation } = await signUpWithEmail(email.trim(), password);
         if (needsConfirmation) {
           setInfo("Compte créé ! Vérifiez votre email pour confirmer, puis connectez-vous.");
           setMode("signin");
         } else {
-          router.replace("/");
+          router.replace(dest as any);
         }
       }
     } catch (e: any) {
