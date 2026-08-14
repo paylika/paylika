@@ -484,20 +484,38 @@ export async function fetchMoney(): Promise<Money> {
   };
 }
 
+const PAYOUT_URL =
+  "https://xkdiodbppotyiyldlwbg.functions.supabase.co/unitech-payout";
+
+/**
+ * Retrait instantané : la fonction Edge revérifie le solde côté serveur et
+ * exécute le transfert UniTech tout de suite. On lui passe le jeton de session.
+ */
 export async function createPayout(input: {
   amount: number;
   method: string;
   destination: string;
 }): Promise<void> {
-  const owner = await currentUserId();
-  const { error } = await supabase.from("payouts").insert({
-    owner_id: owner,
-    amount: input.amount,
-    method: input.method,
-    destination: input.destination,
-    status: "pending",
-  });
-  if (error) throw error;
+  await currentUserId(); // garantit une session fraîche
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const token = session?.access_token;
+  if (!token) throw new Error("Session expirée. Reconnectez-vous pour continuer.");
+
+  let data: any = null;
+  try {
+    const res = await fetch(PAYOUT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify(input),
+    });
+    data = await res.json().catch(() => null);
+    if (res.ok && data?.ok) return;
+  } catch {
+    throw new Error("Connexion impossible. Réessayez.");
+  }
+  throw new Error(data?.error ?? "Retrait impossible. Réessayez.");
 }
 
 export type OfferStat = {
