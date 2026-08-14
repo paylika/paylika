@@ -1,35 +1,32 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
-/** Tiny async loader (fetch once on mount). */
+/** Tiny async loader: fetches on mount and exposes `reload` (pull-to-refresh). */
 export function useAsync<T>(fn: () => Promise<T>) {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const fnRef = useRef(fn);
+  fnRef.current = fn;
 
-  useEffect(() => {
-    let alive = true;
-    (async () => {
-      try {
-        setLoading(true);
-        const d = await fn();
-        if (alive) {
-          setData(d);
-          setError(null);
-        }
-      } catch (e: any) {
-        if (alive) setError(e?.message ?? "Erreur de chargement");
-      } finally {
-        if (alive) setLoading(false);
-      }
-    })();
-    return () => {
-      alive = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  const reload = useCallback(async () => {
+    try {
+      setLoading(true);
+      const d = await fnRef.current();
+      setData(d);
+      setError(null);
+    } catch (e: any) {
+      setError(e?.message ?? "Erreur de chargement");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  return { data, loading, error };
+  useEffect(() => {
+    reload();
+  }, [reload]);
+
+  return { data, loading, error, reload };
 }
 
 export const PERIODICITIES: { label: string; days: number }[] = [

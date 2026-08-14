@@ -140,7 +140,7 @@ export default function OffresScreen() {
   }
 
   return (
-    <Screen>
+    <Screen onRefresh={load}>
       <View className="flex-row items-end justify-between" style={{ gap: 12 }}>
         <PageTitle
           eyebrow="Vendre"

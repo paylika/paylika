@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { View, Text } from "react-native";
 import { useRouter } from "expo-router";
 import { Card, Button, Eyebrow } from "@/components/ui";
@@ -52,28 +52,30 @@ function BalanceHero({
 export function DashboardScreen() {
   const wide = useWide();
   const router = useRouter();
-  const { data } = useDashboard();
-  const { data: money } = useAsync(fetchMoney);
+  const { data, reload: reloadDash } = useDashboard();
+  const { data: money, reload: reloadMoney } = useAsync(fetchMoney);
 
   // Onboarding NON bloquant : on détecte un compte vide pour proposer un accueil.
   const [empty, setEmpty] = useState<boolean | null>(null);
-  useEffect(() => {
-    let alive = true;
-    countOffers()
-      .then((n) => {
-        if (alive) setEmpty(n === 0);
-      })
-      .catch(() => {
-        if (alive) setEmpty(false);
-      });
-    return () => {
-      alive = false;
-    };
+  const checkEmpty = useCallback(async () => {
+    try {
+      const n = await countOffers();
+      setEmpty(n === 0);
+    } catch {
+      setEmpty(false);
+    }
   }, []);
+  useEffect(() => {
+    checkEmpty();
+  }, [checkEmpty]);
+
+  const refresh = useCallback(async () => {
+    await Promise.all([checkEmpty(), reloadDash(), reloadMoney()]);
+  }, [checkEmpty, reloadDash, reloadMoney]);
 
   if (empty) {
     return (
-      <Screen>
+      <Screen onRefresh={refresh}>
         <View style={{ paddingTop: 24 }}>
           <Eyebrow>Bienvenue 👋</Eyebrow>
           <Text
@@ -147,7 +149,7 @@ export function DashboardScreen() {
     : undefined;
 
   return (
-    <Screen>
+    <Screen onRefresh={refresh}>
       <View className="flex-row items-end justify-between" style={{ gap: 12 }}>
         <View>
           <Eyebrow>Tableau de bord</Eyebrow>

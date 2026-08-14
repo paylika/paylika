@@ -67,7 +67,7 @@ export default function AccesScreen() {
   const linkedCount = (connections ?? []).filter((c) => c.groupId).length;
 
   return (
-    <Screen>
+    <Screen onRefresh={load}>
       <PageTitle
         eyebrow="Gérer"
         title="Accès & Bot"

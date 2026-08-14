@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
 /** Shape consumed by the dashboard cards. */
@@ -159,25 +159,24 @@ export function useDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let alive = true;
-    (async () => {
-      try {
-        setLoading(true);
-        const d = await fetchDashboard();
-        if (alive) setError(null), setData(d);
-      } catch (e: any) {
-        if (alive) setError(e?.message ?? "Erreur de chargement");
-      } finally {
-        if (alive) setLoading(false);
-      }
-    })();
-    return () => {
-      alive = false;
-    };
+  const reload = useCallback(async () => {
+    try {
+      setLoading(true);
+      const d = await fetchDashboard();
+      setError(null);
+      setData(d);
+    } catch (e: any) {
+      setError(e?.message ?? "Erreur de chargement");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  return { data, loading, error };
+  useEffect(() => {
+    reload();
+  }, [reload]);
+
+  return { data, loading, error, reload };
 }
 
 export { firstName };

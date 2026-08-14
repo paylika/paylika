@@ -38,10 +38,10 @@ function Row({ n, last }: { n: Notif; last: boolean }) {
 }
 
 export default function NotificationsScreen() {
-  const { data, loading, error } = useAsync(fetchNotifications);
+  const { data, loading, error, reload } = useAsync(fetchNotifications);
 
   return (
-    <Screen>
+    <Screen onRefresh={reload}>
       <PageTitle
         eyebrow="Activité"
         title="Notifications"

@@ -65,7 +65,7 @@ export default function ArgentScreen() {
   );
 
   return (
-    <Screen>
+    <Screen onRefresh={load}>
       <PageTitle
         eyebrow="Encaisser"
         title="Argent"

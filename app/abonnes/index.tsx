@@ -158,7 +158,7 @@ export default function AbonnesScreen() {
   };
 
   return (
-    <Screen>
+    <Screen onRefresh={load}>
       <View className="flex-row items-end justify-between" style={{ gap: 12 }}>
         <PageTitle
           eyebrow="Gérer"

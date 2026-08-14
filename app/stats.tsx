@@ -89,7 +89,7 @@ export default function StatsScreen() {
   const router = useRouter();
   const wide = useWide();
   const [view, setView] = useState<"global" | "offres">("global");
-  const { data, loading, error } = useAsync(fetchStats);
+  const { data, loading, error, reload } = useAsync(fetchStats);
 
   const cur = data?.currency ?? "XOF";
   const kpis = data
@@ -104,7 +104,7 @@ export default function StatsScreen() {
     : [];
 
   return (
-    <Screen>
+    <Screen onRefresh={reload}>
       <View className="flex-row items-end justify-between" style={{ gap: 12 }}>
         <PageTitle
           eyebrow="Activité"
