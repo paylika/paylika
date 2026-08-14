@@ -80,6 +80,12 @@ async function recordMember(groupId: string, from: any) {
 }
 
 Deno.serve(async (req) => {
+  // Marqueur de version public : permet de vérifier de l'extérieur que la bonne
+  // version (avec suivi des membres) est bien déployée dans CETTE fonction.
+  if (req.method === "GET" && new URL(req.url).searchParams.has("ping")) {
+    return new Response("telegram-webhook v2 — suivi des membres actif", { status: 200 });
+  }
+
   // Only Telegram (with our shared secret header) may call this.
   if (WEBHOOK_SECRET) {
     const got = req.headers.get("x-telegram-bot-api-secret-token");
