@@ -103,11 +103,10 @@ const APP_URL = "https://paylika.paylika-app.workers.dev";
 export function payLinkFor(offre: Pick<Offre, "id" | "deliveryType">): string {
   // Telegram passe par le bot (capture l'utilisateur pour le DM) ;
   // les autres modes vont directement sur la page de paiement web.
-  // Non-Telegram : on partage la PAGE DE VENTE (/p) — c'est la landing pour les
-  // pubs. Telegram passe par le bot.
+  // Telegram passe par le bot ; les autres modes vont sur la page de paiement.
   return offre.deliveryType === "telegram"
     ? `https://t.me/Paylikabot?start=${offre.id}`
-    : `${APP_URL}/p/${offre.id}`;
+    : `${APP_URL}/pay/${offre.id}`;
 }
 
 /** Upload d'une image de couverture (bucket public) → URL publique. */
@@ -620,14 +619,13 @@ export type Profile = {
   payoutCountry: string;
   payoutMethod: string;
   payoutNumber: string;
-  metaPixelId: string;
 };
 
 export async function fetchProfile(): Promise<Profile> {
   const owner = await currentUserId();
   const { data } = await supabase
     .from("profiles")
-    .select("full_name, business_name, avatar_url, payout_country, payout_method, payout_number, meta_pixel_id")
+    .select("full_name, business_name, avatar_url, payout_country, payout_method, payout_number")
     .eq("id", owner)
     .maybeSingle();
   return {
@@ -637,7 +635,6 @@ export async function fetchProfile(): Promise<Profile> {
     payoutCountry: data?.payout_country ?? "SN",
     payoutMethod: data?.payout_method ?? "wave",
     payoutNumber: data?.payout_number ?? "",
-    metaPixelId: data?.meta_pixel_id ?? "",
   };
 }
 
@@ -648,7 +645,6 @@ export async function saveProfile(input: {
   payoutCountry?: string;
   payoutMethod: string;
   payoutNumber: string;
-  metaPixelId?: string;
 }): Promise<void> {
   const owner = await currentUserId();
   const { error } = await supabase.from("profiles").upsert({
@@ -659,7 +655,6 @@ export async function saveProfile(input: {
     ...(input.payoutCountry !== undefined ? { payout_country: input.payoutCountry } : {}),
     payout_method: input.payoutMethod,
     payout_number: input.payoutNumber || null,
-    ...(input.metaPixelId !== undefined ? { meta_pixel_id: input.metaPixelId || null } : {}),
     updated_at: new Date().toISOString(),
   });
   if (error) throw error;

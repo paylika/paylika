@@ -59,7 +59,6 @@ export default function ReglagesScreen() {
   const [payoutCountry, setPayoutCountry] = useState("SN");
   const [payoutMethod, setPayoutMethod] = useState<string>("wave");
   const [payoutNumber, setPayoutNumber] = useState("");
-  const [metaPixelId, setMetaPixelId] = useState("");
 
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -86,7 +85,6 @@ export default function ReglagesScreen() {
         setPayoutCountry(p.payoutCountry || "SN");
         setPayoutMethod(p.payoutMethod || "wave");
         setPayoutNumber(p.payoutNumber);
-        setMetaPixelId(p.metaPixelId);
       } catch (e: any) {
         setError(e?.message ?? "Chargement impossible.");
       } finally {
@@ -116,7 +114,7 @@ export default function ReglagesScreen() {
     try {
       const url = await uploadAvatar(asset.uri, asset.mimeType);
       setAvatarUrl(url);
-      await saveProfile({ fullName, businessName, avatarUrl: url, payoutCountry, payoutMethod, payoutNumber, metaPixelId });
+      await saveProfile({ fullName, businessName, avatarUrl: url, payoutCountry, payoutMethod, payoutNumber });
     } catch (e: any) {
       setError(e?.message ?? "Téléversement impossible.");
     } finally {
@@ -130,7 +128,7 @@ export default function ReglagesScreen() {
     setError(null);
     setSaved(false);
     try {
-      await saveProfile({ fullName, businessName, payoutCountry, payoutMethod, payoutNumber, metaPixelId });
+      await saveProfile({ fullName, businessName, payoutCountry, payoutMethod, payoutNumber });
       setSaved(true);
       setTimeout(() => setSaved(false), 1800);
     } catch (e: any) {
@@ -253,23 +251,6 @@ export default function ReglagesScreen() {
             onChangeText={setPayoutNumber}
             keyboardType="numeric"
             placeholder="77 000 00 00"
-          />
-        </View>
-      </Card>
-
-      {/* Marketing / suivi */}
-      <Card>
-        <Eyebrow>Publicité · Meta Pixel</Eyebrow>
-        <Text className="mt-1 font-sans text-[12px] text-ink-muted">
-          Pour suivre tes pubs Facebook/Instagram : les événements (vue, paiement lancé, achat) remontent à Meta.
-        </Text>
-        <View className="mt-3">
-          <Input
-            label="ID du Pixel Meta"
-            value={metaPixelId}
-            onChangeText={setMetaPixelId}
-            keyboardType="numeric"
-            placeholder="Ex. 123456789012345"
           />
         </View>
       </Card>

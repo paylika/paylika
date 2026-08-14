@@ -1,21 +1,17 @@
 import { useState } from "react";
-import { View, Text, ActivityIndicator, Pressable, Image } from "react-native";
+import { View, Text, ActivityIndicator, Pressable } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Screen, PageTitle } from "@/components/Screen";
 import { Card, Button, Eyebrow } from "@/components/ui";
 import { Input, Chip, FieldLabel } from "@/components/form";
 import { Icon } from "@/components/Icon";
 import { colors } from "@/theme/colors";
-import { useAuth } from "@/lib/auth";
-import { FORMATION_IA_TEMPLATE } from "@/data/salesTemplates";
 import * as DocumentPicker from "expo-document-picker";
-import * as ImagePicker from "expo-image-picker";
 import {
   useAsync,
   fetchGroups,
   createOffer,
   uploadContent,
-  uploadCover,
   PERIODICITIES,
   DELIVERY_TYPES,
   type DeliveryType,
@@ -92,7 +88,6 @@ function TierCard({
 
 export default function NouvelleOffreScreen() {
   const router = useRouter();
-  const { isAdmin } = useAuth();
   const { first } = useLocalSearchParams<{ first?: string }>();
   const onboarding = first === "1";
   const { data: groups, loading: groupsLoading } = useAsync(fetchGroups);
@@ -107,34 +102,6 @@ export default function NouvelleOffreScreen() {
   const [tiers, setTiers] = useState<TierForm[]>([{ days: 30, price: "", compare: "" }]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Page de vente (offres non-Telegram)
-  const [cover, setCover] = useState<string | null>(null);
-  const [coverUploading, setCoverUploading] = useState(false);
-  const [headline, setHeadline] = useState("");
-  const [subheadline, setSubheadline] = useState("");
-  const [benefits, setBenefits] = useState("");
-  const [description, setDescription] = useState("");
-
-  async function pickCover() {
-    setError(null);
-    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) {
-      setError("Autorisez l'accès aux photos.");
-      return;
-    }
-    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: "images", quality: 0.8 });
-    if (res.canceled || !res.assets?.[0]) return;
-    setCoverUploading(true);
-    try {
-      const url = await uploadCover(res.assets[0].uri, res.assets[0].mimeType);
-      setCover(url);
-    } catch (e: any) {
-      setError(e?.message ?? "Téléversement impossible.");
-    } finally {
-      setCoverUploading(false);
-    }
-  }
 
   async function pickFile() {
     setError(null);
@@ -193,18 +160,6 @@ export default function NouvelleOffreScreen() {
         currency: "XOF",
         deliveryType,
         deliveryTarget: needsTarget ? deliveryTarget.trim() : null,
-        salesPage: isTelegram
-          ? null
-          : {
-              cover,
-              headline: headline.trim(),
-              subheadline: subheadline.trim(),
-              benefits: benefits
-                .split("\n")
-                .map((b) => b.trim())
-                .filter(Boolean),
-              description: description.trim(),
-            },
         groupId: usingExisting ? groupChoice : undefined,
         newGroupName: usingExisting ? undefined : offerName,
         tiers: validTiers.map((t) => ({
@@ -422,75 +377,6 @@ export default function NouvelleOffreScreen() {
         </Card>
       )}
 
-      {/* Page de vente (offres non-Telegram) — réservé admin */}
-      {!isTelegram && isAdmin ? (
-        <Card>
-          <View className="flex-row items-center justify-between">
-            <Eyebrow>Page de vente (optionnel)</Eyebrow>
-            <Pressable
-              onPress={() => {
-                const t = FORMATION_IA_TEMPLATE;
-                setHeadline(t.headline ?? "");
-                setSubheadline(t.subheadline ?? "");
-                setBenefits((t.benefits ?? []).join("\n"));
-                setDescription(t.description ?? "");
-              }}
-              className="rounded-full bg-bordeaux-50 px-3 py-1.5"
-            >
-              <Text className="font-semibold text-[11px] text-bordeaux-700">Charger le modèle optimisé</Text>
-            </Pressable>
-          </View>
-          <Text className="mt-1 font-sans text-[11px] text-ink-muted">
-            Ce que voient les visiteurs avant de payer — idéal pour les pubs. Laisse vide pour une page minimale.
-          </Text>
-          <View className="mt-3" style={{ gap: 12 }}>
-            {cover ? (
-              <Pressable onPress={pickCover}>
-                <Image source={{ uri: cover }} style={{ width: "100%", height: 150, borderRadius: 16 }} resizeMode="cover" />
-                <Text className="mt-1 text-center font-semibold text-[12px] text-bordeaux-700">Changer l'image</Text>
-              </Pressable>
-            ) : coverUploading ? (
-              <View className="items-center rounded-2xl bg-sand py-6">
-                <ActivityIndicator color={colors.bordeaux[600]} />
-              </View>
-            ) : (
-              <Pressable
-                onPress={pickCover}
-                className="flex-row items-center justify-center rounded-2xl border border-dashed border-ink/20 py-5"
-              >
-                <Icon name="plus" size={16} color={colors.bordeaux[600]} strokeWidth={2} />
-                <Text className="ml-2 font-semibold text-[13px] text-bordeaux-700">Image de couverture</Text>
-              </Pressable>
-            )}
-            <Input
-              label="Accroche (titre)"
-              value={headline}
-              onChangeText={setHeadline}
-              placeholder="Ex. Maîtrise ChatGPT en 7 jours"
-            />
-            <Input
-              label="Sous-titre (promesse)"
-              value={subheadline}
-              onChangeText={setSubheadline}
-              placeholder="Le bénéfice principal en une phrase"
-            />
-            <Input
-              label="Bénéfices (un par ligne)"
-              value={benefits}
-              onChangeText={setBenefits}
-              placeholder={"Accès à vie\n30 prompts prêts à l'emploi\nMises à jour offertes"}
-              multiline
-            />
-            <Input
-              label="Description"
-              value={description}
-              onChangeText={setDescription}
-              placeholder="Décris ton produit et pour qui c'est…"
-              multiline
-            />
-          </View>
-        </Card>
-      ) : null}
 
       {error ? <Text className="font-sans text-[12px] text-bordeaux-700">{error}</Text> : null}
 
