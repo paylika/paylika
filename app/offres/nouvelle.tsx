@@ -106,7 +106,8 @@ export default function NouvelleOffreScreen() {
   const offerName = usingExisting ? selectedGroupName : name.trim();
 
   const num = (s: string) => parseInt(s.replace(/\D/g, ""), 10) || 0;
-  const validTiers = tiers.filter((t) => num(t.price) > 0);
+  // Seul Telegram gère la récurrence ; les autres = paiement unique (1 prix).
+  const validTiers = (isTelegram ? tiers : tiers.slice(0, 1)).filter((t) => num(t.price) > 0);
   const valid =
     offerName.length > 0 &&
     validTiers.length > 0 &&
@@ -143,7 +144,7 @@ export default function NouvelleOffreScreen() {
         groupId: usingExisting ? groupChoice : undefined,
         newGroupName: usingExisting ? undefined : offerName,
         tiers: validTiers.map((t) => ({
-          intervalDays: t.days,
+          intervalDays: isTelegram ? t.days : 0, // 0 = paiement unique
           price: num(t.price),
           comparePrice: num(t.compare) > 0 ? num(t.compare) : null,
         })),
@@ -236,29 +237,59 @@ export default function NouvelleOffreScreen() {
         </View>
       </Card>
 
-      {/* Formules */}
-      {tiers.map((t, i) => (
-        <TierCard
-          key={i}
-          index={i}
-          tier={t}
-          onChange={(nt) => updateTier(i, nt)}
-          onRemove={() => removeTier(i)}
-          removable={i > 0}
-        />
-      ))}
-
-      {tiers.length < 3 ? (
-        <Pressable
-          onPress={addTier}
-          className="flex-row items-center justify-center rounded-2xl border border-dashed border-ink/20 py-3.5"
-        >
-          <Icon name="plus" size={16} color={colors.bordeaux[600]} strokeWidth={2} />
-          <Text className="ml-2 font-semibold text-[13px] text-bordeaux-700">
-            Ajouter une formule
+      {/* Prix : récurrence (Telegram) OU paiement unique (autres) */}
+      {isTelegram ? (
+        <>
+          {tiers.map((t, i) => (
+            <TierCard
+              key={i}
+              index={i}
+              tier={t}
+              onChange={(nt) => updateTier(i, nt)}
+              onRemove={() => removeTier(i)}
+              removable={i > 0}
+            />
+          ))}
+          {tiers.length < 3 ? (
+            <Pressable
+              onPress={addTier}
+              className="flex-row items-center justify-center rounded-2xl border border-dashed border-ink/20 py-3.5"
+            >
+              <Icon name="plus" size={16} color={colors.bordeaux[600]} strokeWidth={2} />
+              <Text className="ml-2 font-semibold text-[13px] text-bordeaux-700">Ajouter une formule</Text>
+            </Pressable>
+          ) : null}
+        </>
+      ) : (
+        <Card>
+          <Eyebrow>Prix · paiement unique</Eyebrow>
+          <Text className="mt-1 font-sans text-[11px] text-ink-muted">
+            Pas de récurrence sur ce mode (le retrait automatique n'existe que sur Telegram).
           </Text>
-        </Pressable>
-      ) : null}
+          <View className="mt-3 flex-row" style={{ gap: 10 }}>
+            <View style={{ flex: 1 }}>
+              <Input
+                label="Prix"
+                value={tiers[0].price}
+                onChangeText={(v) => updateTier(0, { ...tiers[0], price: v })}
+                keyboardType="numeric"
+                suffix="XOF"
+                placeholder="5000"
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Input
+                label="Prix barré (option)"
+                value={tiers[0].compare}
+                onChangeText={(v) => updateTier(0, { ...tiers[0], compare: v })}
+                keyboardType="numeric"
+                suffix="XOF"
+                placeholder="8000"
+              />
+            </View>
+          </View>
+        </Card>
+      )}
 
       {error ? <Text className="font-sans text-[12px] text-bordeaux-700">{error}</Text> : null}
 

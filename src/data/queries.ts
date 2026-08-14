@@ -39,6 +39,7 @@ export const PERIODICITIES: { label: string; days: number }[] = [
 ];
 
 export function intervalLabel(days: number): string {
+  if (days <= 0) return "Paiement unique";
   const m = PERIODICITIES.find((p) => p.days === days);
   if (m) return m.label;
   return `${days} j`;

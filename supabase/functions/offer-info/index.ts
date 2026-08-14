@@ -28,7 +28,7 @@ const PERIODS: Record<number, string> = {
   180: "Semestriel",
   365: "Annuel",
 };
-const periodLabel = (d: number) => PERIODS[d] ?? `${d} j`;
+const periodLabel = (d: number) => (d <= 0 ? "Paiement unique" : PERIODS[d] ?? `${d} j`);
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });

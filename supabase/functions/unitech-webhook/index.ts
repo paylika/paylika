@@ -203,7 +203,8 @@ async function grantAccess(evt: any) {
       group_id: intent.group_id ?? null,
       status: "active",
       started_at: new Date(now).toISOString(),
-      expires_at: new Date(now + intervalDays * 86400000).toISOString(),
+      // interval 0 = paiement unique → accès permanent (pas d'expiration/kick).
+      expires_at: intervalDays > 0 ? new Date(now + intervalDays * 86400000).toISOString() : null,
     })
     .select("id")
     .maybeSingle();

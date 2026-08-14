@@ -16,6 +16,7 @@ export default function EditOffreScreen() {
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
   const [days, setDays] = useState(30);
+  const [recurring, setRecurring] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -28,6 +29,7 @@ export default function EditOffreScreen() {
           setPrice(String(o.price));
           setDays(o.interval_days);
           setGroupName(o.groupName);
+          setRecurring(o.deliveryType === "telegram");
         } else {
           setError("Offre introuvable.");
         }
@@ -85,19 +87,25 @@ export default function EditOffreScreen() {
                 keyboardType="numeric"
                 suffix="XOF"
               />
-              <View>
-                <FieldLabel>Périodicité</FieldLabel>
-                <View className="flex-row flex-wrap" style={{ gap: 8 }}>
-                  {PERIODICITIES.map((p) => (
-                    <Chip
-                      key={p.days}
-                      label={p.label}
-                      active={days === p.days}
-                      onPress={() => setDays(p.days)}
-                    />
-                  ))}
+              {recurring ? (
+                <View>
+                  <FieldLabel>Périodicité</FieldLabel>
+                  <View className="flex-row flex-wrap" style={{ gap: 8 }}>
+                    {PERIODICITIES.map((p) => (
+                      <Chip
+                        key={p.days}
+                        label={p.label}
+                        active={days === p.days}
+                        onPress={() => setDays(p.days)}
+                      />
+                    ))}
+                  </View>
                 </View>
-              </View>
+              ) : (
+                <Text className="font-sans text-[12px] text-ink-muted">
+                  Paiement unique (pas de récurrence sur ce mode de livraison).
+                </Text>
+              )}
               {error ? (
                 <Text className="font-sans text-[12px] text-bordeaux-700">{error}</Text>
               ) : null}
