@@ -66,6 +66,17 @@ const OP_LABELS: Record<string, string> = {
   free_money: "Mixx by Yas",
 };
 
+// Libellés simples, orientés client (« Par jour » plutôt que « Journalier »).
+const PER_LABELS: Record<number, string> = {
+  1: "Par jour",
+  7: "Par semaine",
+  30: "Par mois",
+  90: "Par 3 mois",
+  180: "Par 6 mois",
+  365: "Par an",
+};
+const perLabel = (d: number) => PER_LABELS[d] ?? `Par ${d} j`;
+
 const COUNTRIES: { code: string; label: string; operators: string[] }[] = [
   { code: "SN", label: "Sénégal", operators: ["wave", "orange_money"] },
   { code: "CI", label: "Côte d'Ivoire", operators: ["wave_money", "orange_money", "mtn_money", "moov"] },
@@ -95,12 +106,12 @@ function Choice({
   children: React.ReactNode;
 }) {
   return (
-    <Pressable onPress={onPress} style={{ width: 78, alignItems: "center" }}>
+    <Pressable onPress={onPress} style={{ width: 66, alignItems: "center" }}>
       <View
         style={{
-          width: 56,
-          height: 56,
-          borderRadius: 28,
+          width: 50,
+          height: 50,
+          borderRadius: 25,
           alignItems: "center",
           justifyContent: "center",
           borderWidth: selected ? 2.5 : 1,
@@ -112,8 +123,8 @@ function Choice({
       </View>
       <Text
         numberOfLines={1}
-        className={`mt-1.5 text-[11px] ${selected ? "font-bold text-ink" : "font-medium text-ink-muted"}`}
-        style={{ maxWidth: 76, textAlign: "center" }}
+        className={`mt-1.5 text-[10px] ${selected ? "font-bold text-ink" : "font-medium text-ink-muted"}`}
+        style={{ maxWidth: 64, textAlign: "center" }}
       >
         {label}
       </Text>
@@ -142,8 +153,11 @@ export default function PayScreen() {
         const data = await res.json();
         if (data && data.tiers) {
           setInfo(data);
-          const initial = data.tiers.find((t: Tier) => t.id === offer) ?? data.tiers[0];
-          setTierId(initial?.id ?? "");
+          // Par défaut on présélectionne la formule « du milieu » (la plus
+          // populaire) pour inciter à monter en gamme.
+          const byPrice = [...data.tiers].sort((a: Tier, b: Tier) => a.price - b.price);
+          const popular = byPrice[Math.floor((byPrice.length - 1) / 2)] ?? byPrice[0];
+          setTierId(popular?.id ?? "");
         }
       } catch {
         /* offre introuvable */
@@ -157,6 +171,11 @@ export default function PayScreen() {
   const tier = info?.tiers.find((t) => t.id === tierId) ?? info?.tiers[0] ?? null;
   const opLabel = OP_LABELS[operator] ?? "l'opérateur";
   const phoneOk = phone.replace(/\D/g, "").length >= 9;
+
+  // Badges d'incitation : « Plus populaire » (milieu), « Meilleure offre » (le + cher).
+  const byPrice = [...(info?.tiers ?? [])].sort((a, b) => a.price - b.price);
+  const popularId = byPrice.length ? byPrice[Math.floor((byPrice.length - 1) / 2)].id : "";
+  const bestId = byPrice.length ? byPrice[byPrice.length - 1].id : "";
 
   function pickCountry(code: string) {
     setCountryCode(code);
@@ -234,6 +253,12 @@ export default function PayScreen() {
               <View className="mt-4" style={{ gap: 8 }}>
                 {info.tiers.map((t) => {
                   const active = t.id === tier.id;
+                  const badge =
+                    t.id === popularId
+                      ? { text: "Plus populaire", color: colors.bordeaux[600] }
+                      : t.id === bestId
+                        ? { text: "Meilleure offre", color: colors.forest }
+                        : null;
                   return (
                     <Pressable
                       key={t.id}
@@ -253,9 +278,18 @@ export default function PayScreen() {
                         >
                           {active ? <Icon name="check" size={11} color={colors.white} strokeWidth={2.8} /> : null}
                         </View>
-                        <Text className={`text-[14px] ${active ? "font-bold text-ink" : "font-semibold text-ink-soft"}`}>
-                          {t.label}
-                        </Text>
+                        <View>
+                          <Text className={`text-[14px] ${active ? "font-bold text-ink" : "font-semibold text-ink-soft"}`}>
+                            {perLabel(t.intervalDays)}
+                          </Text>
+                          {badge ? (
+                            <View className="mt-1 self-start rounded-full px-2 py-0.5" style={{ backgroundColor: badge.color }}>
+                              <Text style={{ color: "#FFFFFF", fontSize: 9, fontWeight: "700", letterSpacing: 0.2 }}>
+                                {badge.text}
+                              </Text>
+                            </View>
+                          ) : null}
+                        </View>
                       </View>
                       <View className="flex-row items-baseline" style={{ gap: 6 }}>
                         {t.comparePrice ? (
@@ -277,7 +311,11 @@ export default function PayScreen() {
               <View style={{ gap: 18 }}>
                 <View>
                   <FieldLabel>Votre pays</FieldLabel>
-                  <View className="mt-1 flex-row flex-wrap" style={{ gap: 6, rowGap: 12 }}>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={{ gap: 4, paddingVertical: 4 }}
+                  >
                     {COUNTRIES.map((c) => (
                       <Choice
                         key={c.code}
@@ -287,17 +325,21 @@ export default function PayScreen() {
                       >
                         <Image
                           source={FLAGS[c.code]}
-                          style={{ width: "100%", height: "100%", borderRadius: 24 }}
+                          style={{ width: "100%", height: "100%", borderRadius: 23 }}
                           resizeMode="cover"
                         />
                       </Choice>
                     ))}
-                  </View>
+                  </ScrollView>
                 </View>
 
                 <View>
                   <FieldLabel>Moyen de paiement</FieldLabel>
-                  <View className="mt-1 flex-row flex-wrap" style={{ gap: 6, rowGap: 12 }}>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={{ gap: 4, paddingVertical: 4 }}
+                  >
                     {country.operators.map((key) => (
                       <Choice
                         key={key}
@@ -309,7 +351,7 @@ export default function PayScreen() {
                           style={{
                             width: "100%",
                             height: "100%",
-                            borderRadius: 24,
+                            borderRadius: 23,
                             backgroundColor: "#FFFFFF",
                             alignItems: "center",
                             justifyContent: "center",
@@ -320,7 +362,7 @@ export default function PayScreen() {
                         </View>
                       </Choice>
                     ))}
-                  </View>
+                  </ScrollView>
                 </View>
               </View>
             </Card>
