@@ -34,7 +34,9 @@ export type IconName =
   | "tag"
   | "chart"
   | "eye"
-  | "eye-off";
+  | "eye-off"
+  | "camera"
+  | "trash";
 
 /**
  * Hand-drawn stroke icon set for paylika.
@@ -89,6 +91,19 @@ export function Icon({
       )}
       {name === "check" && (
         <Polyline points="20 6 9 17 4 12" {...stroke} />
+      )}
+      {name === "camera" && (
+        <G {...stroke}>
+          <Path d="M4 8.5a2 2 0 0 1 2-2h1.2l1-1.6a1 1 0 0 1 .85-.4h3.9a1 1 0 0 1 .85.4l1 1.6H18a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z" />
+          <Circle cx={12} cy={12.5} r={3.2} />
+        </G>
+      )}
+      {name === "trash" && (
+        <G {...stroke}>
+          <Polyline points="4 7 20 7" />
+          <Path d="M9 7V5.5a1.5 1.5 0 0 1 1.5-1.5h3A1.5 1.5 0 0 1 15 5.5V7" />
+          <Path d="M6 7l1 12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-12" />
+        </G>
       )}
       {name === "close" && (
         <G {...stroke}>

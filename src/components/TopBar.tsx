@@ -11,6 +11,7 @@ import { Avatar } from "./ui";
 import { Icon, Logo } from "./Icon";
 import { colors } from "@/theme/colors";
 import { maxWidthFor } from "./Screen";
+import { useAuth } from "@/lib/auth";
 
 const TABS: { label: string; path: string }[] = [
   { label: "Accueil", path: "/" },
@@ -44,9 +45,11 @@ export function TopBar() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const pathname = usePathname();
+  const { session } = useAuth();
   const { width } = useWindowDimensions();
   const wide = width >= 900;
   const maxW = maxWidthFor(wide);
+  const initials = (session?.user?.email?.[0] ?? "P").toUpperCase();
 
   // A sub-page is any route that isn't one of the top-level tabs.
   const isSubPage = !TABS.some((t) => t.path === pathname);
@@ -88,19 +91,8 @@ export function TopBar() {
               />
             </Pressable>
             <Pressable onPress={() => router.push("/reglages" as any)}>
-              <Avatar initials="AB" size={40} tone="ink" />
+              <Avatar initials={initials} size={40} tone="ink" />
             </Pressable>
-          </View>
-        </View>
-
-        {/* Search */}
-        <View className="mt-4 flex-row items-center rounded-2xl bg-sand px-4 py-3">
-          <Icon name="search" size={18} color={colors.muted} />
-          <Text className="ml-3 flex-1 font-sans text-[14px] text-ink-muted">
-            Rechercher un abonné, un groupe…
-          </Text>
-          <View className="rounded-md bg-card border border-ink/10 px-2 py-0.5">
-            <Text className="font-medium text-[11px] text-ink-muted">⌘K</Text>
           </View>
         </View>
 

@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { View, Text } from "react-native";
 import { useRouter } from "expo-router";
 import { Screen, PageTitle } from "@/components/Screen";
 import { Card, Button, Eyebrow } from "@/components/ui";
 import { Input, Segmented } from "@/components/form";
-import { useAsync, fetchMoney, createPayout } from "@/data/queries";
+import { useAsync, fetchMoney, fetchProfile, createPayout } from "@/data/queries";
 import { formatInt } from "@/components/cards";
 
 export default function RetraitScreen() {
@@ -16,6 +16,16 @@ export default function RetraitScreen() {
   const [destination, setDestination] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Pré-remplir avec le moyen de retrait par défaut du profil.
+  useEffect(() => {
+    fetchProfile()
+      .then((p) => {
+        if (p.payoutMethod) setMethod(p.payoutMethod as any);
+        if (p.payoutNumber) setDestination(p.payoutNumber);
+      })
+      .catch(() => {});
+  }, []);
 
   const available = money?.available ?? 0;
   const amountNum = parseInt(amount.replace(/\D/g, ""), 10) || 0;

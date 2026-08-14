@@ -1,4 +1,4 @@
-import { View, Text, Pressable } from "react-native";
+import { View, Text, Pressable, Image } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import type { ReactNode } from "react";
 import { Icon, type IconName } from "./Icon";
@@ -67,26 +67,35 @@ export function Avatar({
   size = 38,
   tone = "bordeaux",
   ring = false,
+  uri,
 }: {
   initials: string;
   size?: number;
   tone?: "bordeaux" | "ink" | "sand";
   ring?: boolean;
+  uri?: string | null;
 }) {
   const bg =
     tone === "ink" ? "bg-night" : tone === "sand" ? "bg-sand" : "bg-bordeaux-600";
   const fg = tone === "sand" ? "text-ink" : "text-white";
+  const frame = {
+    width: size,
+    height: size,
+    borderRadius: size / 2,
+    borderWidth: ring ? 2 : 0,
+    borderColor: colors.card,
+  };
+  if (uri) {
+    return (
+      <Image
+        source={{ uri }}
+        style={{ ...frame, backgroundColor: colors.sand }}
+        resizeMode="cover"
+      />
+    );
+  }
   return (
-    <View
-      style={{
-        width: size,
-        height: size,
-        borderRadius: size / 2,
-        borderWidth: ring ? 2 : 0,
-        borderColor: colors.card,
-      }}
-      className={`items-center justify-center ${bg}`}
-    >
+    <View style={frame} className={`items-center justify-center ${bg}`}>
       <Text
         className={`font-semibold ${fg}`}
         style={{ fontSize: size * 0.34, letterSpacing: 0.3 }}

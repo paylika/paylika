@@ -518,6 +518,94 @@ export async function createPayout(input: {
   throw new Error(data?.error ?? "Retrait impossible. Réessayez.");
 }
 
+// ---- Profil propriétaire ----
+
+export type Profile = {
+  fullName: string;
+  businessName: string;
+  avatarUrl: string | null;
+  payoutMethod: string;
+  payoutNumber: string;
+};
+
+export async function fetchProfile(): Promise<Profile> {
+  const owner = await currentUserId();
+  const { data } = await supabase
+    .from("profiles")
+    .select("full_name, business_name, avatar_url, payout_method, payout_number")
+    .eq("id", owner)
+    .maybeSingle();
+  return {
+    fullName: data?.full_name ?? "",
+    businessName: data?.business_name ?? "",
+    avatarUrl: data?.avatar_url ?? null,
+    payoutMethod: data?.payout_method ?? "wave",
+    payoutNumber: data?.payout_number ?? "",
+  };
+}
+
+export async function saveProfile(input: {
+  fullName: string;
+  businessName: string;
+  avatarUrl?: string | null;
+  payoutMethod: string;
+  payoutNumber: string;
+}): Promise<void> {
+  const owner = await currentUserId();
+  const { error } = await supabase.from("profiles").upsert({
+    id: owner,
+    full_name: input.fullName || null,
+    business_name: input.businessName || null,
+    ...(input.avatarUrl !== undefined ? { avatar_url: input.avatarUrl } : {}),
+    payout_method: input.payoutMethod,
+    payout_number: input.payoutNumber || null,
+    updated_at: new Date().toISOString(),
+  });
+  if (error) throw error;
+}
+
+/** Upload an avatar image to Storage (avatars/<uid>/…) and return its public URL. */
+export async function uploadAvatar(uri: string, mimeType?: string): Promise<string> {
+  const owner = await currentUserId();
+  const resp = await fetch(uri);
+  const blob = await resp.blob();
+  const type = mimeType || blob.type || "image/jpeg";
+  const ext = type.includes("png") ? "png" : "jpg";
+  const path = `${owner}/avatar_${Date.now()}.${ext}`;
+  const { error } = await supabase.storage
+    .from("avatars")
+    .upload(path, blob, { contentType: type, upsert: true });
+  if (error) throw error;
+  return supabase.storage.from("avatars").getPublicUrl(path).data.publicUrl;
+}
+
+const DELETE_ACCOUNT_URL =
+  "https://xkdiodbppotyiyldlwbg.functions.supabase.co/delete-account";
+
+/** Permanently delete the current owner's account and all their data. */
+export async function deleteAccount(): Promise<void> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const token = session?.access_token;
+  if (!token) throw new Error("Session expirée. Reconnectez-vous.");
+  let data: any = null;
+  try {
+    const res = await fetch(DELETE_ACCOUNT_URL, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    data = await res.json().catch(() => null);
+    if (res.ok && data?.ok) {
+      await supabase.auth.signOut();
+      return;
+    }
+  } catch {
+    throw new Error("Connexion impossible. Réessayez.");
+  }
+  throw new Error(data?.error ?? "Suppression impossible.");
+}
+
 export type OfferStat = {
   id: string;
   name: string;
