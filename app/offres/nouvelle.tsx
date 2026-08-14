@@ -7,6 +7,7 @@ import { Input, Chip, FieldLabel } from "@/components/form";
 import { Icon } from "@/components/Icon";
 import { colors } from "@/theme/colors";
 import { useAuth } from "@/lib/auth";
+import { FORMATION_IA_TEMPLATE } from "@/data/salesTemplates";
 import * as DocumentPicker from "expo-document-picker";
 import * as ImagePicker from "expo-image-picker";
 import {
@@ -424,7 +425,21 @@ export default function NouvelleOffreScreen() {
       {/* Page de vente (offres non-Telegram) — réservé admin */}
       {!isTelegram && isAdmin ? (
         <Card>
-          <Eyebrow>Page de vente (optionnel)</Eyebrow>
+          <View className="flex-row items-center justify-between">
+            <Eyebrow>Page de vente (optionnel)</Eyebrow>
+            <Pressable
+              onPress={() => {
+                const t = FORMATION_IA_TEMPLATE;
+                setHeadline(t.headline ?? "");
+                setSubheadline(t.subheadline ?? "");
+                setBenefits((t.benefits ?? []).join("\n"));
+                setDescription(t.description ?? "");
+              }}
+              className="rounded-full bg-bordeaux-50 px-3 py-1.5"
+            >
+              <Text className="font-semibold text-[11px] text-bordeaux-700">Charger le modèle optimisé</Text>
+            </Pressable>
+          </View>
           <Text className="mt-1 font-sans text-[11px] text-ink-muted">
             Ce que voient les visiteurs avant de payer — idéal pour les pubs. Laisse vide pour une page minimale.
           </Text>
