@@ -33,19 +33,23 @@ function AppShell() {
   const { session, loading, isAdmin, adminChecked } = useAuth();
 
   const isPay = pathname.startsWith("/pay") || pathname.startsWith("/access"); // pages publiques client
+  const isLanding = pathname === "/decouvrir"; // page marketing publique
   const isLogin = pathname === "/login";
   const isOnboarding = pathname === "/onboarding";
   const isAdminRoute = pathname.startsWith("/admin");
   const routedAdmin = useRef(false); // n'envoie l'admin vers sa console qu'une fois
 
   useEffect(() => {
-    if (loading || isPay) return;
+    if (loading || isPay || isLanding) return;
     if (!session) {
       routedAdmin.current = false;
-      if (!isLogin) {
-        // Garde la destination pour y revenir après connexion.
-        const q = pathname && pathname !== "/" ? `?next=${encodeURIComponent(pathname)}` : "";
-        router.replace(`/login${q}` as any);
+      if (isLogin) return;
+      // Visiteur non connecté : la racine mène à la landing (pour les pubs) ;
+      // les autres pages protégées mènent au login (avec retour).
+      if (pathname === "/") {
+        router.replace("/decouvrir" as any);
+      } else {
+        router.replace(`/login?next=${encodeURIComponent(pathname)}` as any);
       }
       return;
     }
@@ -75,8 +79,8 @@ function AppShell() {
   }, [loading, session, pathname, isPay, isLogin, isAdminRoute, isAdmin, adminChecked, nextParam, router]);
 
   let content = null;
-  if (isPay) {
-    content = <Slot />; // no auth, no owner chrome
+  if (isPay || isLanding) {
+    content = <Slot />; // pages publiques (checkout, accès, landing), sans chrome
   } else if (loading) {
     content = null; // brief splash
   } else if (isLogin) {
