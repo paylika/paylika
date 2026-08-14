@@ -31,6 +31,7 @@ function AppShell() {
 
   const isPay = pathname.startsWith("/pay"); // public customer checkout
   const isLogin = pathname === "/login";
+  const isOnboarding = pathname === "/onboarding";
 
   useEffect(() => {
     if (loading || isPay) return;
@@ -47,6 +48,8 @@ function AppShell() {
     content = <Slot />;
   } else if (!session) {
     content = null; // redirecting to /login
+  } else if (isOnboarding) {
+    content = <Slot />; // logged in, focused wizard (no chrome)
   } else {
     content = (
       <>

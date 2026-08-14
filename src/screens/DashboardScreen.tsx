@@ -60,7 +60,7 @@ export function DashboardScreen() {
     let alive = true;
     countOffers()
       .then((n) => {
-        if (alive && n === 0) router.replace("/offres/nouvelle?first=1");
+        if (alive && n === 0) router.replace("/onboarding");
       })
       .catch(() => {});
     return () => {

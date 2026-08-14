@@ -312,6 +312,52 @@ export async function unlinkConnection(chatId: number): Promise<void> {
   if (error) throw error;
 }
 
+/** Onboarding: create a Paylika group for a detected Telegram chat + link it. */
+export async function connectGroup(chatId: number, title: string): Promise<string> {
+  const { data: g, error } = await supabase
+    .from("groups")
+    .insert({ name: title || "Mon groupe", kind: "telegram", telegram_chat_id: String(chatId) })
+    .select("id")
+    .single();
+  if (error) throw error;
+  const { error: e2 } = await supabase
+    .from("telegram_connections")
+    .update({ group_id: g.id, status: "linked" })
+    .eq("chat_id", chatId);
+  if (e2) throw e2;
+  return g.id as string;
+}
+
+/** Onboarding: connections not yet linked to a Paylika group. */
+export async function fetchPendingConnections(): Promise<Connection[]> {
+  const all = await fetchConnections();
+  return all.filter((c) => !c.groupId);
+}
+
+/** Create a single-tier offer and return the created plan id (for the share link). */
+export async function createSimpleOffer(input: {
+  offerName: string;
+  groupId: string;
+  intervalDays: number;
+  price: number;
+  comparePrice?: number | null;
+}): Promise<string> {
+  const { data, error } = await supabase
+    .from("plans")
+    .insert({
+      group_id: input.groupId,
+      name: `${input.offerName} — ${intervalLabel(input.intervalDays)}`,
+      price: input.price,
+      compare_price: input.comparePrice ?? null,
+      currency: "XOF",
+      interval_days: input.intervalDays,
+    })
+    .select("id")
+    .single();
+  if (error) throw error;
+  return data.id as string;
+}
+
 const COMMISSION_RATE = 0.1; // 10% — see docs/ROADMAP.md
 
 export type Transaction = {
