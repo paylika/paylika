@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { View, Text, ActivityIndicator, Pressable } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
-import { Screen, PageTitle } from "@/components/Screen";
+import { Screen, PageHeader } from "@/components/Screen";
 import { Card, Avatar, Tag, Button } from "@/components/ui";
 import { Chip } from "@/components/form";
 import { Icon } from "@/components/Icon";
@@ -159,21 +159,19 @@ export default function AbonnesScreen() {
 
   return (
     <Screen onRefresh={load}>
-      <View className="flex-row items-end justify-between" style={{ gap: 12 }}>
-        <PageTitle
-          eyebrow="Gérer"
-          title="Abonnés"
-          subtitle="Renouvelez, expirez ou retirez un accès."
-        />
-        <View style={{ minWidth: 150 }}>
+      <PageHeader
+        eyebrow="Gérer"
+        title="Abonnés"
+        subtitle="Renouvelez, expirez ou retirez un accès."
+        action={
           <Button
             label="Ajouter"
             icon="plus"
             variant="accent"
             onPress={() => router.push("/abonnes/nouveau" as any)}
           />
-        </View>
-      </View>
+        }
+      />
 
       <View className="flex-row" style={{ gap: 8 }}>
         <Chip label={`Tous (${counts.all})`} active={filter === "all"} onPress={() => setFilter("all")} />

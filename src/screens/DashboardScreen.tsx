@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { View, Text } from "react-native";
 import { useRouter } from "expo-router";
 import { Card, Button, Eyebrow } from "@/components/ui";
-import { Screen, useWide } from "@/components/Screen";
+import { Screen, PageHeader, useWide } from "@/components/Screen";
 import { useDashboard } from "@/data/useDashboard";
 import { useAsync, fetchMoney, countOffers } from "@/data/queries";
 import {
@@ -150,25 +150,18 @@ export function DashboardScreen() {
 
   return (
     <Screen onRefresh={refresh}>
-      <View className="flex-row items-end justify-between" style={{ gap: 12 }}>
-        <View>
-          <Eyebrow>Tableau de bord</Eyebrow>
-          <Text
-            className="mt-1.5 font-display-x text-[30px] text-ink"
-            style={{ letterSpacing: -1.2, lineHeight: 34 }}
-          >
-            Vue d'ensemble
-          </Text>
-        </View>
-        <View style={{ minWidth: 150 }}>
+      <PageHeader
+        eyebrow="Tableau de bord"
+        title="Vue d'ensemble"
+        action={
           <Button
             label="Nouvelle offre"
             icon="plus"
             variant="accent"
             onPress={() => router.push("/offres/nouvelle" as any)}
           />
-        </View>
-      </View>
+        }
+      />
 
       {/* Balance + KPIs */}
       {wide ? (

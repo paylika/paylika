@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { View, Text, ActivityIndicator, Pressable } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
-import { Screen, PageTitle } from "@/components/Screen";
+import { Screen, PageHeader } from "@/components/Screen";
 import { Card, Button, Tag, Eyebrow } from "@/components/ui";
 import { Icon } from "@/components/Icon";
 import { colors } from "@/theme/colors";
@@ -141,21 +141,19 @@ export default function OffresScreen() {
 
   return (
     <Screen onRefresh={load}>
-      <View className="flex-row items-end justify-between" style={{ gap: 12 }}>
-        <PageTitle
-          eyebrow="Vendre"
-          title="Offres"
-          subtitle="Vos paywalls : prix, périodicité et lien de partage."
-        />
-        <View style={{ minWidth: 150 }}>
+      <PageHeader
+        eyebrow="Vendre"
+        title="Offres"
+        subtitle="Vos paywalls : prix, périodicité et lien de partage."
+        action={
           <Button
             label="Créer une offre"
             icon="plus"
             variant="accent"
             onPress={() => router.push("/offres/nouvelle")}
           />
-        </View>
-      </View>
+        }
+      />
 
       {error ? (
         <Card>

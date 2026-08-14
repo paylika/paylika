@@ -78,6 +78,40 @@ export function Screen({
   );
 }
 
+/**
+ * Page heading with an optional action button. On wide screens the action sits
+ * to the right of the title; on mobile it stacks below (no horizontal overflow).
+ */
+export function PageHeader({
+  eyebrow,
+  title,
+  subtitle,
+  action,
+}: {
+  eyebrow?: string;
+  title: string;
+  subtitle?: string;
+  action?: ReactNode;
+}) {
+  const wide = useWide();
+  const heading = <PageTitle eyebrow={eyebrow} title={title} subtitle={subtitle} />;
+  if (!action) return heading;
+  if (wide) {
+    return (
+      <View className="flex-row items-end justify-between" style={{ gap: 12 }}>
+        {heading}
+        <View style={{ minWidth: 150 }}>{action}</View>
+      </View>
+    );
+  }
+  return (
+    <View style={{ gap: 12 }}>
+      {heading}
+      {action}
+    </View>
+  );
+}
+
 /** Standard page heading (eyebrow + title + optional subtitle). */
 export function PageTitle({
   eyebrow,

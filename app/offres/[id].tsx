@@ -3,15 +3,9 @@ import { View, Text, ActivityIndicator } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Screen, PageTitle } from "@/components/Screen";
 import { Card, Button, Tag } from "@/components/ui";
-import { Input, Segmented } from "@/components/form";
+import { Input, Chip, FieldLabel } from "@/components/form";
 import { colors } from "@/theme/colors";
-import { fetchOffre, updateOffer } from "@/data/queries";
-
-function intervalKey(days: number): "30" | "90" | "365" {
-  if (days >= 360) return "365";
-  if (days >= 85) return "90";
-  return "30";
-}
+import { fetchOffre, updateOffer, PERIODICITIES } from "@/data/queries";
 
 export default function EditOffreScreen() {
   const router = useRouter();
@@ -21,7 +15,7 @@ export default function EditOffreScreen() {
   const [groupName, setGroupName] = useState("");
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
-  const [interval, setInterval] = useState<"30" | "90" | "365">("30");
+  const [days, setDays] = useState(30);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,7 +26,7 @@ export default function EditOffreScreen() {
         if (o) {
           setName(o.name);
           setPrice(String(o.price));
-          setInterval(intervalKey(o.interval_days));
+          setDays(o.interval_days);
           setGroupName(o.groupName);
         } else {
           setError("Offre introuvable.");
@@ -56,7 +50,7 @@ export default function EditOffreScreen() {
       await updateOffer(String(id), {
         name: name.trim(),
         price: priceNum,
-        intervalDays: parseInt(interval, 10),
+        intervalDays: days,
       });
       router.replace("/offres");
     } catch (e: any) {
@@ -91,16 +85,19 @@ export default function EditOffreScreen() {
                 keyboardType="numeric"
                 suffix="XOF"
               />
-              <Segmented
-                label="Périodicité"
-                value={interval}
-                onChange={setInterval}
-                options={[
-                  { label: "Mensuel", value: "30" },
-                  { label: "Trimestriel", value: "90" },
-                  { label: "Annuel", value: "365" },
-                ]}
-              />
+              <View>
+                <FieldLabel>Périodicité</FieldLabel>
+                <View className="flex-row flex-wrap" style={{ gap: 8 }}>
+                  {PERIODICITIES.map((p) => (
+                    <Chip
+                      key={p.days}
+                      label={p.label}
+                      active={days === p.days}
+                      onPress={() => setDays(p.days)}
+                    />
+                  ))}
+                </View>
+              </View>
               {error ? (
                 <Text className="font-sans text-[12px] text-bordeaux-700">{error}</Text>
               ) : null}

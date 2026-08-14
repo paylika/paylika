@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { View, Text, ActivityIndicator } from "react-native";
 import { useRouter } from "expo-router";
-import { Screen, PageTitle, useWide } from "@/components/Screen";
+import { Screen, PageHeader, useWide } from "@/components/Screen";
 import { Card, Button, Eyebrow, Tag } from "@/components/ui";
 import { Segmented } from "@/components/form";
 import { colors } from "@/theme/colors";
@@ -105,21 +105,19 @@ export default function StatsScreen() {
 
   return (
     <Screen onRefresh={reload}>
-      <View className="flex-row items-end justify-between" style={{ gap: 12 }}>
-        <PageTitle
-          eyebrow="Activité"
-          title="Statistiques"
-          subtitle="Vue complète de votre activité et de vos offres."
-        />
-        <View style={{ minWidth: 150 }}>
+      <PageHeader
+        eyebrow="Activité"
+        title="Statistiques"
+        subtitle="Vue complète de votre activité et de vos offres."
+        action={
           <Button
             label="Voir les abonnés"
             icon="users"
             variant="outline"
             onPress={() => router.push("/abonnes" as any)}
           />
-        </View>
-      </View>
+        }
+      />
 
       {/* Sub-nav */}
       <Segmented
