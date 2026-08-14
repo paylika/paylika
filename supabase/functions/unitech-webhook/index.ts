@@ -95,20 +95,14 @@ Deno.serve(async (req) => {
 });
 
 async function grantAccess(evt: any) {
-  const reference = evt.reference as string;
-
-  // Idempotence.
-  const { data: seen } = await admin
-    .from("payments")
-    .select("id")
-    .eq("provider_ref", reference)
-    .maybeSingle();
-  if (seen) return;
+  const evtRef = (evt.reference ?? "") as string;
 
   const cols = "plan_id, group_id, telegram_user_id, amount, reference";
   let intent: any = null;
-  // 1) par référence
-  intent = (await admin.from("payment_intents").select(cols).eq("reference", reference).maybeSingle()).data;
+  // 1) par référence (si UniTech en fournit une)
+  if (evtRef) {
+    intent = (await admin.from("payment_intents").select(cols).eq("reference", evtRef).maybeSingle()).data;
+  }
   // 2) par transaction_id
   if (!intent && evt.transaction_id != null) {
     intent = (await admin
@@ -129,8 +123,24 @@ async function grantAccess(evt: any) {
       .maybeSingle()).data;
   }
   if (!intent?.plan_id) {
-    console.error("intent introuvable pour", reference, evt.transaction_id);
+    console.error("intent introuvable pour", evtRef, evt.transaction_id);
     return;
+  }
+
+  // Référence canonique : celle de l'intent (le webhook UniTech ne renvoie pas
+  // toujours `reference`). Sert au provider_ref ET à l'anti-doublon.
+  const reference = (intent.reference ||
+    evtRef ||
+    (evt.transaction_id != null ? `txn_${evt.transaction_id}` : "")) as string;
+
+  // Idempotence : ce paiement est-il déjà enregistré ?
+  if (reference) {
+    const { data: seen } = await admin
+      .from("payments")
+      .select("id")
+      .eq("provider_ref", reference)
+      .maybeSingle();
+    if (seen) return;
   }
 
   const { data: plan } = await admin
