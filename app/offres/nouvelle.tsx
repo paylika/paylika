@@ -6,10 +6,12 @@ import { Card, Button, Eyebrow } from "@/components/ui";
 import { Input, Chip, FieldLabel } from "@/components/form";
 import { Icon } from "@/components/Icon";
 import { colors } from "@/theme/colors";
+import * as DocumentPicker from "expo-document-picker";
 import {
   useAsync,
   fetchGroups,
   createOffer,
+  uploadContent,
   PERIODICITIES,
   DELIVERY_TYPES,
   type DeliveryType,
@@ -94,9 +96,29 @@ export default function NouvelleOffreScreen() {
   const [groupChoice, setGroupChoice] = useState<string>(NEW);
   const [name, setName] = useState("");
   const [deliveryTarget, setDeliveryTarget] = useState("");
+  const [linkMode, setLinkMode] = useState<"url" | "file">("url");
+  const [fileName, setFileName] = useState("");
+  const [uploading, setUploading] = useState(false);
   const [tiers, setTiers] = useState<TierForm[]>([{ days: 30, price: "", compare: "" }]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  async function pickFile() {
+    setError(null);
+    try {
+      const res = await DocumentPicker.getDocumentAsync({ copyToCacheDirectory: true });
+      if (res.canceled || !res.assets?.[0]) return;
+      const a = res.assets[0];
+      setUploading(true);
+      const target = await uploadContent(a.uri, a.name, a.mimeType);
+      setDeliveryTarget(target);
+      setFileName(a.name);
+    } catch (e: any) {
+      setError(e?.message ?? "Téléversement impossible.");
+    } finally {
+      setUploading(false);
+    }
+  }
 
   const isTelegram = deliveryType === "telegram";
   const needsTarget = deliveryType === "whatsapp" || deliveryType === "link";
@@ -113,9 +135,6 @@ export default function NouvelleOffreScreen() {
     validTiers.length > 0 &&
     (needsTarget ? deliveryTarget.trim().length > 0 : true);
 
-  const targetLabel = deliveryType === "whatsapp" ? "Lien d'invitation du groupe WhatsApp" : "Lien à livrer (URL)";
-  const targetPlaceholder =
-    deliveryType === "whatsapp" ? "https://chat.whatsapp.com/…" : "https://… (formation, fichier, page privée)";
 
   function updateTier(i: number, t: TierForm) {
     setTiers((prev) => prev.map((x, idx) => (idx === i ? t : x)));
@@ -221,16 +240,83 @@ export default function NouvelleOffreScreen() {
             />
           ) : null}
 
-          {needsTarget ? (
+          {deliveryType === "whatsapp" ? (
             <View>
               <Input
-                label={targetLabel}
+                label="Lien d'invitation du groupe WhatsApp"
                 value={deliveryTarget}
                 onChangeText={setDeliveryTarget}
-                placeholder={targetPlaceholder}
+                placeholder="https://chat.whatsapp.com/…"
               />
               <Text className="mt-1.5 font-sans text-[11px] text-ink-muted">
-                Ce lien reste secret : livré uniquement après paiement, via un bouton (jamais affiché en clair).
+                Livré après paiement via un bouton (jamais affiché en clair).
+              </Text>
+            </View>
+          ) : deliveryType === "link" ? (
+            <View style={{ gap: 12 }}>
+              <View>
+                <FieldLabel>Que livrer ?</FieldLabel>
+                <View className="mt-1 flex-row" style={{ gap: 8 }}>
+                  <Chip
+                    label="Un lien (URL)"
+                    active={linkMode === "url"}
+                    onPress={() => {
+                      setLinkMode("url");
+                      setDeliveryTarget("");
+                      setFileName("");
+                    }}
+                  />
+                  <Chip
+                    label="Un fichier"
+                    active={linkMode === "file"}
+                    onPress={() => {
+                      setLinkMode("file");
+                      setDeliveryTarget("");
+                      setFileName("");
+                    }}
+                  />
+                </View>
+              </View>
+
+              {linkMode === "url" ? (
+                <Input
+                  label="Lien à livrer (URL)"
+                  value={deliveryTarget}
+                  onChangeText={setDeliveryTarget}
+                  placeholder="https://… (formation, page privée)"
+                />
+              ) : uploading ? (
+                <View className="flex-row items-center rounded-2xl bg-sand px-4 py-3" style={{ gap: 10 }}>
+                  <ActivityIndicator color={colors.bordeaux[600]} />
+                  <Text className="font-sans text-[13px] text-ink-muted">Téléversement…</Text>
+                </View>
+              ) : fileName ? (
+                <Pressable
+                  onPress={pickFile}
+                  className="flex-row items-center justify-between rounded-2xl bg-sand px-4 py-3"
+                >
+                  <View className="flex-1 flex-row items-center pr-2" style={{ gap: 8 }}>
+                    <Icon name="check" size={16} color={colors.forest} strokeWidth={2.4} />
+                    <Text numberOfLines={1} className="flex-1 font-semibold text-[13px] text-ink">
+                      {fileName}
+                    </Text>
+                  </View>
+                  <Text className="font-semibold text-[12px] text-bordeaux-700">Changer</Text>
+                </Pressable>
+              ) : (
+                <Pressable
+                  onPress={pickFile}
+                  className="flex-row items-center justify-center rounded-2xl border border-dashed border-ink/20 py-4"
+                >
+                  <Icon name="plus" size={16} color={colors.bordeaux[600]} strokeWidth={2} />
+                  <Text className="ml-2 font-semibold text-[13px] text-bordeaux-700">Téléverser un fichier</Text>
+                </Pressable>
+              )}
+
+              <Text className="font-sans text-[11px] text-ink-muted">
+                {linkMode === "file"
+                  ? "Le fichier reste privé : livré via un lien de téléchargement temporaire après paiement."
+                  : "Ce lien reste secret : livré uniquement après paiement, via un bouton."}
               </Text>
             </View>
           ) : null}

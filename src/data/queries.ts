@@ -98,6 +98,26 @@ export function payLinkFor(offre: Pick<Offre, "id" | "deliveryType">): string {
     : `${APP_URL}/pay/${offre.id}`;
 }
 
+/**
+ * Téléverse un fichier de contenu dans le bucket privé et renvoie sa référence
+ * de livraison (`storage:<chemin>`). Livré via URL signée après paiement.
+ */
+export async function uploadContent(uri: string, fileName: string, mimeType?: string): Promise<string> {
+  const owner = await currentUserId();
+  const resp = await fetch(uri);
+  const blob = await resp.blob();
+  const safe = (fileName || "fichier").replace(/[^\w.\-]+/g, "_").slice(-60);
+  const path = `${owner}/${Date.now()}-${safe}`;
+  const { error } = await supabase.storage
+    .from("content")
+    .upload(path, blob, {
+      contentType: mimeType || blob.type || "application/octet-stream",
+      upsert: true,
+    });
+  if (error) throw error;
+  return `storage:${path}`;
+}
+
 export type SubscriberRow = {
   id: string;
   name: string;

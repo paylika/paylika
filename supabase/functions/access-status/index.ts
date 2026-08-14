@@ -51,11 +51,22 @@ Deno.serve(async (req) => {
   const g: any = (plan as any)?.groups ?? {};
   const deliveryType = g.delivery_type ?? "telegram";
 
+  // Cible livrée UNIQUEMENT si payé. Un fichier (`storage:<chemin>`) devient une
+  // URL signée temporaire ; sinon on renvoie l'URL telle quelle.
+  let target: string | null = paid ? g.delivery_target ?? null : null;
+  let isFile = false;
+  if (target && target.startsWith("storage:")) {
+    isFile = true;
+    const objectPath = target.slice("storage:".length);
+    const { data: signed } = await admin.storage.from("content").createSignedUrl(objectPath, 3600);
+    target = signed?.signedUrl ?? null;
+  }
+
   return json({
     status: paid ? "completed" : "pending",
     deliveryType,
     offerName: g.name ?? (plan as any)?.name ?? "Offre",
-    // Cible livrée UNIQUEMENT si payé.
-    target: paid ? g.delivery_target ?? null : null,
+    target,
+    isFile,
   });
 });

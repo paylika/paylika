@@ -13,6 +13,7 @@ type State = {
   deliveryType: string;
   offerName: string;
   target: string | null;
+  isFile?: boolean;
 };
 
 function openTarget(url: string) {
@@ -131,11 +132,16 @@ export default function AccessScreen() {
             ) : dt === "link" && state?.target ? (
               <View className="mt-5">
                 <Button
-                  label="Accéder au contenu"
+                  label={state.isFile ? "Télécharger le fichier" : "Accéder au contenu"}
                   icon="arrow-up-right"
                   variant="accent"
                   onPress={() => openTarget(state.target!)}
                 />
+                {state.isFile ? (
+                  <Text className="mt-2 text-center font-sans text-[11px] text-ink-muted">
+                    Lien de téléchargement valable 1 heure.
+                  </Text>
+                ) : null}
               </View>
             ) : (
               <Text className="mt-4 text-center font-sans text-[12px] text-ink-muted">
