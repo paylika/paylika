@@ -32,7 +32,10 @@ function AppShell() {
   const { height } = useWindowDimensions();
   const { session, loading, isAdmin, adminChecked } = useAuth();
 
-  const isPay = pathname.startsWith("/pay") || pathname.startsWith("/access"); // public client
+  const isPay =
+    pathname.startsWith("/pay") ||
+    pathname.startsWith("/access") ||
+    pathname.startsWith("/p/"); // pages publiques client (checkout, accès, vente)
   const isLogin = pathname === "/login";
   const isOnboarding = pathname === "/onboarding";
   const isAdminRoute = pathname.startsWith("/admin");

@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { View, Text, ScrollView, ActivityIndicator, Platform, Linking } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Card, Button } from "@/components/ui";
 import { Logo, Icon } from "@/components/Icon";
 import { colors } from "@/theme/colors";
+import { loadPixel, track } from "@/lib/pixel";
 
 const STATUS_URL = "https://xkdiodbppotyiyldlwbg.functions.supabase.co/access-status";
 
@@ -14,6 +15,8 @@ type State = {
   offerName: string;
   target: string | null;
   isFile?: boolean;
+  amount?: number;
+  metaPixelId?: string | null;
 };
 
 function openTarget(url: string) {
@@ -60,6 +63,16 @@ export default function AccessScreen() {
       clearInterval(id);
     };
   }, [ref]);
+
+  // Événement Meta "Purchase" une seule fois, dès la confirmation.
+  const fired = useRef(false);
+  useEffect(() => {
+    if (state?.status === "completed" && !fired.current) {
+      fired.current = true;
+      loadPixel(state.metaPixelId);
+      track("Purchase", { value: state.amount ?? 0, currency: "XOF" });
+    }
+  }, [state]);
 
   const completed = state?.status === "completed";
   const dt = state?.deliveryType;

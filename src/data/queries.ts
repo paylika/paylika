@@ -60,6 +60,15 @@ export type Offre = {
 
 export type DeliveryType = "telegram" | "whatsapp" | "link" | "receipt";
 
+export type SalesPage = {
+  cover?: string | null;
+  headline?: string;
+  subheadline?: string;
+  benefits?: string[];
+  description?: string;
+  guarantee?: string;
+};
+
 export const DELIVERY_TYPES: { value: DeliveryType; label: string; hint: string }[] = [
   { value: "telegram", label: "Groupe Telegram", hint: "Ajout et retrait automatiques (le plus verrouillé)." },
   { value: "whatsapp", label: "Groupe WhatsApp", hint: "L'acheteur reçoit un bouton pour rejoindre le groupe." },
@@ -93,9 +102,26 @@ const APP_URL = "https://paylika.paylika-app.workers.dev";
 export function payLinkFor(offre: Pick<Offre, "id" | "deliveryType">): string {
   // Telegram passe par le bot (capture l'utilisateur pour le DM) ;
   // les autres modes vont directement sur la page de paiement web.
+  // Non-Telegram : on partage la PAGE DE VENTE (/p) — c'est la landing pour les
+  // pubs. Telegram passe par le bot.
   return offre.deliveryType === "telegram"
     ? `https://t.me/Paylikabot?start=${offre.id}`
-    : `${APP_URL}/pay/${offre.id}`;
+    : `${APP_URL}/p/${offre.id}`;
+}
+
+/** Upload d'une image de couverture (bucket public) → URL publique. */
+export async function uploadCover(uri: string, mimeType?: string): Promise<string> {
+  const owner = await currentUserId();
+  const resp = await fetch(uri);
+  const blob = await resp.blob();
+  const type = mimeType || blob.type || "image/jpeg";
+  const ext = type.includes("png") ? "png" : "jpg";
+  const path = `${owner}/cover_${Date.now()}.${ext}`;
+  const { error } = await supabase.storage
+    .from("covers")
+    .upload(path, blob, { contentType: type, upsert: true });
+  if (error) throw error;
+  return supabase.storage.from("covers").getPublicUrl(path).data.publicUrl;
 }
 
 /**
@@ -237,6 +263,7 @@ export type NewOffer = {
   currency: string;
   deliveryType: DeliveryType;
   deliveryTarget?: string | null; // lien WhatsApp / URL (whatsapp & link)
+  salesPage?: SalesPage | null; // contenu de la page de vente
   groupId?: string; // telegram : groupe déjà connecté
   newGroupName?: string; // nom de l'entité vendable (si pas de groupe existant)
   tiers: Tier[];
@@ -259,6 +286,7 @@ export async function createOffer(input: NewOffer): Promise<string[]> {
         kind: input.deliveryType === "telegram" ? "telegram" : input.deliveryType,
         delivery_type: input.deliveryType,
         delivery_target: input.deliveryTarget?.trim() || null,
+        sales_page: input.salesPage ?? null,
         owner_id: owner,
       })
       .select("id")
@@ -579,13 +607,14 @@ export type Profile = {
   avatarUrl: string | null;
   payoutMethod: string;
   payoutNumber: string;
+  metaPixelId: string;
 };
 
 export async function fetchProfile(): Promise<Profile> {
   const owner = await currentUserId();
   const { data } = await supabase
     .from("profiles")
-    .select("full_name, business_name, avatar_url, payout_method, payout_number")
+    .select("full_name, business_name, avatar_url, payout_method, payout_number, meta_pixel_id")
     .eq("id", owner)
     .maybeSingle();
   return {
@@ -594,6 +623,7 @@ export async function fetchProfile(): Promise<Profile> {
     avatarUrl: data?.avatar_url ?? null,
     payoutMethod: data?.payout_method ?? "wave",
     payoutNumber: data?.payout_number ?? "",
+    metaPixelId: data?.meta_pixel_id ?? "",
   };
 }
 
@@ -603,6 +633,7 @@ export async function saveProfile(input: {
   avatarUrl?: string | null;
   payoutMethod: string;
   payoutNumber: string;
+  metaPixelId?: string;
 }): Promise<void> {
   const owner = await currentUserId();
   const { error } = await supabase.from("profiles").upsert({
@@ -612,6 +643,7 @@ export async function saveProfile(input: {
     ...(input.avatarUrl !== undefined ? { avatar_url: input.avatarUrl } : {}),
     payout_method: input.payoutMethod,
     payout_number: input.payoutNumber || null,
+    ...(input.metaPixelId !== undefined ? { meta_pixel_id: input.metaPixelId || null } : {}),
     updated_at: new Date().toISOString(),
   });
   if (error) throw error;

@@ -19,6 +19,7 @@ export function Input({
   suffix,
   autoFocus,
   secureTextEntry,
+  multiline,
 }: {
   label?: string;
   value: string;
@@ -28,12 +29,17 @@ export function Input({
   suffix?: string;
   autoFocus?: boolean;
   secureTextEntry?: boolean;
+  multiline?: boolean;
 }) {
   const [hidden, setHidden] = useState(!!secureTextEntry);
   return (
     <View>
       {label ? <FieldLabel>{label}</FieldLabel> : null}
-      <View className="flex-row items-center rounded-2xl bg-card border border-ink/[0.1] px-4 py-3">
+      <View
+        className={`flex-row rounded-2xl bg-card border border-ink/[0.1] px-4 py-3 ${
+          multiline ? "items-start" : "items-center"
+        }`}
+      >
         <TextInput
           value={value}
           onChangeText={onChangeText}
@@ -42,9 +48,10 @@ export function Input({
           keyboardType={keyboardType}
           autoFocus={autoFocus}
           secureTextEntry={secureTextEntry ? hidden : false}
+          multiline={multiline}
           className="flex-1 font-sans text-[15px] text-ink"
           // @ts-expect-error web-only: remove the focus outline (RN Web)
-          style={{ paddingVertical: 0, outlineStyle: "none" }}
+          style={{ paddingVertical: 0, outlineStyle: "none", minHeight: multiline ? 80 : undefined, textAlignVertical: multiline ? "top" : "center" }}
         />
         {secureTextEntry ? (
           <Pressable onPress={() => setHidden((h) => !h)} hitSlop={8} className="ml-2">

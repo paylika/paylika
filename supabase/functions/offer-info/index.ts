@@ -37,11 +37,23 @@ Deno.serve(async (req) => {
 
   const { data: base } = await admin
     .from("plans")
-    .select("id, name, price, compare_price, currency, interval_days, group_id, groups(name, delivery_type)")
+    .select("id, name, price, compare_price, currency, interval_days, group_id, groups(name, delivery_type, sales_page, owner_id)")
     .eq("id", id)
     .maybeSingle();
   if (!base) return json({ error: "Offre introuvable" }, 404);
   const b: any = base;
+
+  // Meta Pixel du propriétaire (public côté client).
+  let metaPixelId: string | null = null;
+  const ownerId = b.groups?.owner_id;
+  if (ownerId) {
+    const { data: prof } = await admin
+      .from("profiles")
+      .select("meta_pixel_id")
+      .eq("id", ownerId)
+      .maybeSingle();
+    metaPixelId = prof?.meta_pixel_id ?? null;
+  }
 
   // Toutes les formules de la même offre (= même groupe), triées par durée.
   const { data: sibs } = await admin
@@ -66,6 +78,8 @@ Deno.serve(async (req) => {
     currency: b.currency,
     // Type de livraison public (sert au checkout) ; la CIBLE reste secrète.
     deliveryType: b.groups?.delivery_type ?? "telegram",
+    salesPage: b.groups?.sales_page ?? null,
+    metaPixelId,
     tiers,
   });
 });

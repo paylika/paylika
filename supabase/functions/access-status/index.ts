@@ -27,7 +27,7 @@ Deno.serve(async (req) => {
 
   const { data: intent } = await admin
     .from("payment_intents")
-    .select("status, plan_id")
+    .select("status, plan_id, amount")
     .eq("reference", ref)
     .maybeSingle();
   if (!intent) return json({ status: "unknown" });
@@ -45,11 +45,22 @@ Deno.serve(async (req) => {
 
   const { data: plan } = await admin
     .from("plans")
-    .select("name, groups(name, delivery_type, delivery_target)")
+    .select("name, groups(name, delivery_type, delivery_target, owner_id)")
     .eq("id", intent.plan_id)
     .maybeSingle();
   const g: any = (plan as any)?.groups ?? {};
   const deliveryType = g.delivery_type ?? "telegram";
+
+  // Meta Pixel du propriétaire (pour l'événement Purchase côté acheteur).
+  let metaPixelId: string | null = null;
+  if (g.owner_id) {
+    const { data: prof } = await admin
+      .from("profiles")
+      .select("meta_pixel_id")
+      .eq("id", g.owner_id)
+      .maybeSingle();
+    metaPixelId = prof?.meta_pixel_id ?? null;
+  }
 
   // Cible livrée UNIQUEMENT si payé. Un fichier (`storage:<chemin>`) devient une
   // URL signée temporaire ; sinon on renvoie l'URL telle quelle.
@@ -68,5 +79,7 @@ Deno.serve(async (req) => {
     offerName: g.name ?? (plan as any)?.name ?? "Offre",
     target,
     isFile,
+    amount: Number(intent.amount) || 0,
+    metaPixelId,
   });
 });

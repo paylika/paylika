@@ -15,6 +15,7 @@ import { Card, Button, Eyebrow } from "@/components/ui";
 import { Input, FieldLabel } from "@/components/form";
 import { Icon, Logo } from "@/components/Icon";
 import { colors } from "@/theme/colors";
+import { loadPixel, track } from "@/lib/pixel";
 import { formatInt } from "@/components/cards";
 
 type Tier = {
@@ -30,6 +31,7 @@ type OfferInfo = {
   groupName: string;
   currency: string;
   deliveryType?: string;
+  metaPixelId?: string | null;
   tiers: Tier[];
 };
 
@@ -154,6 +156,7 @@ export default function PayScreen() {
         const data = await res.json();
         if (data && data.tiers) {
           setInfo(data);
+          loadPixel(data.metaPixelId);
           // Par défaut on présélectionne la formule « du milieu » (la plus
           // populaire) pour inciter à monter en gamme.
           const byPrice = [...data.tiers].sort((a: Tier, b: Tier) => a.price - b.price);
@@ -188,6 +191,7 @@ export default function PayScreen() {
     if (!phoneOk || submitting || !tier) return;
     setSubmitting(true);
     setError(null);
+    track("InitiateCheckout", { value: tier.price, currency: info?.currency ?? "XOF" });
     try {
       const res = await fetch(CREATE_URL, {
         method: "POST",
