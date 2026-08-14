@@ -6,6 +6,7 @@ import { Card, Button, Eyebrow } from "@/components/ui";
 import { Input, Chip, FieldLabel } from "@/components/form";
 import { Icon } from "@/components/Icon";
 import { colors } from "@/theme/colors";
+import { useAuth } from "@/lib/auth";
 import * as DocumentPicker from "expo-document-picker";
 import * as ImagePicker from "expo-image-picker";
 import {
@@ -90,6 +91,7 @@ function TierCard({
 
 export default function NouvelleOffreScreen() {
   const router = useRouter();
+  const { isAdmin } = useAuth();
   const { first } = useLocalSearchParams<{ first?: string }>();
   const onboarding = first === "1";
   const { data: groups, loading: groupsLoading } = useAsync(fetchGroups);
@@ -419,8 +421,8 @@ export default function NouvelleOffreScreen() {
         </Card>
       )}
 
-      {/* Page de vente (offres non-Telegram) */}
-      {!isTelegram ? (
+      {/* Page de vente (offres non-Telegram) — réservé admin */}
+      {!isTelegram && isAdmin ? (
         <Card>
           <Eyebrow>Page de vente (optionnel)</Eyebrow>
           <Text className="mt-1 font-sans text-[11px] text-ink-muted">

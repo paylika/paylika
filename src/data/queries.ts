@@ -56,6 +56,7 @@ export type Offre = {
   groupName: string;
   groupKind: string;
   deliveryType: DeliveryType;
+  salesPage?: SalesPage | null;
 };
 
 export type DeliveryType = "telegram" | "whatsapp" | "link" | "receipt";
@@ -322,7 +323,7 @@ export async function countOffers(): Promise<number> {
 export async function fetchOffre(id: string): Promise<Offre | null> {
   const { data, error } = await supabase
     .from("plans")
-    .select("id, name, price, compare_price, currency, interval_days, group_id, groups(name, kind, delivery_type)")
+    .select("id, name, price, compare_price, currency, interval_days, group_id, groups(name, kind, delivery_type, sales_page)")
     .eq("id", id)
     .maybeSingle();
   if (error) throw error;
@@ -339,7 +340,17 @@ export async function fetchOffre(id: string): Promise<Offre | null> {
     groupName: p.groups?.name ?? "—",
     groupKind: p.groups?.kind ?? "telegram",
     deliveryType: (p.groups?.delivery_type ?? "telegram") as DeliveryType,
+    salesPage: (p.groups?.sales_page ?? null) as SalesPage | null,
   };
+}
+
+/** Met à jour la page de vente d'une offre (via son groupe). */
+export async function updateSalesPage(groupId: string, salesPage: SalesPage): Promise<void> {
+  const { error } = await supabase
+    .from("groups")
+    .update({ sales_page: salesPage })
+    .eq("id", groupId);
+  if (error) throw error;
 }
 
 export async function updateOffer(

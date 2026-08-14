@@ -87,6 +87,16 @@ export default function SalesPage() {
   const cheapest = [...info.tiers].sort((a, b) => a.price - b.price)[0];
   const headline = s.headline?.trim() || info.offerName;
   const benefits = (s.benefits ?? []).filter((b) => b.trim());
+  const discount =
+    cheapest?.comparePrice && cheapest.comparePrice > cheapest.price
+      ? Math.round((1 - cheapest.price / cheapest.comparePrice) * 100)
+      : 0;
+
+  const TRUST = [
+    { icon: "wallet" as const, text: "Paiement Wave / Orange Money" },
+    { icon: "arrow-up-right" as const, text: "Accès immédiat" },
+    { icon: "check" as const, text: "Accès à vie" },
+  ];
 
   return (
     <ScrollView
@@ -111,7 +121,13 @@ export default function SalesPage() {
               </Text>
             </View>
 
-            <Text className="font-display-x text-[26px] text-ink" style={{ letterSpacing: -1, lineHeight: 30 }}>
+            <View className="self-start rounded-full bg-bordeaux-50 px-3 py-1">
+              <Text className="font-bold text-[10px] uppercase text-bordeaux-700" style={{ letterSpacing: 0.5 }}>
+                Formation en ligne · Accès immédiat
+              </Text>
+            </View>
+
+            <Text className="font-display-x text-[27px] text-ink" style={{ letterSpacing: -1, lineHeight: 31 }}>
               {headline}
             </Text>
             {s.subheadline?.trim() ? (
@@ -126,18 +142,26 @@ export default function SalesPage() {
                   {formatInt(cheapest.comparePrice)}
                 </Text>
               ) : null}
-              <Text className="font-display-x text-[30px] text-ink" style={{ letterSpacing: -1.2 }}>
+              <Text className="font-display-x text-[32px] text-ink" style={{ letterSpacing: -1.2 }}>
                 {formatInt(cheapest?.price ?? 0)}
               </Text>
               <Text className="font-medium text-[13px] text-ink-muted">{info.currency}</Text>
+              {discount > 0 ? (
+                <View className="ml-1 rounded-full bg-forest px-2 py-0.5">
+                  <Text className="font-bold text-[11px] text-white">-{discount}%</Text>
+                </View>
+              ) : null}
             </View>
 
             <CTA label="Acheter maintenant" onPress={buy} />
-            <View className="flex-row items-center justify-center" style={{ gap: 6 }}>
-              <Icon name="check" size={13} color={colors.forest} strokeWidth={2.4} />
-              <Text className="font-sans text-[11px] text-ink-muted">
-                Paiement Wave / Orange Money · Accès immédiat après paiement
-              </Text>
+
+            <View className="flex-row flex-wrap justify-center" style={{ gap: 12 }}>
+              {TRUST.map((t) => (
+                <View key={t.text} className="flex-row items-center" style={{ gap: 4 }}>
+                  <Icon name={t.icon} size={12} color={colors.forest} strokeWidth={2.4} />
+                  <Text className="font-sans text-[11px] text-ink-muted">{t.text}</Text>
+                </View>
+              ))}
             </View>
           </View>
 
