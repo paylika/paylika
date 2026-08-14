@@ -427,9 +427,9 @@ async function debugMembers(): Promise<Response> {
   // 3) Abonnements récents + telegram_user_id de l'abonné (source du badge).
   const { data: subs, error: subErr } = await admin
     .from("subscriptions")
-    .select("id, group_id, status, expires_at, subscriber_id, subscribers(telegram_user_id, full_name, owner_id)")
+    .select("id, owner_id, group_id, status, expires_at, subscriber_id, subscribers(telegram_user_id, full_name, owner_id)")
     .order("created_at", { ascending: false })
-    .limit(10);
+    .limit(6);
   trace.subscriptions = subErr ? `ERREUR: ${subErr.message}` : subs ?? [];
 
   // 4) Abonnés récents (pour voir si telegram_user_id est bien renseigné).
