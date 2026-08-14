@@ -14,6 +14,7 @@ import {
   uploadAvatar,
   deleteAccount,
 } from "@/data/queries";
+import { adminWhoami } from "@/lib/admin";
 
 function LinkRow({
   icon,
@@ -64,6 +65,13 @@ export default function ReglagesScreen() {
 
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    adminWhoami()
+      .then((w) => setIsAdmin(w.isAdmin))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -250,6 +258,24 @@ export default function ReglagesScreen() {
           last
         />
       </Card>
+
+      {isAdmin ? (
+        <Pressable
+          onPress={() => router.push("/admin" as any)}
+          className="flex-row items-center rounded-3xl bg-night p-4"
+        >
+          <View className="h-9 w-9 items-center justify-center rounded-full bg-bordeaux-600">
+            <Icon name="chart" size={17} color={colors.white} />
+          </View>
+          <View className="ml-3 flex-1">
+            <Text className="font-display-semi text-[14px] text-white">Admin Paylika</Text>
+            <Text className="mt-0.5 font-sans text-[12px] text-white/60">
+              Pilotage plateforme : propriétaires, revenus, accès
+            </Text>
+          </View>
+          <Icon name="chevron-right" size={16} color={colors.white} />
+        </Pressable>
+      ) : null}
 
       <Button label="Se déconnecter" icon="close" variant="outline" onPress={logout} />
 
