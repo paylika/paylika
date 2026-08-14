@@ -23,6 +23,9 @@ import {
 } from "@/data/queries";
 
 const BOT_URL = "https://t.me/Paylikabot";
+// Ouvre Telegram sur le sélecteur de groupe + ajoute le bot admin avec droits.
+const CONNECT_URL =
+  "https://t.me/Paylikabot?startgroup=connect&admin=invite_users+restrict_members";
 
 function Steps({ step }: { step: number }) {
   return (
@@ -149,18 +152,23 @@ export default function Onboarding() {
         {/* STEP 1 — connect bot */}
         {step === 1 ? (
           <Card>
-            <Eyebrow>Étape 1 · Connecter votre groupe</Eyebrow>
+            <Eyebrow>Étape 1 · Connecter un groupe</Eyebrow>
             <Text className="mt-2 font-display-semi text-[18px] text-ink">
-              Ajoutez le bot à votre groupe Telegram
+              Choisissez votre groupe Telegram
             </Text>
             <View className="mt-3" style={{ gap: 10 }}>
-              <Step n={1} text="Ouvrez (ou créez) votre groupe Telegram privé." />
-              <Step n={2} text="Ajoutez @Paylikabot comme administrateur (droits : inviter via lien + bannir)." />
-              <Step n={3} text="Votre groupe apparaît ici automatiquement." />
+              <Step n={1} text="Cliquez « Choisir mon groupe »." />
+              <Step n={2} text="Telegram s'ouvre : sélectionnez le groupe à connecter." />
+              <Step n={3} text="Confirmez — le bot est ajouté avec les bons droits, et le groupe apparaît ici." />
             </View>
 
             <View className="mt-4">
-              <Button label="Ouvrir @Paylikabot" icon="send" variant="accent" onPress={() => Linking.openURL(BOT_URL)} />
+              <Button
+                label="Choisir mon groupe"
+                icon="send"
+                variant="accent"
+                onPress={() => Linking.openURL(CONNECT_URL)}
+              />
             </View>
 
             {error ? <Text className="mt-3 font-sans text-[12px] text-bordeaux-700">{error}</Text> : null}

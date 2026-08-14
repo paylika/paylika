@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { View, Text } from "react-native";
 import { useRouter } from "expo-router";
 import { Card, Button, Eyebrow } from "@/components/ui";
@@ -55,18 +55,63 @@ export function DashboardScreen() {
   const { data } = useDashboard();
   const { data: money } = useAsync(fetchMoney);
 
-  // Onboarding : un nouveau compte (aucune offre) est orienté vers la création.
+  // Onboarding NON bloquant : on détecte un compte vide pour proposer un accueil.
+  const [empty, setEmpty] = useState<boolean | null>(null);
   useEffect(() => {
     let alive = true;
     countOffers()
       .then((n) => {
-        if (alive && n === 0) router.replace("/onboarding");
+        if (alive) setEmpty(n === 0);
       })
-      .catch(() => {});
+      .catch(() => {
+        if (alive) setEmpty(false);
+      });
     return () => {
       alive = false;
     };
-  }, [router]);
+  }, []);
+
+  if (empty) {
+    return (
+      <Screen>
+        <View style={{ paddingTop: 24 }}>
+          <Eyebrow>Bienvenue 👋</Eyebrow>
+          <Text
+            className="mt-1.5 font-display-x text-[30px] text-ink"
+            style={{ letterSpacing: -1.2, lineHeight: 34 }}
+          >
+            Commençons
+          </Text>
+          <Text className="mt-1.5 font-sans text-[13px] text-ink-muted">
+            Créez votre première offre pour commencer à encaisser. La connexion
+            d'un groupe Telegram est optionnelle — vous pourrez la faire plus tard.
+          </Text>
+        </View>
+
+        <Card>
+          <Eyebrow>Guidé, en 1 minute</Eyebrow>
+          <Text className="mt-2 font-sans text-[13px] text-ink-soft">
+            Connecter un groupe (optionnel) → créer votre offre → partager le lien.
+          </Text>
+          <View className="mt-4">
+            <Button label="Commencer" icon="arrow-right" variant="accent" onPress={() => router.push("/onboarding" as any)} />
+          </View>
+        </Card>
+
+        <Card>
+          <Eyebrow>Ou directement</Eyebrow>
+          <View className="mt-3 flex-row" style={{ gap: 10 }}>
+            <View style={{ flex: 1 }}>
+              <Button label="Créer une offre" icon="plus" variant="outline" onPress={() => router.push("/offres/nouvelle" as any)} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Button label="Connecter un groupe" icon="send" variant="outline" onPress={() => router.push("/acces" as any)} />
+            </View>
+          </View>
+        </Card>
+      </Screen>
+    );
+  }
 
   const kpis: Stat[] = [
     {

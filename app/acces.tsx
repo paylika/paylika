@@ -16,6 +16,8 @@ import {
 } from "@/data/queries";
 
 const BOT_URL = "https://t.me/Paylikabot";
+const CONNECT_URL =
+  "https://t.me/Paylikabot?startgroup=connect&admin=invite_users+restrict_members";
 
 function Step({ n, text }: { n: number; text: string }) {
   return (
@@ -90,8 +92,13 @@ export default function AccesScreen() {
             </View>
           </View>
         </View>
-        <View className="mt-4" style={{ maxWidth: 220 }}>
-          <Button label="Ouvrir le bot" icon="arrow-up-right" variant="accent" onPress={() => Linking.openURL(BOT_URL)} />
+        <View className="mt-4" style={{ maxWidth: 240 }}>
+          <Button
+            label="Ajouter à un groupe"
+            icon="send"
+            variant="accent"
+            onPress={() => Linking.openURL(CONNECT_URL)}
+          />
         </View>
       </Card>
 
@@ -99,8 +106,8 @@ export default function AccesScreen() {
       <Card>
         <Eyebrow>Connecter un groupe</Eyebrow>
         <View className="mt-3" style={{ gap: 12 }}>
-          <Step n={1} text="Ajoutez @Paylikabot comme administrateur de votre groupe Telegram." />
-          <Step n={2} text="Donnez-lui les droits « Inviter via lien » et « Bannir des utilisateurs »." />
+          <Step n={1} text="Cliquez « Ajouter à un groupe »." />
+          <Step n={2} text="Telegram s'ouvre : choisissez le groupe. Le bot est ajouté admin avec les bons droits automatiquement." />
           <Step n={3} text="Le groupe apparaît ci-dessous — reliez-le à une offre." />
         </View>
       </Card>
