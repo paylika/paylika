@@ -52,9 +52,9 @@ export default function AccessScreen() {
     tick();
     id = setInterval(() => {
       n += 1;
-      if (n > 40) clearInterval(id); // ~2 min max
+      if (n > 120) clearInterval(id); // ~3 min max
       tick();
-    }, 3000);
+    }, 1500);
     return () => {
       alive = false;
       clearInterval(id);
