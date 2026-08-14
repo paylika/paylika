@@ -77,6 +77,10 @@ Deno.serve(async (req) => {
         return json(await setBanned(String(body.ownerId ?? ""), false));
       case "transactions":
         return json({ transactions: await transactions() });
+      case "users":
+        return json({ users: await usersDirectory() });
+      case "remove_member":
+        return json(await removeMemberAdmin(String(body.groupId ?? ""), Number(body.telegramUserId ?? 0)));
       case "resend_link":
         return json(await resendLink(String(body.groupId ?? ""), Number(body.telegramUserId ?? 0)));
       default:
@@ -211,6 +215,61 @@ async function transactions() {
     ownerEmail: emailById.get(p.owner_id) ?? "—",
     group: p.subscriptions?.groups?.name ?? "—",
   }));
+}
+
+async function usersDirectory() {
+  const now = new Date().toISOString();
+  const [{ data: members }, { data: groups }, { data: subs }] = await Promise.all([
+    admin
+      .from("group_members")
+      .select("group_id, owner_id, telegram_user_id, first_name, username, in_group, last_seen")
+      .order("last_seen", { ascending: false })
+      .limit(2000),
+    admin.from("groups").select("id, name"),
+    admin
+      .from("subscriptions")
+      .select("group_id, subscribers(telegram_user_id)")
+      .eq("status", "active")
+      .gt("expires_at", now),
+  ]);
+  const groupName = new Map((groups ?? []).map((g: any) => [g.id, g.name]));
+  const { data: usersList } = await admin.auth.admin.listUsers({ perPage: 1000 });
+  const emailById = new Map((usersList?.users ?? []).map((u: any) => [u.id, u.email]));
+  const paid = new Set(
+    (subs ?? []).map((s: any) => `${s.group_id}:${s.subscribers?.telegram_user_id}`),
+  );
+  return (members ?? []).map((m: any) => {
+    const tid = Number(m.telegram_user_id);
+    return {
+      telegramUserId: tid,
+      name: m.first_name || m.username || "Membre",
+      username: m.username,
+      groupId: m.group_id,
+      group: groupName.get(m.group_id) ?? "—",
+      ownerEmail: emailById.get(m.owner_id) ?? "—",
+      inGroup: m.in_group,
+      paid: paid.has(`${m.group_id}:${tid}`),
+      lastSeen: m.last_seen,
+    };
+  });
+}
+
+async function removeMemberAdmin(groupId: string, telegramUserId: number) {
+  if (!groupId || !telegramUserId) return { error: "groupId / telegramUserId manquant" };
+  const { data: conn } = await admin
+    .from("telegram_connections")
+    .select("chat_id")
+    .eq("group_id", groupId)
+    .maybeSingle();
+  if (!conn?.chat_id) return { error: "Groupe non connecté." };
+  await tg("banChatMember", { chat_id: conn.chat_id, user_id: telegramUserId });
+  await tg("unbanChatMember", { chat_id: conn.chat_id, user_id: telegramUserId, only_if_banned: true });
+  await admin
+    .from("group_members")
+    .update({ in_group: false })
+    .eq("group_id", groupId)
+    .eq("telegram_user_id", telegramUserId);
+  return { ok: true };
 }
 
 async function setBanned(ownerId: string, banned: boolean) {

@@ -73,3 +73,19 @@ export const adminUnban = (ownerId: string) => call<{ ok: boolean }>("unban", { 
 export const adminResendLink = (groupId: string, telegramUserId: number) =>
   call<{ ok: boolean }>("resend_link", { groupId, telegramUserId });
 export const adminTransactions = () => call<{ transactions: AdminTx[] }>("transactions").then((r) => r.transactions);
+
+export type AdminUser = {
+  telegramUserId: number;
+  name: string;
+  username: string | null;
+  groupId: string;
+  group: string;
+  ownerEmail: string;
+  inGroup: boolean;
+  paid: boolean;
+  lastSeen: string;
+};
+
+export const adminUsers = () => call<{ users: AdminUser[] }>("users").then((r) => r.users);
+export const adminRemoveMember = (groupId: string, telegramUserId: number) =>
+  call<{ ok: boolean }>("remove_member", { groupId, telegramUserId });

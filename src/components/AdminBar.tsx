@@ -8,6 +8,7 @@ import { signOut } from "@/lib/auth";
 
 const TABS: { label: string; path: string }[] = [
   { label: "Pilotage", path: "/admin" },
+  { label: "Utilisateurs", path: "/admin/users" },
   { label: "Propriétaires", path: "/admin/owners" },
   { label: "Transactions", path: "/admin/transactions" },
 ];

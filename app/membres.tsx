@@ -2,11 +2,12 @@ import { useCallback, useState } from "react";
 import { View, Text, ActivityIndicator, Pressable } from "react-native";
 import { useFocusEffect, useLocalSearchParams } from "expo-router";
 import { Screen, PageTitle } from "@/components/Screen";
-import { Card, Tag, Button } from "@/components/ui";
+import { Card, Tag, Button, Eyebrow } from "@/components/ui";
 import { Chip } from "@/components/form";
 import { Icon } from "@/components/Icon";
 import { colors } from "@/theme/colors";
-import { fetchMembers, removeMember, fetchGroups, type Member } from "@/data/queries";
+import { fetchMembers, removeMember, inviteMember, fetchGroups, type Member } from "@/data/queries";
+import { copyOrShare } from "@/lib/clipboard";
 
 type Filter = "all" | "paid" | "unpaid";
 
@@ -27,6 +28,9 @@ export default function MembresScreen() {
   const [error, setError] = useState<string | null>(null);
   const [confirmId, setConfirmId] = useState<number | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
+  const [inviteBusy, setInviteBusy] = useState<number | "new" | null>(null);
+  const [linkInfo, setLinkInfo] = useState<{ link: string; dmSent: boolean; name: string } | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -44,6 +48,29 @@ export default function MembresScreen() {
       load();
     }, [load]),
   );
+
+  async function invite(m?: Member) {
+    setInviteBusy(m?.telegramUserId ?? "new");
+    setError(null);
+    setCopied(false);
+    try {
+      const r = await inviteMember(groupId, m?.telegramUserId);
+      setLinkInfo({ link: r.link, dmSent: r.dmSent, name: m?.name ?? "nouveau membre" });
+    } catch (e: any) {
+      setError(e?.message ?? "Envoi impossible.");
+    } finally {
+      setInviteBusy(null);
+    }
+  }
+
+  async function copyLink() {
+    if (!linkInfo) return;
+    const r = await copyOrShare(linkInfo.link);
+    if (r !== "failed") {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1600);
+    }
+  }
 
   async function remove(m: Member) {
     setBusyId(m.telegramUserId);
@@ -78,6 +105,37 @@ export default function MembresScreen() {
         <Chip label={`Payé (${paidCount})`} active={filter === "paid"} onPress={() => setFilter("paid")} />
         <Chip label={`Non payé (${unpaidCount})`} active={filter === "unpaid"} onPress={() => setFilter("unpaid")} />
       </View>
+
+      <View style={{ maxWidth: 280 }}>
+        <Button
+          label={inviteBusy === "new" ? "…" : "Générer un lien d'accès"}
+          icon="send"
+          variant="outline"
+          onPress={() => invite()}
+        />
+      </View>
+
+      {linkInfo ? (
+        <Card>
+          <Eyebrow>Lien d'accès créé</Eyebrow>
+          <Text className="mt-1 font-sans text-[12px] text-ink-muted">
+            {linkInfo.dmSent ? `Envoyé en privé à ${linkInfo.name}. ` : "À partager avec la personne. "}
+            Usage unique, valable 24 h.
+          </Text>
+          <Pressable
+            onPress={copyLink}
+            className="mt-3 flex-row items-center justify-between rounded-2xl bg-sand px-4 py-3"
+          >
+            <Text numberOfLines={1} className="flex-1 pr-2 font-medium text-[12px] text-bordeaux-700">
+              {linkInfo.link}
+            </Text>
+            <View className="flex-row items-center rounded-full bg-bordeaux-600 px-3 py-1.5" style={{ gap: 4 }}>
+              {copied ? <Icon name="check" size={12} color={colors.white} strokeWidth={2.6} /> : null}
+              <Text className="font-semibold text-[11px] text-white">{copied ? "Copié" : "Copier"}</Text>
+            </View>
+          </Pressable>
+        </Card>
+      ) : null}
 
       {error ? (
         <Card>
@@ -132,13 +190,26 @@ export default function MembresScreen() {
                       </Pressable>
                     </View>
                   ) : (
-                    <Pressable
-                      onPress={() => setConfirmId(m.telegramUserId)}
-                      className="flex-row items-center self-start rounded-full bg-sand px-3.5 py-2"
-                    >
-                      <Icon name="trash" size={14} color={colors.ink} />
-                      <Text className="ml-1.5 font-semibold text-[12px] text-ink">Retirer du groupe</Text>
-                    </Pressable>
+                    <View className="flex-row items-center" style={{ gap: 8 }}>
+                      {inviteBusy === m.telegramUserId ? (
+                        <ActivityIndicator color={colors.bordeaux[600]} />
+                      ) : (
+                        <Pressable
+                          onPress={() => invite(m)}
+                          className="flex-row items-center rounded-full bg-bordeaux-600 px-3.5 py-2"
+                        >
+                          <Icon name="send" size={14} color={colors.white} />
+                          <Text className="ml-1.5 font-semibold text-[12px] text-white">Donner l'accès</Text>
+                        </Pressable>
+                      )}
+                      <Pressable
+                        onPress={() => setConfirmId(m.telegramUserId)}
+                        className="flex-row items-center rounded-full bg-sand px-3.5 py-2"
+                      >
+                        <Icon name="trash" size={14} color={colors.ink} />
+                        <Text className="ml-1.5 font-semibold text-[12px] text-ink">Retirer</Text>
+                      </Pressable>
+                    </View>
                   )}
                 </View>
               ) : null}

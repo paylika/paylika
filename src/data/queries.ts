@@ -673,6 +673,38 @@ export async function removeMember(groupId: string, telegramUserId: number): Pro
   throw new Error(data?.error ?? "Retrait impossible.");
 }
 
+const MEMBER_INVITE_URL =
+  "https://xkdiodbppotyiyldlwbg.functions.supabase.co/member-invite";
+
+/**
+ * Donne/renvoie un accès à un membre : lien éphémère (usage unique, 24h),
+ * envoyé en privé au membre si possible, et renvoyé pour copie.
+ * telegramUserId optionnel → sans lui, on génère juste un lien à partager.
+ */
+export async function inviteMember(
+  groupId: string,
+  telegramUserId?: number,
+): Promise<{ link: string; dmSent: boolean }> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const token = session?.access_token;
+  if (!token) throw new Error("Session expirée. Reconnectez-vous.");
+  let data: any = null;
+  try {
+    const res = await fetch(MEMBER_INVITE_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ groupId, telegramUserId }),
+    });
+    data = await res.json().catch(() => null);
+    if (res.ok && data?.ok) return { link: data.link, dmSent: !!data.dmSent };
+  } catch {
+    throw new Error("Connexion impossible. Réessayez.");
+  }
+  throw new Error(data?.error ?? "Envoi impossible.");
+}
+
 export type OfferStat = {
   id: string;
   name: string;
