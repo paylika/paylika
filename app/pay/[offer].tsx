@@ -46,18 +46,24 @@ const FLAGS: Record<string, any> = {
   BJ: require("../../assets/flags/bj.png"),
 };
 
-// Métadonnées opérateurs (couleur de marque + monogramme, pastille ronde).
-const OPERATORS: Record<
-  string,
-  { label: string; color: string; mono: string; fg?: string }
-> = {
-  wave: { label: "Wave", color: "#1EC6F3", mono: "W" },
-  wave_money: { label: "Wave", color: "#1EC6F3", mono: "W" },
-  orange_money: { label: "Orange Money", color: "#FF7900", mono: "OM" },
-  mtn_money: { label: "MTN", color: "#FFCC00", mono: "MTN", fg: "#111111" },
-  moov: { label: "Moov", color: "#F58220", mono: "M" },
-  togocell: { label: "Togocel", color: "#E2001A", mono: "T" },
-  free_money: { label: "Free", color: "#CD1F2D", mono: "F" },
+// Vrais logos opérateurs (PNG embarqués), affichés en pastille ronde.
+const OP_LOGOS: Record<string, any> = {
+  wave: require("../../assets/operators/wave.png"),
+  wave_money: require("../../assets/operators/wave.png"),
+  orange_money: require("../../assets/operators/orange.png"),
+  mtn_money: require("../../assets/operators/mtn.png"),
+  moov: require("../../assets/operators/moov.png"),
+  togocell: require("../../assets/operators/mixx.png"),
+  free_money: require("../../assets/operators/mixx.png"),
+};
+const OP_LABELS: Record<string, string> = {
+  wave: "Wave",
+  wave_money: "Wave",
+  orange_money: "Orange Money",
+  mtn_money: "MTN",
+  moov: "Moov",
+  togocell: "Mixx by Yas",
+  free_money: "Mixx by Yas",
 };
 
 const COUNTRIES: { code: string; label: string; operators: string[] }[] = [
@@ -149,7 +155,7 @@ export default function PayScreen() {
 
   const country = COUNTRIES.find((c) => c.code === countryCode) ?? COUNTRIES[0];
   const tier = info?.tiers.find((t) => t.id === tierId) ?? info?.tiers[0] ?? null;
-  const op = OPERATORS[operator] ?? OPERATORS.wave;
+  const opLabel = OP_LABELS[operator] ?? "l'opérateur";
   const phoneOk = phone.replace(/\D/g, "").length >= 9;
 
   function pickCountry(code: string) {
@@ -292,32 +298,28 @@ export default function PayScreen() {
                 <View>
                   <FieldLabel>Moyen de paiement</FieldLabel>
                   <View className="mt-1 flex-row flex-wrap" style={{ gap: 6, rowGap: 12 }}>
-                    {country.operators.map((key) => {
-                      const meta = OPERATORS[key];
-                      return (
-                        <Choice
-                          key={key}
-                          selected={key === operator}
-                          onPress={() => setOperator(key)}
-                          label={meta.label}
+                    {country.operators.map((key) => (
+                      <Choice
+                        key={key}
+                        selected={key === operator}
+                        onPress={() => setOperator(key)}
+                        label={OP_LABELS[key] ?? key}
+                      >
+                        <View
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            borderRadius: 24,
+                            backgroundColor: "#FFFFFF",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            overflow: "hidden",
+                          }}
                         >
-                          <View
-                            style={{
-                              width: "100%",
-                              height: "100%",
-                              borderRadius: 24,
-                              backgroundColor: meta.color,
-                              alignItems: "center",
-                              justifyContent: "center",
-                            }}
-                          >
-                            <Text style={{ color: meta.fg ?? "#FFFFFF", fontWeight: "800", fontSize: meta.mono.length > 2 ? 12 : 16 }}>
-                              {meta.mono}
-                            </Text>
-                          </View>
-                        </Choice>
-                      );
-                    })}
+                          <Image source={OP_LOGOS[key]} style={{ width: "88%", height: "88%" }} resizeMode="contain" />
+                        </View>
+                      </Choice>
+                    ))}
                   </View>
                 </View>
               </View>
@@ -347,7 +349,7 @@ export default function PayScreen() {
                   onPress={pay}
                 />
                 <Text className="text-center font-sans text-[11px] text-ink-muted">
-                  Vous serez redirigé vers {op.label} pour confirmer. L'accès arrive sur Telegram.
+                  Vous serez redirigé vers {opLabel} pour confirmer. L'accès arrive sur Telegram.
                 </Text>
               </View>
             </Card>

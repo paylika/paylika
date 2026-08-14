@@ -36,6 +36,10 @@ async function hmacHex(secret: string, message: string): Promise<string> {
 }
 
 Deno.serve(async (req) => {
+  // Diagnostic : trace le dernier paiement pour savoir où le lien se bloque.
+  if (req.method === "GET" && new URL(req.url).searchParams.get("debug") === "last") {
+    return await debugLast();
+  }
   // Redirection navigateur après paiement → page de remerciement.
   if (req.method === "GET") {
     return new Response(
@@ -228,4 +232,65 @@ async function grantAccess(evt: any) {
       }
     }
   }
+}
+
+/**
+ * Diagnostic (GET ?debug=last) : suit le dernier paiement étape par étape
+ * pour identifier POURQUOI le lien d'accès n'est pas parti.
+ */
+async function debugLast(): Promise<Response> {
+  const trace: Record<string, unknown> = {};
+
+  const { data: intent } = await admin
+    .from("payment_intents")
+    .select("reference, transaction_id, plan_id, group_id, telegram_user_id, amount, status, created_at")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  trace.intent = intent ?? "AUCUN INTENT — le paiement n'a pas été créé (unitech-create).";
+
+  if (intent?.telegram_user_id) {
+    const { data: tu } = await admin
+      .from("telegram_users")
+      .select("chat_id, username, first_name")
+      .eq("telegram_user_id", intent.telegram_user_id)
+      .maybeSingle();
+    trace.telegram_user = tu ?? "ABSENT — le payeur n'a pas /start le bot : impossible de lui envoyer le lien.";
+  } else {
+    trace.telegram_user = "PAS DE telegram_user_id dans l'intent (lien ouvert sans passer par le bot).";
+  }
+
+  if (intent?.group_id) {
+    const { data: conn } = await admin
+      .from("telegram_connections")
+      .select("chat_id, title, status")
+      .eq("group_id", intent.group_id)
+      .maybeSingle();
+    trace.connection = conn ?? "AUCUNE connexion Telegram pour ce groupe : rien à quoi rattacher le lien.";
+    if (conn?.chat_id) {
+      const link = await tg("createChatInviteLink", {
+        chat_id: conn.chat_id,
+        member_limit: 1,
+        name: "paylika-debug",
+      });
+      trace.invite_test = link?.ok
+        ? { ok: true, link: link.result?.invite_link }
+        : { ok: false, error: link?.description ?? "échec — le bot manque probablement du droit « Inviter via un lien »." };
+    }
+  } else {
+    trace.connection = "PAS DE group_id dans l'intent.";
+  }
+
+  if (intent?.reference) {
+    const { data: pay } = await admin
+      .from("payments")
+      .select("id, status, paid_at")
+      .eq("provider_ref", intent.reference)
+      .maybeSingle();
+    trace.payment_recorded = pay ?? "NON — le webhook UniTech n'a jamais confirmé ce paiement (URL/HMAC ?).";
+  }
+
+  return new Response(JSON.stringify(trace, null, 2), {
+    headers: { "content-type": "application/json; charset=utf-8" },
+  });
 }

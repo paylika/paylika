@@ -17,6 +17,10 @@ const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const API = "https://api.unitech.sn/api";
 const API_KEY = Deno.env.get("UNITECH_API_KEY") ?? "";
 const COMMISSION_RATE = 0.1;
+// Frais de retrait UniTech (~1.5 % Sénégal). Paylika l'ABSORBE : le proprio
+// reçoit exactement le montant demandé (retrait « gratuit »), car tous les
+// frais sont déjà pris à l'encaissement via la commission de 10 %.
+const PAYOUT_FEE_RATE = 0.015;
 
 // app method -> UniTech payout channel
 const PAYOUT_METHOD: Record<string, string> = {
@@ -94,7 +98,9 @@ Deno.serve(async (req) => {
         method: "POST",
         headers: { Authorization: `Bearer ${API_KEY}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          amount,
+          // UniTech débite le brut et le destinataire reçoit brut - frais.
+          // On envoie donc un brut « majoré » pour qu'il reçoive `amount` net.
+          amount: Math.ceil(amount / (1 - PAYOUT_FEE_RATE)),
           method: PAYOUT_METHOD[method] ?? "wave",
           account: destination,
         }),
