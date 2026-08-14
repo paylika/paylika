@@ -59,7 +59,8 @@ Deno.serve(async (req) => {
     const action = String(body?.action ?? "");
 
     // whoami : ouvert (permet à l'app de savoir s'il faut afficher l'Admin).
-    if (action === "whoami") return json({ isAdmin, email });
+    // adminCount = nb d'emails admin configurés (vérif sans exposer les emails).
+    if (action === "whoami") return json({ isAdmin, email, adminCount: ADMIN_EMAILS.length });
 
     if (!isAdmin) return json({ error: "Accès réservé aux administrateurs Paylika." }, 403);
 
