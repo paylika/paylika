@@ -54,7 +54,17 @@ export type AdminOwnerDetail = {
   connections: { group_id: string | null; chat_id: number; title: string | null; status: string }[];
 };
 
-export const adminWhoami = () => call<{ isAdmin: boolean; email: string }>("whoami");
+export type AdminTx = {
+  id: string;
+  amount: number;
+  commission: number;
+  status: string;
+  paidAt: string | null;
+  ownerEmail: string;
+  group: string;
+};
+
+export const adminWhoami = () => call<{ isAdmin: boolean; email: string; adminCount?: number }>("whoami");
 export const adminOverview = () => call<AdminOverview>("overview");
 export const adminOwners = () => call<{ owners: AdminOwner[] }>("owners").then((r) => r.owners);
 export const adminOwnerDetail = (ownerId: string) => call<AdminOwnerDetail>("owner", { ownerId });
@@ -62,3 +72,4 @@ export const adminBan = (ownerId: string) => call<{ ok: boolean }>("ban", { owne
 export const adminUnban = (ownerId: string) => call<{ ok: boolean }>("unban", { ownerId });
 export const adminResendLink = (groupId: string, telegramUserId: number) =>
   call<{ ok: boolean }>("resend_link", { groupId, telegramUserId });
+export const adminTransactions = () => call<{ transactions: AdminTx[] }>("transactions").then((r) => r.transactions);

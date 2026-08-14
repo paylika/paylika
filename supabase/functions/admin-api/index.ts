@@ -75,6 +75,8 @@ Deno.serve(async (req) => {
         return json(await setBanned(String(body.ownerId ?? ""), true));
       case "unban":
         return json(await setBanned(String(body.ownerId ?? ""), false));
+      case "transactions":
+        return json({ transactions: await transactions() });
       case "resend_link":
         return json(await resendLink(String(body.groupId ?? ""), Number(body.telegramUserId ?? 0)));
       default:
@@ -190,6 +192,25 @@ async function ownerDetail(ownerId: string) {
     .from("telegram_connections")
     .select("group_id, chat_id, title, status");
   return { groups: groups ?? [], subscriptions: subs ?? [], connections: conns ?? [] };
+}
+
+async function transactions() {
+  const { data } = await admin
+    .from("payments")
+    .select("id, owner_id, amount, commission, status, paid_at, subscriptions(groups(name))")
+    .order("paid_at", { ascending: false })
+    .limit(60);
+  const { data: usersList } = await admin.auth.admin.listUsers({ perPage: 1000 });
+  const emailById = new Map((usersList?.users ?? []).map((u: any) => [u.id, u.email]));
+  return (data ?? []).map((p: any) => ({
+    id: p.id,
+    amount: num(p.amount),
+    commission: p.commission != null ? num(p.commission) : Math.round(num(p.amount) * COMMISSION_RATE),
+    status: p.status,
+    paidAt: p.paid_at,
+    ownerEmail: emailById.get(p.owner_id) ?? "—",
+    group: p.subscriptions?.groups?.name ?? "—",
+  }));
 }
 
 async function setBanned(ownerId: string, banned: boolean) {

@@ -1,6 +1,6 @@
 import "../global.css";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { View, useWindowDimensions } from "react-native";
 import { Slot, usePathname, useRouter, useLocalSearchParams } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -19,6 +19,7 @@ import {
 } from "@expo-google-fonts/space-grotesk";
 import { TopBar } from "@/components/TopBar";
 import { BottomNav } from "@/components/BottomNav";
+import { AdminBar } from "@/components/AdminBar";
 import { useWide } from "@/components/Screen";
 import { AuthProvider, useAuth } from "@/lib/auth";
 
@@ -29,21 +30,42 @@ function AppShell() {
   const params = useLocalSearchParams<{ next?: string }>();
   const nextParam = typeof params.next === "string" ? params.next : "";
   const { height } = useWindowDimensions();
-  const { session, loading } = useAuth();
+  const { session, loading, isAdmin, adminChecked } = useAuth();
 
   const isPay = pathname.startsWith("/pay"); // public customer checkout
   const isLogin = pathname === "/login";
   const isOnboarding = pathname === "/onboarding";
+  const isAdminRoute = pathname.startsWith("/admin");
+  const routedAdmin = useRef(false); // n'envoie l'admin vers sa console qu'une fois
 
   useEffect(() => {
     if (loading || isPay) return;
-    if (!session && !isLogin) {
-      // Garde la destination pour y revenir après connexion.
-      const q = pathname && pathname !== "/" ? `?next=${encodeURIComponent(pathname)}` : "";
-      router.replace(`/login${q}` as any);
+    if (!session) {
+      routedAdmin.current = false;
+      if (!isLogin) {
+        // Garde la destination pour y revenir après connexion.
+        const q = pathname && pathname !== "/" ? `?next=${encodeURIComponent(pathname)}` : "";
+        router.replace(`/login${q}` as any);
+      }
+      return;
     }
-    if (session && isLogin) router.replace((nextParam || "/") as any);
-  }, [loading, session, pathname, isPay, isLogin, nextParam, router]);
+    if (isLogin) {
+      router.replace((nextParam || "/") as any);
+      return;
+    }
+    if (adminChecked) {
+      // Non-admin qui tente la console → app propriétaire.
+      if (isAdminRoute && !isAdmin) {
+        router.replace("/");
+        return;
+      }
+      // Admin : atterrissage sur sa console (une seule fois → « Vue app » reste possible).
+      if (isAdmin && pathname === "/" && !routedAdmin.current) {
+        routedAdmin.current = true;
+        router.replace("/admin");
+      }
+    }
+  }, [loading, session, pathname, isPay, isLogin, isAdminRoute, isAdmin, adminChecked, nextParam, router]);
 
   let content = null;
   if (isPay) {
@@ -56,6 +78,16 @@ function AppShell() {
     content = null; // redirecting to /login
   } else if (isOnboarding) {
     content = <Slot />; // logged in, focused wizard (no chrome)
+  } else if (isAdminRoute) {
+    // Console super-admin : chrome sombre dédié. On attend la vérif du statut
+    // pour ne jamais flasher la console à un non-admin.
+    content =
+      adminChecked && !isAdmin ? null : (
+        <>
+          <AdminBar />
+          <Slot />
+        </>
+      );
   } else {
     content = (
       <>

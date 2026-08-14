@@ -1,17 +1,27 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
+import { adminWhoami } from "./admin";
 
 type AuthState = {
   session: Session | null;
   loading: boolean;
+  isAdmin: boolean;
+  adminChecked: boolean;
 };
 
-const AuthContext = createContext<AuthState>({ session: null, loading: true });
+const AuthContext = createContext<AuthState>({
+  session: null,
+  loading: true,
+  isAdmin: false,
+  adminChecked: false,
+});
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [adminChecked, setAdminChecked] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -24,8 +34,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => sub.subscription.unsubscribe();
   }, []);
 
+  // Statut super-admin : vérifié côté serveur à chaque changement de session.
+  useEffect(() => {
+    if (!session) {
+      setIsAdmin(false);
+      setAdminChecked(true);
+      return;
+    }
+    let alive = true;
+    setAdminChecked(false);
+    adminWhoami()
+      .then((w) => alive && (setIsAdmin(!!w.isAdmin), setAdminChecked(true)))
+      .catch(() => alive && (setIsAdmin(false), setAdminChecked(true)));
+    return () => {
+      alive = false;
+    };
+  }, [session]);
+
   return (
-    <AuthContext.Provider value={{ session, loading }}>
+    <AuthContext.Provider value={{ session, loading, isAdmin, adminChecked }}>
       {children}
     </AuthContext.Provider>
   );
