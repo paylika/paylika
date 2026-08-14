@@ -5,6 +5,7 @@ import Svg, {
   Line,
   Rect,
   Polyline,
+  Polygon,
   G,
 } from "react-native-svg";
 import { colors } from "@/theme/colors";
@@ -36,7 +37,11 @@ export type IconName =
   | "eye"
   | "eye-off"
   | "camera"
-  | "trash";
+  | "trash"
+  | "telegram"
+  | "whatsapp"
+  | "bolt"
+  | "shield";
 
 /**
  * Hand-drawn stroke icon set for paylika.
@@ -104,6 +109,22 @@ export function Icon({
           <Path d="M9 7V5.5a1.5 1.5 0 0 1 1.5-1.5h3A1.5 1.5 0 0 1 15 5.5V7" />
           <Path d="M6 7l1 12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-12" />
         </G>
+      )}
+      {name === "telegram" && (
+        <Path
+          fill={color}
+          d="M21.9 4.3 18.7 19c-.2 1-.9 1.3-1.7.8l-4.7-3.5-2.3 2.2c-.3.3-.5.5-1 .5l.3-4.9L18 6.4c.4-.3-.1-.5-.6-.2L7.4 12.6l-4.5-1.4c-1-.3-1-1 .2-1.5l17.4-6.7c.8-.3 1.5.2 1.4 1.3Z"
+        />
+      )}
+      {name === "whatsapp" && (
+        <Path
+          fill={color}
+          d="M12 2a10 10 0 0 0-8.6 15L2 22l5.1-1.3A10 10 0 1 0 12 2Zm0 2a8 8 0 1 1-4.1 14.8l-.4-.2-2.9.7.8-2.8-.2-.4A8 8 0 0 1 12 4Zm4.4 10.4c-.2-.1-1.4-.7-1.6-.8-.2-.1-.4-.1-.5.1l-.7.9c-.1.2-.3.2-.5.1-.7-.3-1.3-.6-1.9-1.3-.5-.5-.8-1.1-1-1.3-.1-.2 0-.3.1-.5l.4-.4c.1-.2.1-.3.2-.5v-.4l-.8-1.8c-.2-.5-.4-.4-.5-.4h-.5c-.2 0-.4.1-.7.3-.2.3-.9.9-.9 2.1s.9 2.4 1 2.6c.1.2 1.8 2.7 4.3 3.7 2.1.8 2.5.7 3 .6.5 0 1.4-.6 1.6-1.1.2-.6.2-1 .1-1.1l-.4-.2Z"
+        />
+      )}
+      {name === "bolt" && <Polygon points="13 2 4 14 11 14 11 22 20 10 13 10" {...stroke} fill="none" />}
+      {name === "shield" && (
+        <Path {...stroke} fill="none" d="M12 3l7 3v5c0 4.4-3 7.6-7 9-4-1.4-7-4.6-7-9V6l7-3z" />
       )}
       {name === "close" && (
         <G {...stroke}>
