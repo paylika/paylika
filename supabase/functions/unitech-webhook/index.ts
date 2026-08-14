@@ -36,9 +36,11 @@ async function hmacHex(secret: string, message: string): Promise<string> {
 }
 
 Deno.serve(async (req) => {
-  // Diagnostic : trace le dernier paiement pour savoir où le lien se bloque.
-  if (req.method === "GET" && new URL(req.url).searchParams.get("debug") === "last") {
-    return await debugLast();
+  // Diagnostic / récupération manuelle du dernier paiement.
+  if (req.method === "GET") {
+    const dbg = new URL(req.url).searchParams.get("debug");
+    if (dbg === "last") return await debugLast();
+    if (dbg === "resend") return await debugResend();
   }
   // Redirection navigateur après paiement → page de remerciement.
   if (req.method === "GET") {
@@ -160,7 +162,7 @@ async function grantAccess(evt: any) {
       .maybeSingle();
     subscriberId = existing?.id ?? null;
     if (!subscriberId) {
-      const { data: sub } = await admin
+      const { data: sub, error: subErr } = await admin
         .from("subscribers")
         .insert({
           owner_id: owner,
@@ -169,13 +171,19 @@ async function grantAccess(evt: any) {
           telegram_user_id: telegramUserId,
         })
         .select("id")
-        .single();
-      subscriberId = sub.id;
+        .maybeSingle();
+      if (subErr) console.error("insert subscriber:", subErr.message);
+      subscriberId = sub?.id ?? null;
     }
   }
 
+  // 1) LIVRER L'ACCÈS EN PRIORITÉ — indépendant du journal comptable, pour que
+  //    le lien parte même si l'enregistrement du paiement échoue.
+  await deliverAccess(intent.group_id ?? null, chatId, reference);
+
+  // 2) Journaliser abonnement + paiement (best-effort, erreurs remontées).
   const now = Date.now();
-  const { data: subscription } = await admin
+  const { data: subscription, error: subsErr } = await admin
     .from("subscriptions")
     .insert({
       owner_id: owner,
@@ -187,10 +195,11 @@ async function grantAccess(evt: any) {
       expires_at: new Date(now + intervalDays * 86400000).toISOString(),
     })
     .select("id")
-    .single();
+    .maybeSingle();
+  if (subsErr) console.error("insert subscription:", subsErr.message);
 
   const commission = Math.round(amount * COMMISSION_RATE);
-  await admin.from("payments").insert({
+  const { error: payErr } = await admin.from("payments").insert({
     owner_id: owner,
     subscription_id: subscription?.id ?? null,
     subscriber_id: subscriberId,
@@ -204,34 +213,47 @@ async function grantAccess(evt: any) {
     status: "completed",
     paid_at: new Date(now).toISOString(),
   });
+  if (payErr) console.error("insert payment:", payErr.message);
 
   await admin
     .from("payment_intents")
     .update({ status: "completed" })
     .eq("reference", intent.reference ?? reference);
+}
 
-  // Accès Telegram : lien d'invitation à usage unique en privé.
-  if (intent.group_id && chatId) {
-    const { data: conn } = await admin
-      .from("telegram_connections")
-      .select("chat_id")
-      .eq("group_id", intent.group_id)
-      .maybeSingle();
-    if (conn?.chat_id) {
-      const link = await tg("createChatInviteLink", {
-        chat_id: conn.chat_id,
-        member_limit: 1,
-        name: `paylika-${reference.slice(0, 10)}`,
-      });
-      const invite = link?.result?.invite_link;
-      if (invite) {
-        await tg("sendMessage", {
-          chat_id: chatId,
-          text: `✅ Paiement confirmé !\n\nVoici votre lien d'accès (usage unique) :\n${invite}`,
-        });
-      }
-    }
+/** Envoie le lien d'accès Telegram (usage unique) au payeur en privé. */
+async function deliverAccess(
+  groupId: string | null,
+  chatId: number | null,
+  reference: string,
+) {
+  if (!groupId || !chatId) {
+    console.error("livraison impossible (group/chat manquant)", { groupId, chatId });
+    return;
   }
+  const { data: conn } = await admin
+    .from("telegram_connections")
+    .select("chat_id")
+    .eq("group_id", groupId)
+    .maybeSingle();
+  if (!conn?.chat_id) {
+    console.error("aucune connexion Telegram pour le groupe", groupId);
+    return;
+  }
+  const link = await tg("createChatInviteLink", {
+    chat_id: conn.chat_id,
+    member_limit: 1,
+    name: `paylika-${String(reference).slice(0, 10)}`,
+  });
+  const invite = link?.result?.invite_link;
+  if (!invite) {
+    console.error("createChatInviteLink a échoué:", JSON.stringify(link));
+    return;
+  }
+  await tg("sendMessage", {
+    chat_id: chatId,
+    text: `✅ Paiement confirmé !\n\nVoici votre lien d'accès (usage unique) :\n${invite}`,
+  });
 }
 
 /**
@@ -287,10 +309,48 @@ async function debugLast(): Promise<Response> {
       .select("id, status, paid_at")
       .eq("provider_ref", intent.reference)
       .maybeSingle();
-    trace.payment_recorded = pay ?? "NON — le webhook UniTech n'a jamais confirmé ce paiement (URL/HMAC ?).";
+    trace.payment_recorded = pay ?? "NON — insertion du paiement échouée (voir payments_schema ci-dessous) ou webhook non appelé.";
   }
+
+  // Sonde de schéma : les colonnes utilisées par l'insertion existent-elles ?
+  const probe = await admin
+    .from("payments")
+    .select("provider, provider_ref, commission, net_amount, owner_id")
+    .limit(1);
+  trace.payments_schema = probe.error
+    ? `⚠️ COLONNE MANQUANTE — exécute payments_schema.sql PUIS multi_tenant.sql : ${probe.error.message}`
+    : "OK (toutes les colonnes présentes)";
 
   return new Response(JSON.stringify(trace, null, 2), {
     headers: { "content-type": "application/json; charset=utf-8" },
   });
+}
+
+/** Renvoie manuellement le lien d'accès du dernier paiement (GET ?debug=resend). */
+async function debugResend(): Promise<Response> {
+  const { data: intent } = await admin
+    .from("payment_intents")
+    .select("group_id, telegram_user_id, reference")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!intent) {
+    return new Response(JSON.stringify({ error: "aucun intent" }), {
+      headers: { "content-type": "application/json; charset=utf-8" },
+    });
+  }
+  let chatId: number | null = null;
+  if (intent.telegram_user_id) {
+    const { data: tu } = await admin
+      .from("telegram_users")
+      .select("chat_id")
+      .eq("telegram_user_id", intent.telegram_user_id)
+      .maybeSingle();
+    chatId = tu?.chat_id ?? null;
+  }
+  await deliverAccess(intent.group_id ?? null, chatId, intent.reference ?? "resend");
+  return new Response(
+    JSON.stringify({ ok: true, sent_to_chat: chatId, group_id: intent.group_id }, null, 2),
+    { headers: { "content-type": "application/json; charset=utf-8" } },
+  );
 }
