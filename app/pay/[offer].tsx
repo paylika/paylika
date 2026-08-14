@@ -29,6 +29,7 @@ type OfferInfo = {
   offerName: string;
   groupName: string;
   currency: string;
+  deliveryType?: string;
   tiers: Tier[];
 };
 
@@ -401,7 +402,10 @@ export default function PayScreen() {
                   onPress={pay}
                 />
                 <Text className="text-center font-sans text-[11px] text-ink-muted">
-                  Vous serez redirigé vers {opLabel} pour confirmer. L'accès arrive sur Telegram.
+                  Vous serez redirigé vers {opLabel} pour confirmer.{" "}
+                  {info.deliveryType === "telegram"
+                    ? "L'accès arrive sur Telegram."
+                    : "Votre accès s'affiche juste après le paiement."}
                 </Text>
               </View>
             </Card>
