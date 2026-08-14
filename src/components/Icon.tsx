@@ -32,7 +32,9 @@ export type IconName =
   | "home"
   | "wallet"
   | "tag"
-  | "chart";
+  | "chart"
+  | "eye"
+  | "eye-off";
 
 /**
  * Hand-drawn stroke icon set for paylika.
@@ -190,6 +192,20 @@ export function Icon({
           <Rect x={4} y={11} width={3.6} height={9} rx={1.2} />
           <Rect x={10.2} y={6} width={3.6} height={14} rx={1.2} />
           <Rect x={16.4} y={14} width={3.6} height={6} rx={1.2} />
+        </G>
+      )}
+      {name === "eye" && (
+        <G {...stroke}>
+          <Path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" />
+          <Circle cx={12} cy={12} r={3} />
+        </G>
+      )}
+      {name === "eye-off" && (
+        <G {...stroke}>
+          <Line x1={3} y1={3} x2={21} y2={21} />
+          <Path d="M10.6 10.6a3 3 0 0 0 4.2 4.2" />
+          <Path d="M9.9 5.1A9.5 9.5 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-2.4 3.3" />
+          <Path d="M6.1 6.1A17 17 0 0 0 2 12s3.5 7 10 7a9.4 9.4 0 0 0 3.9-.8" />
         </G>
       )}
     </Svg>

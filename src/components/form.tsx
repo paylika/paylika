@@ -1,6 +1,7 @@
 import { View, Text, TextInput, Pressable } from "react-native";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { colors } from "@/theme/colors";
+import { Icon } from "./Icon";
 
 export function FieldLabel({ children }: { children: ReactNode }) {
   return (
@@ -28,6 +29,7 @@ export function Input({
   autoFocus?: boolean;
   secureTextEntry?: boolean;
 }) {
+  const [hidden, setHidden] = useState(!!secureTextEntry);
   return (
     <View>
       {label ? <FieldLabel>{label}</FieldLabel> : null}
@@ -39,12 +41,16 @@ export function Input({
           placeholderTextColor={colors.muted}
           keyboardType={keyboardType}
           autoFocus={autoFocus}
-          secureTextEntry={secureTextEntry}
+          secureTextEntry={secureTextEntry ? hidden : false}
           className="flex-1 font-sans text-[15px] text-ink"
           // @ts-expect-error web-only: remove the focus outline (RN Web)
           style={{ paddingVertical: 0, outlineStyle: "none" }}
         />
-        {suffix ? (
+        {secureTextEntry ? (
+          <Pressable onPress={() => setHidden((h) => !h)} hitSlop={8} className="ml-2">
+            <Icon name={hidden ? "eye" : "eye-off"} size={19} color={colors.muted} />
+          </Pressable>
+        ) : suffix ? (
           <Text className="ml-2 font-medium text-[13px] text-ink-muted">{suffix}</Text>
         ) : null}
       </View>
