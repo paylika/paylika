@@ -10,7 +10,7 @@ import {
 import { useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Card, Button, Eyebrow, Tag } from "@/components/ui";
-import { Input, Segmented } from "@/components/form";
+import { Input, Chip, FieldLabel } from "@/components/form";
 import { Logo } from "@/components/Icon";
 import { colors } from "@/theme/colors";
 import { formatInt } from "@/components/cards";
@@ -23,6 +23,57 @@ type PayPlan = {
   currency: string;
   groupName: string;
 };
+
+type Operator = { value: string; label: string };
+type Country = { code: string; label: string; operators: Operator[] };
+
+// Pays & opérateurs couverts par UniTech Pay.
+// SN : endpoints dédiés (wave / orange_money). Autres pays : create_intl_payment.
+const COUNTRIES: Country[] = [
+  {
+    code: "SN",
+    label: "Sénégal",
+    operators: [
+      { value: "wave", label: "Wave" },
+      { value: "orange_money", label: "Orange Money" },
+    ],
+  },
+  {
+    code: "CI",
+    label: "Côte d'Ivoire",
+    operators: [
+      { value: "wave_money", label: "Wave" },
+      { value: "orange_money", label: "Orange Money" },
+      { value: "mtn_money", label: "MTN" },
+      { value: "moov", label: "Moov" },
+    ],
+  },
+  {
+    code: "BF",
+    label: "Burkina Faso",
+    operators: [
+      { value: "orange_money", label: "Orange Money" },
+      { value: "wave_money", label: "Wave" },
+      { value: "moov", label: "Moov" },
+    ],
+  },
+  {
+    code: "TG",
+    label: "Togo",
+    operators: [
+      { value: "moov", label: "Moov" },
+      { value: "togocell", label: "Togocel" },
+    ],
+  },
+  {
+    code: "BJ",
+    label: "Bénin",
+    operators: [
+      { value: "moov", label: "Moov" },
+      { value: "mtn_money", label: "MTN" },
+    ],
+  },
+];
 
 const CREATE_URL =
   "https://xkdiodbppotyiyldlwbg.functions.supabase.co/unitech-create";
@@ -45,9 +96,19 @@ export default function PayScreen() {
   const [loading, setLoading] = useState(true);
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
-  const [operator, setOperator] = useState<"wave" | "orange_money">("wave");
+  const [countryCode, setCountryCode] = useState("SN");
+  const [operator, setOperator] = useState("wave");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const country = COUNTRIES.find((c) => c.code === countryCode) ?? COUNTRIES[0];
+  const operatorLabel = country.operators.find((o) => o.value === operator)?.label ?? "l'opérateur";
+
+  function pickCountry(code: string) {
+    setCountryCode(code);
+    const next = COUNTRIES.find((c) => c.code === code);
+    if (next) setOperator(next.operators[0].value);
+  }
 
   useEffect(() => {
     (async () => {
@@ -76,6 +137,7 @@ export default function PayScreen() {
         body: JSON.stringify({
           offer: String(offer),
           tg: tg ?? "",
+          country: countryCode,
           operator,
           phone: phone.replace(/\s/g, ""),
           fullName: fullName.trim(),
@@ -156,15 +218,34 @@ export default function PayScreen() {
 
             <Card>
               <View style={{ gap: 16 }}>
-                <Segmented
-                  label="Moyen de paiement"
-                  value={operator}
-                  onChange={setOperator}
-                  options={[
-                    { label: "Wave", value: "wave" },
-                    { label: "Orange Money", value: "orange_money" },
-                  ]}
-                />
+                <View>
+                  <FieldLabel>Pays</FieldLabel>
+                  <View className="mt-2 flex-row flex-wrap" style={{ gap: 8 }}>
+                    {COUNTRIES.map((c) => (
+                      <Chip
+                        key={c.code}
+                        label={c.label}
+                        active={c.code === countryCode}
+                        onPress={() => pickCountry(c.code)}
+                      />
+                    ))}
+                  </View>
+                </View>
+
+                <View>
+                  <FieldLabel>Moyen de paiement</FieldLabel>
+                  <View className="mt-2 flex-row flex-wrap" style={{ gap: 8 }}>
+                    {country.operators.map((o) => (
+                      <Chip
+                        key={o.value}
+                        label={o.label}
+                        active={o.value === operator}
+                        onPress={() => setOperator(o.value)}
+                      />
+                    ))}
+                  </View>
+                </View>
+
                 <Input
                   label="Nom complet (optionnel)"
                   value={fullName}
@@ -188,7 +269,7 @@ export default function PayScreen() {
                   onPress={pay}
                 />
                 <Text className="text-center font-sans text-[11px] text-ink-muted">
-                  Vous serez redirigé vers {operator === "wave" ? "Wave" : "Orange Money"} pour confirmer. L'accès arrive sur Telegram.
+                  Vous serez redirigé vers {operatorLabel} pour confirmer. L'accès arrive sur Telegram.
                 </Text>
               </View>
             </Card>
