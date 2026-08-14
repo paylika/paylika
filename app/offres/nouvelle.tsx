@@ -6,7 +6,14 @@ import { Card, Button, Eyebrow } from "@/components/ui";
 import { Input, Chip, FieldLabel } from "@/components/form";
 import { Icon } from "@/components/Icon";
 import { colors } from "@/theme/colors";
-import { useAsync, fetchGroups, createOffer, PERIODICITIES } from "@/data/queries";
+import {
+  useAsync,
+  fetchGroups,
+  createOffer,
+  PERIODICITIES,
+  DELIVERY_TYPES,
+  type DeliveryType,
+} from "@/data/queries";
 
 const NEW = "__new__";
 
@@ -83,21 +90,31 @@ export default function NouvelleOffreScreen() {
   const onboarding = first === "1";
   const { data: groups, loading: groupsLoading } = useAsync(fetchGroups);
 
+  const [deliveryType, setDeliveryType] = useState<DeliveryType>("telegram");
   const [groupChoice, setGroupChoice] = useState<string>(NEW);
-  const [newGroupName, setNewGroupName] = useState("");
+  const [name, setName] = useState("");
+  const [deliveryTarget, setDeliveryTarget] = useState("");
   const [tiers, setTiers] = useState<TierForm[]>([{ days: 30, price: "", compare: "" }]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const creatingNewGroup = groupChoice === NEW;
-  // Le nom de l'offre = le nom du groupe/canal (nouveau ou existant).
+  const isTelegram = deliveryType === "telegram";
+  const needsTarget = deliveryType === "whatsapp" || deliveryType === "link";
+  // Telegram : on peut relier un groupe déjà connecté ; sinon on nomme l'offre.
+  const usingExisting = isTelegram && groupChoice !== NEW;
   const selectedGroupName = groups?.find((g) => g.id === groupChoice)?.name ?? "";
-  const offerName = creatingNewGroup ? newGroupName.trim() : selectedGroupName;
+  const offerName = usingExisting ? selectedGroupName : name.trim();
+
   const num = (s: string) => parseInt(s.replace(/\D/g, ""), 10) || 0;
   const validTiers = tiers.filter((t) => num(t.price) > 0);
   const valid =
-    (creatingNewGroup ? newGroupName.trim().length > 0 : !!groupChoice) &&
-    validTiers.length > 0;
+    offerName.length > 0 &&
+    validTiers.length > 0 &&
+    (needsTarget ? deliveryTarget.trim().length > 0 : true);
+
+  const targetLabel = deliveryType === "whatsapp" ? "Lien d'invitation du groupe WhatsApp" : "Lien à livrer (URL)";
+  const targetPlaceholder =
+    deliveryType === "whatsapp" ? "https://chat.whatsapp.com/…" : "https://… (formation, fichier, page privée)";
 
   function updateTier(i: number, t: TierForm) {
     setTiers((prev) => prev.map((x, idx) => (idx === i ? t : x)));
@@ -121,8 +138,10 @@ export default function NouvelleOffreScreen() {
       await createOffer({
         offerName: offerName || "Offre",
         currency: "XOF",
-        groupId: creatingNewGroup ? undefined : groupChoice,
-        newGroup: creatingNewGroup ? { name: newGroupName.trim(), kind: "telegram" } : undefined,
+        deliveryType,
+        deliveryTarget: needsTarget ? deliveryTarget.trim() : null,
+        groupId: usingExisting ? groupChoice : undefined,
+        newGroupName: usingExisting ? undefined : offerName,
         tiers: validTiers.map((t) => ({
           intervalDays: t.days,
           price: num(t.price),
@@ -148,32 +167,71 @@ export default function NouvelleOffreScreen() {
         }
       />
 
+      {/* Type de livraison */}
+      <Card>
+        <View style={{ gap: 12 }}>
+          <View>
+            <FieldLabel>Que reçoit l'acheteur après paiement ?</FieldLabel>
+            <View className="mt-1 flex-row flex-wrap" style={{ gap: 8 }}>
+              {DELIVERY_TYPES.map((d) => (
+                <Chip
+                  key={d.value}
+                  label={d.label}
+                  active={deliveryType === d.value}
+                  onPress={() => setDeliveryType(d.value)}
+                />
+              ))}
+            </View>
+            <Text className="mt-2 font-sans text-[11px] text-ink-muted">
+              {DELIVERY_TYPES.find((d) => d.value === deliveryType)?.hint}
+            </Text>
+          </View>
+        </View>
+      </Card>
+
+      {/* Cible / nom selon le type */}
       <Card>
         <View style={{ gap: 16 }}>
-          <View>
-            <FieldLabel>Groupe / canal</FieldLabel>
-            <Text className="mb-2 font-sans text-[11px] text-ink-muted">
-              Son nom devient le nom de l'offre.
-            </Text>
-            {groupsLoading ? (
-              <ActivityIndicator color={colors.bordeaux[600]} />
-            ) : (
-              <View className="flex-row flex-wrap" style={{ gap: 8 }}>
-                {(groups ?? []).map((g) => (
-                  <Chip key={g.id} label={g.name} active={groupChoice === g.id} onPress={() => setGroupChoice(g.id)} />
-                ))}
-                <Chip label="+ Nouveau groupe" active={creatingNewGroup} onPress={() => setGroupChoice(NEW)} />
-              </View>
-            )}
-          </View>
-          {creatingNewGroup ? (
+          {isTelegram ? (
+            <View>
+              <FieldLabel>Groupe / canal Telegram</FieldLabel>
+              <Text className="mb-2 font-sans text-[11px] text-ink-muted">
+                Reliez un groupe déjà connecté, ou nommez-en un nouveau.
+              </Text>
+              {groupsLoading ? (
+                <ActivityIndicator color={colors.bordeaux[600]} />
+              ) : (
+                <View className="flex-row flex-wrap" style={{ gap: 8 }}>
+                  {(groups ?? []).map((g) => (
+                    <Chip key={g.id} label={g.name} active={groupChoice === g.id} onPress={() => setGroupChoice(g.id)} />
+                  ))}
+                  <Chip label="+ Nouveau" active={groupChoice === NEW} onPress={() => setGroupChoice(NEW)} />
+                </View>
+              )}
+            </View>
+          ) : null}
+
+          {!usingExisting ? (
             <Input
-              label="Nom du groupe / canal Telegram"
-              value={newGroupName}
-              onChangeText={setNewGroupName}
-              placeholder="Ex. Crypto Signals VIP"
-              autoFocus
+              label="Nom de l'offre"
+              value={name}
+              onChangeText={setName}
+              placeholder="Ex. Accès VIP Crypto"
             />
+          ) : null}
+
+          {needsTarget ? (
+            <View>
+              <Input
+                label={targetLabel}
+                value={deliveryTarget}
+                onChangeText={setDeliveryTarget}
+                placeholder={targetPlaceholder}
+              />
+              <Text className="mt-1.5 font-sans text-[11px] text-ink-muted">
+                Ce lien reste secret : livré uniquement après paiement, via un bouton (jamais affiché en clair).
+              </Text>
+            </View>
           ) : null}
         </View>
       </Card>

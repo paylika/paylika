@@ -5,11 +5,10 @@ import { Screen, PageHeader } from "@/components/Screen";
 import { Card, Button, Tag, Eyebrow } from "@/components/ui";
 import { Icon } from "@/components/Icon";
 import { colors } from "@/theme/colors";
-import { fetchOffres, deleteOffer, intervalLabel, type Offre } from "@/data/queries";
+import { fetchOffres, deleteOffer, intervalLabel, payLinkFor, type Offre } from "@/data/queries";
 import { formatInt } from "@/components/cards";
 import { copyOrShare } from "@/lib/clipboard";
 
-const BOT = "https://t.me/Paylikabot";
 
 function OffreCard({
   offre,
@@ -22,7 +21,8 @@ function OffreCard({
 }) {
   const [confirming, setConfirming] = useState(false);
   const [copied, setCopied] = useState(false);
-  const payLink = `${BOT}?start=${offre.id}`;
+  const payLink = payLinkFor(offre);
+  const linkPreview = payLink.replace(/^https?:\/\//, "").slice(0, 28);
 
   async function copy() {
     const r = await copyOrShare(payLink);
@@ -69,7 +69,7 @@ function OffreCard({
         <View className="flex-1 flex-row items-center pr-2" style={{ gap: 6 }}>
           <Icon name="send" size={14} color={colors.bordeaux[600]} />
           <Text numberOfLines={1} className="flex-1 font-medium text-[12px] text-bordeaux-700">
-            t.me/Paylikabot?start={offre.id.slice(0, 8)}…
+            {linkPreview}…
           </Text>
         </View>
         <View className="flex-row items-center rounded-full bg-bordeaux-600 px-3 py-1.5" style={{ gap: 4 }}>

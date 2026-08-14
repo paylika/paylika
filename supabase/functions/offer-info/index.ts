@@ -37,7 +37,7 @@ Deno.serve(async (req) => {
 
   const { data: base } = await admin
     .from("plans")
-    .select("id, name, price, compare_price, currency, interval_days, group_id, groups(name)")
+    .select("id, name, price, compare_price, currency, interval_days, group_id, groups(name, delivery_type)")
     .eq("id", id)
     .maybeSingle();
   if (!base) return json({ error: "Offre introuvable" }, 404);
@@ -64,6 +64,8 @@ Deno.serve(async (req) => {
     offerName: b.groups?.name ?? b.name,
     groupName: b.groups?.name ?? "—",
     currency: b.currency,
+    // Type de livraison public (sert au checkout) ; la CIBLE reste secrète.
+    deliveryType: b.groups?.delivery_type ?? "telegram",
     tiers,
   });
 });

@@ -36,18 +36,23 @@ Deno.serve(async (req) => {
 
     const { data: plan } = await admin
       .from("plans")
-      .select("id, name, price, group_id")
+      .select("id, name, price, group_id, groups(delivery_type)")
       .eq("id", offer)
       .maybeSingle();
     if (!plan) return json({ error: "Offre introuvable." }, 404);
+
+    // Redirection après paiement selon le mode de livraison.
+    const deliveryType = (plan as any).groups?.delivery_type ?? "telegram";
+    const APP_URL = "https://paylika.paylika-app.workers.dev";
+    const successUrl = deliveryType === "telegram" ? "https://t.me/Paylikabot" : `${APP_URL}/access`;
 
     const base: Record<string, unknown> = {
       amount: Number(plan.price),
       customer_number: String(phone).replace(/\s/g, ""),
       customer_name: fullName || "Client Paylika",
-      description: `Abonnement Paylika : ${plan.name}`,
-      callback_success: "https://t.me/Paylikabot",
-      callback_cancel: "https://t.me/Paylikabot",
+      description: `Paylika : ${plan.name}`,
+      callback_success: successUrl,
+      callback_cancel: successUrl,
     };
 
     // Choix de l'endpoint selon pays/opérateur.

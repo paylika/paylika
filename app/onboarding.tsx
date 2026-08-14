@@ -200,6 +200,7 @@ export default function Onboarding() {
       const ids = await createOffer({
         offerName: groupName || "Offre",
         currency: "XOF",
+        deliveryType: "telegram",
         groupId: groupId!,
         tiers: validTiers.map((d) => ({
           intervalDays: d,

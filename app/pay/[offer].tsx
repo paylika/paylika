@@ -202,6 +202,14 @@ export default function PayScreen() {
       });
       const data = await res.json();
       if (data.ok && data.url) {
+        // Mémorise la référence pour la page /access (livraison non-Telegram).
+        if (data.reference && typeof window !== "undefined") {
+          try {
+            window.localStorage.setItem("paylika_last_ref", String(data.reference));
+          } catch {
+            /* stockage indispo */
+          }
+        }
         redirect(data.url);
         return;
       }

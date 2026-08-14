@@ -54,12 +54,22 @@ export type Offre = {
   groupId: string;
   groupName: string;
   groupKind: string;
+  deliveryType: DeliveryType;
 };
+
+export type DeliveryType = "telegram" | "whatsapp" | "link" | "receipt";
+
+export const DELIVERY_TYPES: { value: DeliveryType; label: string; hint: string }[] = [
+  { value: "telegram", label: "Groupe Telegram", hint: "Ajout et retrait automatiques (le plus verrouillé)." },
+  { value: "whatsapp", label: "Groupe WhatsApp", hint: "L'acheteur reçoit un bouton pour rejoindre le groupe." },
+  { value: "link", label: "Lien / contenu", hint: "Livrer un lien (formation, fichier, page privée…)." },
+  { value: "receipt", label: "Simple encaissement", hint: "Juste un reçu de paiement, sans accès à livrer." },
+];
 
 export async function fetchOffres(): Promise<Offre[]> {
   const { data, error } = await supabase
     .from("plans")
-    .select("id, name, price, compare_price, currency, interval_days, group_id, groups(name, kind)")
+    .select("id, name, price, compare_price, currency, interval_days, group_id, groups(name, kind, delivery_type)")
     .order("created_at", { ascending: false });
   if (error) throw error;
   return (data ?? []).map((p: any) => ({
@@ -72,7 +82,19 @@ export async function fetchOffres(): Promise<Offre[]> {
     groupId: p.group_id,
     groupName: p.groups?.name ?? "—",
     groupKind: p.groups?.kind ?? "telegram",
+    deliveryType: (p.groups?.delivery_type ?? "telegram") as DeliveryType,
   }));
+}
+
+const APP_URL = "https://paylika.paylika-app.workers.dev";
+
+/** Lien de partage d'une offre selon son mode de livraison. */
+export function payLinkFor(offre: Pick<Offre, "id" | "deliveryType">): string {
+  // Telegram passe par le bot (capture l'utilisateur pour le DM) ;
+  // les autres modes vont directement sur la page de paiement web.
+  return offre.deliveryType === "telegram"
+    ? `https://t.me/Paylikabot?start=${offre.id}`
+    : `${APP_URL}/pay/${offre.id}`;
 }
 
 export type SubscriberRow = {
@@ -192,26 +214,38 @@ export type Tier = { intervalDays: number; price: number; comparePrice?: number 
 export type NewOffer = {
   offerName: string;
   currency: string;
-  groupId?: string;
-  newGroup?: { name: string; kind: string };
+  deliveryType: DeliveryType;
+  deliveryTarget?: string | null; // lien WhatsApp / URL (whatsapp & link)
+  groupId?: string; // telegram : groupe déjà connecté
+  newGroupName?: string; // nom de l'entité vendable (si pas de groupe existant)
   tiers: Tier[];
 };
 
-/** Create a group (if new) then one plan per tier. Returns created plan ids. */
+/** Create the sellable entity (if new) then one plan per tier. Returns plan ids. */
 export async function createOffer(input: NewOffer): Promise<string[]> {
   const owner = await currentUserId();
+  if (!input.tiers.length) throw new Error("Ajoutez au moins une formule.");
+  if ((input.deliveryType === "whatsapp" || input.deliveryType === "link") && !input.deliveryTarget?.trim()) {
+    throw new Error("Renseignez le lien à livrer.");
+  }
+
   let groupId = input.groupId;
-  if (!groupId && input.newGroup) {
+  if (!groupId) {
     const { data, error } = await supabase
       .from("groups")
-      .insert({ name: input.newGroup.name, kind: input.newGroup.kind, owner_id: owner })
+      .insert({
+        name: input.newGroupName?.trim() || input.offerName.trim(),
+        kind: input.deliveryType === "telegram" ? "telegram" : input.deliveryType,
+        delivery_type: input.deliveryType,
+        delivery_target: input.deliveryTarget?.trim() || null,
+        owner_id: owner,
+      })
       .select("id")
       .single();
     if (error) throw error;
     groupId = data.id;
   }
-  if (!groupId) throw new Error("Choisissez ou créez un groupe.");
-  if (!input.tiers.length) throw new Error("Ajoutez au moins une formule.");
+  if (!groupId) throw new Error("Impossible de créer l'offre.");
 
   const rows = input.tiers.map((t) => ({
     owner_id: owner,
@@ -239,7 +273,7 @@ export async function countOffers(): Promise<number> {
 export async function fetchOffre(id: string): Promise<Offre | null> {
   const { data, error } = await supabase
     .from("plans")
-    .select("id, name, price, compare_price, currency, interval_days, group_id, groups(name, kind)")
+    .select("id, name, price, compare_price, currency, interval_days, group_id, groups(name, kind, delivery_type)")
     .eq("id", id)
     .maybeSingle();
   if (error) throw error;
@@ -255,6 +289,7 @@ export async function fetchOffre(id: string): Promise<Offre | null> {
     groupId: p.group_id,
     groupName: p.groups?.name ?? "—",
     groupKind: p.groups?.kind ?? "telegram",
+    deliveryType: (p.groups?.delivery_type ?? "telegram") as DeliveryType,
   };
 }
 
