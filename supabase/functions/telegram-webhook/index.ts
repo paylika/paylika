@@ -47,6 +47,38 @@ const approveJoin = (chat_id: number, user_id: number) =>
 const declineJoin = (chat_id: number, user_id: number) =>
   tg("declineChatJoinRequest", { chat_id, user_id });
 
+/** group_id d'un chat Telegram relié (ou null). */
+async function groupForChat(chatId: number): Promise<string | null> {
+  const { data } = await admin
+    .from("telegram_connections")
+    .select("group_id")
+    .eq("chat_id", chatId)
+    .maybeSingle();
+  return data?.group_id ?? null;
+}
+
+/** Enregistre / met à jour un membre observé dans le roster du groupe. */
+async function recordMember(groupId: string, from: any) {
+  if (!from || from.is_bot) return;
+  const { data: g } = await admin
+    .from("groups")
+    .select("owner_id")
+    .eq("id", groupId)
+    .maybeSingle();
+  await admin.from("group_members").upsert(
+    {
+      owner_id: g?.owner_id ?? null,
+      group_id: groupId,
+      telegram_user_id: from.id,
+      username: from.username ?? null,
+      first_name: from.first_name ?? null,
+      last_seen: new Date().toISOString(),
+      in_group: true,
+    },
+    { onConflict: "group_id,telegram_user_id" },
+  );
+}
+
 Deno.serve(async (req) => {
   // Only Telegram (with our shared secret header) may call this.
   if (WEBHOOK_SECRET) {
@@ -64,6 +96,11 @@ Deno.serve(async (req) => {
   try {
     if (update.message?.text?.startsWith("/start")) {
       await handleStart(update.message);
+    } else if (
+      update.message?.chat &&
+      (update.message.chat.type === "group" || update.message.chat.type === "supergroup")
+    ) {
+      await handleGroupMessage(update.message);
     } else if (update.chat_join_request) {
       await handleJoinRequest(update.chat_join_request);
     } else if (update.my_chat_member) {
@@ -115,6 +152,26 @@ async function handleStart(message: any) {
   }
 }
 
+async function handleGroupMessage(message: any) {
+  const groupId = await groupForChat(message.chat.id);
+  if (!groupId) return; // groupe non relié
+
+  // Nouveaux arrivants (message de service).
+  if (Array.isArray(message.new_chat_members) && message.new_chat_members.length) {
+    for (const m of message.new_chat_members) await recordMember(groupId, m);
+  }
+  // Départ (message de service).
+  if (message.left_chat_member) {
+    await admin
+      .from("group_members")
+      .update({ in_group: false })
+      .eq("group_id", groupId)
+      .eq("telegram_user_id", message.left_chat_member.id);
+  }
+  // Activité normale : on note l'auteur comme membre présent.
+  if (message.from) await recordMember(groupId, message.from);
+}
+
 async function handleJoinRequest(reqEvt: any) {
   const chatId = reqEvt.chat.id;
   const userId = reqEvt.from.id;
@@ -145,8 +202,12 @@ async function handleJoinRequest(reqEvt: any) {
     active = !!subscription;
   }
 
-  if (active) await approveJoin(chatId, userId);
-  else await declineJoin(chatId, userId);
+  if (active) {
+    await approveJoin(chatId, userId);
+    await recordMember(conn.group_id, reqEvt.from);
+  } else {
+    await declineJoin(chatId, userId);
+  }
 }
 
 async function handleMyChatMember(evt: any) {

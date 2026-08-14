@@ -603,6 +603,76 @@ export async function deleteAccount(): Promise<void> {
   throw new Error(data?.error ?? "Suppression impossible.");
 }
 
+// ---- Membres du groupe (roster + badges payé/non payé) ----
+
+export type Member = {
+  telegramUserId: number;
+  name: string;
+  username: string | null;
+  paid: boolean;
+  expiresAt: string | null;
+  lastSeen: string;
+  inGroup: boolean;
+};
+
+export async function fetchMembers(groupId: string): Promise<Member[]> {
+  const [{ data: members }, { data: subs }] = await Promise.all([
+    supabase
+      .from("group_members")
+      .select("telegram_user_id, username, first_name, last_seen, in_group")
+      .eq("group_id", groupId)
+      .order("last_seen", { ascending: false }),
+    supabase
+      .from("subscriptions")
+      .select("expires_at, subscribers(telegram_user_id)")
+      .eq("group_id", groupId)
+      .eq("status", "active")
+      .gt("expires_at", new Date().toISOString()),
+  ]);
+  const paid = new Map<number, string>();
+  for (const s of (subs ?? []) as any[]) {
+    const tid = s.subscribers?.telegram_user_id;
+    if (tid != null) paid.set(Number(tid), s.expires_at);
+  }
+  return ((members ?? []) as any[]).map((m) => {
+    const tid = Number(m.telegram_user_id);
+    return {
+      telegramUserId: tid,
+      name: m.first_name || m.username || "Membre",
+      username: m.username,
+      paid: paid.has(tid),
+      expiresAt: paid.get(tid) ?? null,
+      lastSeen: m.last_seen,
+      inGroup: m.in_group,
+    };
+  });
+}
+
+const MEMBER_REMOVE_URL =
+  "https://xkdiodbppotyiyldlwbg.functions.supabase.co/member-remove";
+
+/** Retire un membre du groupe (kick + relance de paiement). */
+export async function removeMember(groupId: string, telegramUserId: number): Promise<void> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const token = session?.access_token;
+  if (!token) throw new Error("Session expirée. Reconnectez-vous.");
+  let data: any = null;
+  try {
+    const res = await fetch(MEMBER_REMOVE_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ groupId, telegramUserId }),
+    });
+    data = await res.json().catch(() => null);
+    if (res.ok && data?.ok) return;
+  } catch {
+    throw new Error("Connexion impossible. Réessayez.");
+  }
+  throw new Error(data?.error ?? "Retrait impossible.");
+}
+
 export type OfferStat = {
   id: string;
   name: string;

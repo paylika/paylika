@@ -145,12 +145,21 @@ export default function AccesScreen() {
                 {busy ? (
                   <ActivityIndicator color={colors.bordeaux[600]} />
                 ) : linked ? (
-                  <Pressable
-                    onPress={() => act(c.chatId, () => unlinkConnection(c.chatId))}
-                    className="self-start rounded-full bg-sand px-3.5 py-2"
-                  >
-                    <Text className="font-semibold text-[12px] text-ink">Délier</Text>
-                  </Pressable>
+                  <View className="flex-row items-center" style={{ gap: 8 }}>
+                    <Pressable
+                      onPress={() => router.push(`/membres?group=${c.groupId}` as any)}
+                      className="flex-row items-center rounded-full bg-bordeaux-600 px-3.5 py-2"
+                    >
+                      <Icon name="users" size={14} color={colors.white} />
+                      <Text className="ml-1.5 font-semibold text-[12px] text-white">Membres</Text>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => act(c.chatId, () => unlinkConnection(c.chatId))}
+                      className="rounded-full bg-sand px-3.5 py-2"
+                    >
+                      <Text className="font-semibold text-[12px] text-ink">Délier</Text>
+                    </Pressable>
+                  </View>
                 ) : (
                   <>
                     <Eyebrow>Relier à une offre</Eyebrow>
