@@ -61,6 +61,7 @@ Deno.serve(async (req) => {
     // 2) Valider l'entrée.
     const body = await req.json().catch(() => null);
     const amount = Math.floor(Number(body?.amount) || 0);
+    const country = String(body?.country ?? "SN");
     const method = String(body?.method ?? "wave");
     const destination = String(body?.destination ?? "").replace(/\s/g, "");
     if (amount <= 0) return json({ error: "Montant invalide." }, 400);
@@ -101,8 +102,10 @@ Deno.serve(async (req) => {
           // UniTech débite le brut et le destinataire reçoit brut - frais.
           // On envoie donc un brut « majoré » pour qu'il reçoive `amount` net.
           amount: Math.ceil(amount / (1 - PAYOUT_FEE_RATE)),
-          method: PAYOUT_METHOD[method] ?? "wave",
+          method: PAYOUT_METHOD[method] ?? method,
           account: destination,
+          // Hors Sénégal : on transmet le pays (retrait international).
+          ...(country !== "SN" ? { country } : {}),
         }),
       });
       data = await res.json().catch(() => null);

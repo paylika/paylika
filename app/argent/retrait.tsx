@@ -3,8 +3,9 @@ import { View, Text } from "react-native";
 import { useRouter } from "expo-router";
 import { Screen, PageTitle } from "@/components/Screen";
 import { Card, Button, Eyebrow } from "@/components/ui";
-import { Input, Segmented } from "@/components/form";
+import { Input, Chip, FieldLabel } from "@/components/form";
 import { useAsync, fetchMoney, fetchProfile, createPayout } from "@/data/queries";
+import { PAYOUT_COUNTRIES, operatorsFor } from "@/data/operators";
 import { formatInt } from "@/components/cards";
 
 export default function RetraitScreen() {
@@ -12,16 +13,18 @@ export default function RetraitScreen() {
   const { data: money } = useAsync(fetchMoney);
 
   const [amount, setAmount] = useState("");
-  const [method, setMethod] = useState<"wave" | "orange_money" | "free_money">("wave");
+  const [country, setCountry] = useState("SN");
+  const [method, setMethod] = useState<string>("wave");
   const [destination, setDestination] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Pré-remplir avec le moyen de retrait par défaut du profil.
+  // Pré-remplir avec le retrait par défaut du profil.
   useEffect(() => {
     fetchProfile()
       .then((p) => {
-        if (p.payoutMethod) setMethod(p.payoutMethod as any);
+        if (p.payoutCountry) setCountry(p.payoutCountry);
+        if (p.payoutMethod) setMethod(p.payoutMethod);
         if (p.payoutNumber) setDestination(p.payoutNumber);
       })
       .catch(() => {});
@@ -37,7 +40,7 @@ export default function RetraitScreen() {
     setSaving(true);
     setError(null);
     try {
-      await createPayout({ amount: amountNum, method, destination: destination.trim() });
+      await createPayout({ amount: amountNum, country, method, destination: destination.trim() });
       router.replace("/argent");
     } catch (e: any) {
       setError(e?.message ?? "Retrait impossible");
@@ -55,9 +58,7 @@ export default function RetraitScreen() {
           <Text className="font-display-x text-[30px] text-white" style={{ letterSpacing: -1 }}>
             {money ? formatInt(available) : "—"}
           </Text>
-          <Text className="ml-2 font-medium text-[13px] text-white/60">
-            {money?.currency ?? "XOF"}
-          </Text>
+          <Text className="ml-2 font-medium text-[13px] text-white/60">{money?.currency ?? "XOF"}</Text>
         </View>
       </Card>
 
@@ -72,20 +73,40 @@ export default function RetraitScreen() {
             autoFocus
           />
           {overBalance ? (
-            <Text className="font-sans text-[12px] text-bordeaux-700">
-              Montant supérieur au solde disponible.
-            </Text>
+            <Text className="font-sans text-[12px] text-bordeaux-700">Montant supérieur au solde disponible.</Text>
           ) : null}
-          <Segmented
-            label="Moyen"
-            value={method}
-            onChange={setMethod}
-            options={[
-              { label: "Wave", value: "wave" },
-              { label: "Orange", value: "orange_money" },
-              { label: "Free", value: "free_money" },
-            ]}
-          />
+
+          <View>
+            <FieldLabel>Pays</FieldLabel>
+            <View className="mt-1 flex-row flex-wrap" style={{ gap: 8 }}>
+              {PAYOUT_COUNTRIES.map((c) => (
+                <Chip
+                  key={c.code}
+                  label={c.label}
+                  active={c.code === country}
+                  onPress={() => {
+                    setCountry(c.code);
+                    setMethod(operatorsFor(c.code)[0].value);
+                  }}
+                />
+              ))}
+            </View>
+          </View>
+
+          <View>
+            <FieldLabel>Moyen de retrait</FieldLabel>
+            <View className="mt-1 flex-row flex-wrap" style={{ gap: 8 }}>
+              {operatorsFor(country).map((o) => (
+                <Chip
+                  key={o.value}
+                  label={o.label}
+                  active={o.value === method}
+                  onPress={() => setMethod(o.value)}
+                />
+              ))}
+            </View>
+          </View>
+
           <Input
             label="Numéro de réception"
             value={destination}
@@ -94,11 +115,9 @@ export default function RetraitScreen() {
             placeholder="77 000 00 00"
           />
           <Text className="font-sans text-[11px] text-ink-muted">
-            Retrait gratuit · traité sous 24 h.
+            Retrait gratuit · vous recevez le montant net, tout de suite.
           </Text>
-          {error ? (
-            <Text className="font-sans text-[12px] text-bordeaux-700">{error}</Text>
-          ) : null}
+          {error ? <Text className="font-sans text-[12px] text-bordeaux-700">{error}</Text> : null}
         </View>
       </Card>
 

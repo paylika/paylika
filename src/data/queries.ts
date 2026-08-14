@@ -574,6 +574,7 @@ const PAYOUT_URL =
  */
 export async function createPayout(input: {
   amount: number;
+  country?: string;
   method: string;
   destination: string;
 }): Promise<void> {
@@ -605,6 +606,7 @@ export type Profile = {
   fullName: string;
   businessName: string;
   avatarUrl: string | null;
+  payoutCountry: string;
   payoutMethod: string;
   payoutNumber: string;
   metaPixelId: string;
@@ -614,13 +616,14 @@ export async function fetchProfile(): Promise<Profile> {
   const owner = await currentUserId();
   const { data } = await supabase
     .from("profiles")
-    .select("full_name, business_name, avatar_url, payout_method, payout_number, meta_pixel_id")
+    .select("full_name, business_name, avatar_url, payout_country, payout_method, payout_number, meta_pixel_id")
     .eq("id", owner)
     .maybeSingle();
   return {
     fullName: data?.full_name ?? "",
     businessName: data?.business_name ?? "",
     avatarUrl: data?.avatar_url ?? null,
+    payoutCountry: data?.payout_country ?? "SN",
     payoutMethod: data?.payout_method ?? "wave",
     payoutNumber: data?.payout_number ?? "",
     metaPixelId: data?.meta_pixel_id ?? "",
@@ -631,6 +634,7 @@ export async function saveProfile(input: {
   fullName: string;
   businessName: string;
   avatarUrl?: string | null;
+  payoutCountry?: string;
   payoutMethod: string;
   payoutNumber: string;
   metaPixelId?: string;
@@ -641,6 +645,7 @@ export async function saveProfile(input: {
     full_name: input.fullName || null,
     business_name: input.businessName || null,
     ...(input.avatarUrl !== undefined ? { avatar_url: input.avatarUrl } : {}),
+    ...(input.payoutCountry !== undefined ? { payout_country: input.payoutCountry } : {}),
     payout_method: input.payoutMethod,
     payout_number: input.payoutNumber || null,
     ...(input.metaPixelId !== undefined ? { meta_pixel_id: input.metaPixelId || null } : {}),

@@ -4,7 +4,8 @@ import { useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import { Screen, PageTitle } from "@/components/Screen";
 import { Card, Tag, Avatar, Button, Eyebrow } from "@/components/ui";
-import { Input, Segmented, FieldLabel } from "@/components/form";
+import { Input, Chip, FieldLabel } from "@/components/form";
+import { PAYOUT_COUNTRIES, operatorsFor } from "@/data/operators";
 import { Icon, type IconName } from "@/components/Icon";
 import { colors } from "@/theme/colors";
 import { useAuth, signOut } from "@/lib/auth";
@@ -55,7 +56,8 @@ export default function ReglagesScreen() {
   const [fullName, setFullName] = useState("");
   const [businessName, setBusinessName] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [payoutMethod, setPayoutMethod] = useState<"wave" | "orange_money" | "free_money">("wave");
+  const [payoutCountry, setPayoutCountry] = useState("SN");
+  const [payoutMethod, setPayoutMethod] = useState<string>("wave");
   const [payoutNumber, setPayoutNumber] = useState("");
   const [metaPixelId, setMetaPixelId] = useState("");
 
@@ -81,7 +83,8 @@ export default function ReglagesScreen() {
         setFullName(p.fullName);
         setBusinessName(p.businessName);
         setAvatarUrl(p.avatarUrl);
-        setPayoutMethod((p.payoutMethod as any) || "wave");
+        setPayoutCountry(p.payoutCountry || "SN");
+        setPayoutMethod(p.payoutMethod || "wave");
         setPayoutNumber(p.payoutNumber);
         setMetaPixelId(p.metaPixelId);
       } catch (e: any) {
@@ -113,7 +116,7 @@ export default function ReglagesScreen() {
     try {
       const url = await uploadAvatar(asset.uri, asset.mimeType);
       setAvatarUrl(url);
-      await saveProfile({ fullName, businessName, avatarUrl: url, payoutMethod, payoutNumber, metaPixelId });
+      await saveProfile({ fullName, businessName, avatarUrl: url, payoutCountry, payoutMethod, payoutNumber, metaPixelId });
     } catch (e: any) {
       setError(e?.message ?? "Téléversement impossible.");
     } finally {
@@ -127,7 +130,7 @@ export default function ReglagesScreen() {
     setError(null);
     setSaved(false);
     try {
-      await saveProfile({ fullName, businessName, payoutMethod, payoutNumber, metaPixelId });
+      await saveProfile({ fullName, businessName, payoutCountry, payoutMethod, payoutNumber, metaPixelId });
       setSaved(true);
       setTimeout(() => setSaved(false), 1800);
     } catch (e: any) {
@@ -215,16 +218,35 @@ export default function ReglagesScreen() {
           Pré-rempli quand vous retirez votre argent.
         </Text>
         <View className="mt-4" style={{ gap: 14 }}>
-          <Segmented
-            label="Moyen"
-            value={payoutMethod}
-            onChange={setPayoutMethod}
-            options={[
-              { label: "Wave", value: "wave" },
-              { label: "Orange", value: "orange_money" },
-              { label: "Free", value: "free_money" },
-            ]}
-          />
+          <View>
+            <FieldLabel>Pays</FieldLabel>
+            <View className="mt-1 flex-row flex-wrap" style={{ gap: 8 }}>
+              {PAYOUT_COUNTRIES.map((c) => (
+                <Chip
+                  key={c.code}
+                  label={c.label}
+                  active={c.code === payoutCountry}
+                  onPress={() => {
+                    setPayoutCountry(c.code);
+                    setPayoutMethod(operatorsFor(c.code)[0].value);
+                  }}
+                />
+              ))}
+            </View>
+          </View>
+          <View>
+            <FieldLabel>Moyen</FieldLabel>
+            <View className="mt-1 flex-row flex-wrap" style={{ gap: 8 }}>
+              {operatorsFor(payoutCountry).map((o) => (
+                <Chip
+                  key={o.value}
+                  label={o.label}
+                  active={o.value === payoutMethod}
+                  onPress={() => setPayoutMethod(o.value)}
+                />
+              ))}
+            </View>
+          </View>
           <Input
             label="Numéro de réception"
             value={payoutNumber}
