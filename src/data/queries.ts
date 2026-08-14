@@ -116,9 +116,11 @@ export async function addSubscriber(input: {
   telegramUsername?: string;
   groupId: string;
 }): Promise<void> {
+  const owner = await currentUserId();
   const { data: sub, error: e1 } = await supabase
     .from("subscribers")
     .insert({
+      owner_id: owner,
       full_name: input.fullName,
       telegram_username: input.telegramUsername || null,
     })
@@ -137,6 +139,7 @@ export async function addSubscriber(input: {
   const days = plan?.interval_days ?? 30;
   const expires = new Date(Date.now() + days * 86400000).toISOString();
   const { error: e2 } = await supabase.from("subscriptions").insert({
+    owner_id: owner,
     subscriber_id: sub.id,
     plan_id: plan?.id ?? null,
     group_id: input.groupId,
@@ -299,9 +302,27 @@ export async function fetchConnections(): Promise<Connection[]> {
   }));
 }
 
-async function currentUserId(): Promise<string | null> {
-  const { data } = await supabase.auth.getUser();
-  return data.user?.id ?? null;
+/**
+ * Returns the signed-in owner id, guaranteeing a NON-expired session first.
+ * If the access token is missing/expired (which would make server-side
+ * `auth.uid()` NULL and silently break every RLS-protected write), we refresh
+ * it; if that fails, we throw a clear message instead of a cryptic RLS error.
+ */
+async function currentUserId(): Promise<string> {
+  let {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  // Refresh proactively when the token is missing or about to expire (<60s).
+  const expiresInMs = session?.expires_at ? session.expires_at * 1000 - Date.now() : -1;
+  if (!session || expiresInMs < 60_000) {
+    const { data } = await supabase.auth.refreshSession();
+    if (data.session) session = data.session;
+  }
+
+  const uid = session?.user?.id ?? null;
+  if (!uid) throw new Error("Session expirée. Reconnectez-vous pour continuer.");
+  return uid;
 }
 
 export async function linkConnection(chatId: number, groupId: string): Promise<void> {
@@ -352,9 +373,11 @@ export async function createSimpleOffer(input: {
   price: number;
   comparePrice?: number | null;
 }): Promise<string> {
+  const owner = await currentUserId();
   const { data, error } = await supabase
     .from("plans")
     .insert({
+      owner_id: owner,
       group_id: input.groupId,
       name: `${input.offerName} — ${intervalLabel(input.intervalDays)}`,
       price: input.price,
@@ -466,7 +489,9 @@ export async function createPayout(input: {
   method: string;
   destination: string;
 }): Promise<void> {
+  const owner = await currentUserId();
   const { error } = await supabase.from("payouts").insert({
+    owner_id: owner,
     amount: input.amount,
     method: input.method,
     destination: input.destination,
