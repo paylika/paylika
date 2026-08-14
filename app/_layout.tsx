@@ -53,7 +53,14 @@ function AppShell() {
       return;
     }
     if (isLogin) {
-      router.replace((nextParam || "/") as any);
+      // Destination explicite (ex. on venait de /admin) : on y retourne.
+      if (nextParam && nextParam !== "/") {
+        router.replace(nextParam as any);
+      } else if (adminChecked) {
+        // Sinon on route selon l'email : admin -> console, sinon -> compte.
+        router.replace((isAdmin ? "/admin" : "/") as any);
+      }
+      // tant que le statut admin n'est pas connu, on attend (pas de flash).
       return;
     }
     if (adminChecked) {
