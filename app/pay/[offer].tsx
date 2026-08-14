@@ -13,11 +13,21 @@ import { Card, Button, Eyebrow, Tag } from "@/components/ui";
 import { Input, Segmented } from "@/components/form";
 import { Logo } from "@/components/Icon";
 import { colors } from "@/theme/colors";
-import { fetchOffre, type Offre } from "@/data/queries";
 import { formatInt } from "@/components/cards";
+
+type PayPlan = {
+  id: string;
+  name: string;
+  price: number;
+  comparePrice: number | null;
+  currency: string;
+  groupName: string;
+};
 
 const CREATE_URL =
   "https://xkdiodbppotyiyldlwbg.functions.supabase.co/unitech-create";
+const OFFER_INFO_URL =
+  "https://xkdiodbppotyiyldlwbg.functions.supabase.co/offer-info";
 
 function redirect(url: string) {
   if (Platform.OS === "web" && typeof window !== "undefined") {
@@ -31,7 +41,7 @@ export default function PayScreen() {
   const insets = useSafeAreaInsets();
   const { offer, tg } = useLocalSearchParams<{ offer: string; tg?: string }>();
 
-  const [plan, setPlan] = useState<Offre | null>(null);
+  const [plan, setPlan] = useState<PayPlan | null>(null);
   const [loading, setLoading] = useState(true);
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
@@ -42,7 +52,11 @@ export default function PayScreen() {
   useEffect(() => {
     (async () => {
       try {
-        setPlan(await fetchOffre(String(offer)));
+        const res = await fetch(`${OFFER_INFO_URL}?id=${encodeURIComponent(String(offer))}`);
+        const data = await res.json();
+        if (data && data.id) setPlan(data);
+      } catch {
+        /* offre introuvable */
       } finally {
         setLoading(false);
       }

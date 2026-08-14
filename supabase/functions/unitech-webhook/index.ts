@@ -129,28 +129,37 @@ async function grantAccess(evt: any) {
 
   const { data: plan } = await admin
     .from("plans")
-    .select("interval_days, price")
+    .select("interval_days, price, owner_id")
     .eq("id", intent.plan_id)
     .maybeSingle();
   const intervalDays = plan?.interval_days ?? 30;
+  const owner = plan?.owner_id ?? null; // le paiement appartient au proprio de l'offre
   const amount = Number(evt.amount ?? intent.amount ?? plan?.price ?? 0);
   const telegramUserId = intent.telegram_user_id as number | null;
 
-  // Résoudre / créer l'abonné depuis l'utilisateur Telegram.
+  // Résoudre / créer l'abonné (scopé au propriétaire).
   let subscriberId: string | null = null;
   let chatId: number | null = null;
   if (telegramUserId) {
     const { data: tu } = await admin
       .from("telegram_users")
-      .select("chat_id, username, first_name, subscriber_id")
+      .select("chat_id, username, first_name")
       .eq("telegram_user_id", telegramUserId)
       .maybeSingle();
     chatId = tu?.chat_id ?? null;
-    subscriberId = tu?.subscriber_id ?? null;
+
+    const { data: existing } = await admin
+      .from("subscribers")
+      .select("id")
+      .eq("owner_id", owner)
+      .eq("telegram_user_id", telegramUserId)
+      .maybeSingle();
+    subscriberId = existing?.id ?? null;
     if (!subscriberId) {
       const { data: sub } = await admin
         .from("subscribers")
         .insert({
+          owner_id: owner,
           full_name: tu?.first_name ?? "Abonné Telegram",
           telegram_username: tu?.username ?? null,
           telegram_user_id: telegramUserId,
@@ -158,12 +167,6 @@ async function grantAccess(evt: any) {
         .select("id")
         .single();
       subscriberId = sub.id;
-      if (tu) {
-        await admin
-          .from("telegram_users")
-          .update({ subscriber_id: subscriberId })
-          .eq("telegram_user_id", telegramUserId);
-      }
     }
   }
 
@@ -171,6 +174,7 @@ async function grantAccess(evt: any) {
   const { data: subscription } = await admin
     .from("subscriptions")
     .insert({
+      owner_id: owner,
       subscriber_id: subscriberId,
       plan_id: intent.plan_id,
       group_id: intent.group_id ?? null,
@@ -183,6 +187,7 @@ async function grantAccess(evt: any) {
 
   const commission = Math.round(amount * COMMISSION_RATE);
   await admin.from("payments").insert({
+    owner_id: owner,
     subscription_id: subscription?.id ?? null,
     subscriber_id: subscriberId,
     amount,

@@ -296,10 +296,16 @@ export async function fetchConnections(): Promise<Connection[]> {
   }));
 }
 
+async function currentUserId(): Promise<string | null> {
+  const { data } = await supabase.auth.getUser();
+  return data.user?.id ?? null;
+}
+
 export async function linkConnection(chatId: number, groupId: string): Promise<void> {
+  const owner = await currentUserId();
   const { error } = await supabase
     .from("telegram_connections")
-    .update({ group_id: groupId, status: "linked" })
+    .update({ group_id: groupId, status: "linked", owner_id: owner })
     .eq("chat_id", chatId);
   if (error) throw error;
 }
@@ -314,15 +320,16 @@ export async function unlinkConnection(chatId: number): Promise<void> {
 
 /** Onboarding: create a Paylika group for a detected Telegram chat + link it. */
 export async function connectGroup(chatId: number, title: string): Promise<string> {
+  const owner = await currentUserId();
   const { data: g, error } = await supabase
     .from("groups")
-    .insert({ name: title || "Mon groupe", kind: "telegram", telegram_chat_id: String(chatId) })
+    .insert({ name: title || "Mon groupe", kind: "telegram", telegram_chat_id: String(chatId), owner_id: owner })
     .select("id")
     .single();
   if (error) throw error;
   const { error: e2 } = await supabase
     .from("telegram_connections")
-    .update({ group_id: g.id, status: "linked" })
+    .update({ group_id: g.id, status: "linked", owner_id: owner })
     .eq("chat_id", chatId);
   if (e2) throw e2;
   return g.id as string;
