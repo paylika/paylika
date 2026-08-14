@@ -4,13 +4,13 @@
  * in places where className isn't available (SVG fills/strokes, chart bars).
  */
 export const colors = {
-  paper: "#F4EDE3",
+  paper: "#FFFFFF",
   card: "#FFFFFF",
-  night: "#1C1714",
-  ink: "#211B18",
-  inkSoft: "#3A322D",
-  muted: "#8A817A",
-  sand: "#EBE1D3",
+  night: "#18181B",
+  ink: "#18181B",
+  inkSoft: "#3F3F46",
+  muted: "#71717A",
+  sand: "#F4F4F5",
   bordeaux: {
     50: "#F8EAED",
     100: "#EEC9D0",

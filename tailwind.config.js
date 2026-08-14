@@ -11,17 +11,17 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Warm paper background — deliberately not a generic gray dashboard.
-        paper: "#F4EDE3",
+        // Pure white background — clean, neutral (no warm tint).
+        paper: "#FFFFFF",
         card: "#FFFFFF",
-        // Warm near-black used for text and dark panels.
-        night: "#1C1714",
+        // Neutral near-black used for text and dark panels.
+        night: "#18181B",
         ink: {
-          DEFAULT: "#211B18",
-          soft: "#3A322D",
-          muted: "#8A817A",
+          DEFAULT: "#18181B",
+          soft: "#3F3F46",
+          muted: "#71717A",
         },
-        sand: "#EBE1D3",
+        sand: "#F4F4F5",
         // Bordeaux — paylika's signature accent (a deep wine red).
         bordeaux: {
           50: "#F8EAED",

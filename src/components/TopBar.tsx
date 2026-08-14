@@ -61,7 +61,7 @@ export function TopBar() {
             {isSubPage ? (
               <Pressable
                 onPress={goBack}
-                className="h-10 w-10 items-center justify-center rounded-full bg-card border border-ink/[0.07]"
+                className="h-10 w-10 items-center justify-center rounded-full bg-sand"
               >
                 <Icon name="chevron-left" size={20} color={colors.ink} strokeWidth={2} />
               </Pressable>
@@ -70,7 +70,7 @@ export function TopBar() {
           </View>
           <View className="flex-row items-center" style={{ gap: 8 }}>
             <Pressable onPress={() => router.push("/notifications" as any)}>
-              <View className="h-10 w-10 items-center justify-center rounded-full bg-card border border-ink/[0.07]">
+              <View className="h-10 w-10 items-center justify-center rounded-full bg-sand">
                 <Icon name="bell" size={19} color={colors.ink} />
               </View>
               <View
@@ -94,12 +94,12 @@ export function TopBar() {
         </View>
 
         {/* Search */}
-        <View className="mt-4 flex-row items-center rounded-2xl bg-card border border-ink/[0.07] px-4 py-3">
+        <View className="mt-4 flex-row items-center rounded-2xl bg-sand px-4 py-3">
           <Icon name="search" size={18} color={colors.muted} />
           <Text className="ml-3 flex-1 font-sans text-[14px] text-ink-muted">
             Rechercher un abonné, un groupe…
           </Text>
-          <View className="rounded-md bg-sand px-2 py-0.5">
+          <View className="rounded-md bg-card border border-ink/10 px-2 py-0.5">
             <Text className="font-medium text-[11px] text-ink-muted">⌘K</Text>
           </View>
         </View>

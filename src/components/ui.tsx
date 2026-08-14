@@ -15,16 +15,16 @@ export function Card({
   className?: string;
 }) {
   const base =
-    tone === "dark" ? "bg-night" : "bg-card border border-ink/[0.06]";
+    tone === "dark" ? "bg-night" : "bg-card border border-ink/[0.08]";
   return (
     <View
       className={`rounded-[28px] p-5 ${base} ${className}`}
       style={
         tone === "light"
           ? {
-              shadowColor: "#211B18",
-              shadowOpacity: 0.05,
-              shadowRadius: 18,
+              shadowColor: "#000000",
+              shadowOpacity: 0.06,
+              shadowRadius: 20,
               shadowOffset: { width: 0, height: 8 },
             }
           : undefined
