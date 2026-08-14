@@ -7,7 +7,7 @@ import {
   Pressable,
   Linking,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Card, Button, Eyebrow } from "@/components/ui";
 import { Input } from "@/components/form";
@@ -130,6 +130,9 @@ function PeriodRow({
 export default function Onboarding() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { mode } = useLocalSearchParams<{ mode?: string }>();
+  const addMode = mode === "add"; // lancé depuis « Connecter un groupe »
+  const exitTo = addMode ? "/acces" : "/";
 
   const [step, setStep] = useState(1);
   const [pending, setPending] = useState<Connection[]>([]);
@@ -275,11 +278,21 @@ export default function Onboarding() {
                         disabled={busy}
                         className="flex-row items-center justify-between rounded-2xl bg-sand px-4 py-3"
                       >
-                        <View className="flex-1 pr-2">
-                          <Text className="font-semibold text-[14px] text-ink">
-                            {c.title ?? "Groupe Telegram"}
-                          </Text>
-                          <Text className="font-sans text-[11px] text-ink-muted">Appuyez pour continuer</Text>
+                        <View className="flex-1 flex-row items-center pr-2" style={{ gap: 8 }}>
+                          <View
+                            className="h-6 w-6 items-center justify-center rounded-full"
+                            style={{ backgroundColor: colors.forest }}
+                          >
+                            <Icon name="check" size={13} color={colors.white} strokeWidth={2.6} />
+                          </View>
+                          <View className="flex-1">
+                            <Text className="font-semibold text-[14px] text-ink">
+                              {c.title ?? "Groupe Telegram"}
+                            </Text>
+                            <Text className="font-sans text-[11px] text-forest">
+                              Connecté · appuyez pour définir l'offre
+                            </Text>
+                          </View>
                         </View>
                         {busy ? (
                           <ActivityIndicator color={colors.bordeaux[600]} />
@@ -380,14 +393,21 @@ export default function Onboarding() {
               Retrouvez toutes vos formules et leurs liens dans l'onglet Offres.
             </Text>
             <View className="mt-4">
-              <Button label="Aller au tableau de bord" icon="arrow-right" variant="accent" onPress={() => router.replace("/")} />
+              <Button
+                label={addMode ? "Terminer" : "Aller au tableau de bord"}
+                icon="arrow-right"
+                variant="accent"
+                onPress={() => router.replace(exitTo)}
+              />
             </View>
           </Card>
         ) : null}
 
         {step === 1 ? (
-          <Pressable onPress={() => router.replace("/")}>
-            <Text className="text-center font-sans text-[12px] text-ink-muted">Passer pour l'instant</Text>
+          <Pressable onPress={() => router.replace(exitTo)}>
+            <Text className="text-center font-sans text-[12px] text-ink-muted">
+              {addMode ? "Annuler" : "Passer pour l'instant"}
+            </Text>
           </Pressable>
         ) : null}
       </View>

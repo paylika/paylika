@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
-import { View, Text, ActivityIndicator, Pressable, Linking } from "react-native";
-import { useFocusEffect } from "expo-router";
+import { View, Text, ActivityIndicator, Pressable } from "react-native";
+import { useFocusEffect, useRouter } from "expo-router";
 import { Screen, PageTitle } from "@/components/Screen";
 import { Card, Tag, Eyebrow, Button } from "@/components/ui";
 import { Chip } from "@/components/form";
@@ -15,9 +15,6 @@ import {
   type Group,
 } from "@/data/queries";
 
-const BOT_URL = "https://t.me/Paylikabot";
-const CONNECT_URL =
-  "https://t.me/Paylikabot?startgroup=connect&admin=invite_users+restrict_members";
 
 function Step({ n, text }: { n: number; text: string }) {
   return (
@@ -31,6 +28,7 @@ function Step({ n, text }: { n: number; text: string }) {
 }
 
 export default function AccesScreen() {
+  const router = useRouter();
   const [connections, setConnections] = useState<Connection[] | null>(null);
   const [groups, setGroups] = useState<Group[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -94,10 +92,10 @@ export default function AccesScreen() {
         </View>
         <View className="mt-4" style={{ maxWidth: 240 }}>
           <Button
-            label="Ajouter à un groupe"
+            label="Connecter un groupe"
             icon="send"
             variant="accent"
-            onPress={() => Linking.openURL(CONNECT_URL)}
+            onPress={() => router.push("/onboarding?mode=add" as any)}
           />
         </View>
       </Card>
@@ -106,9 +104,9 @@ export default function AccesScreen() {
       <Card>
         <Eyebrow>Connecter un groupe</Eyebrow>
         <View className="mt-3" style={{ gap: 12 }}>
-          <Step n={1} text="Cliquez « Ajouter à un groupe »." />
-          <Step n={2} text="Telegram s'ouvre : choisissez le groupe. Le bot est ajouté admin avec les bons droits automatiquement." />
-          <Step n={3} text="Le groupe apparaît ci-dessous — reliez-le à une offre." />
+          <Step n={1} text="Cliquez « Connecter un groupe » : Telegram s'ouvre sur les groupes où vous êtes admin." />
+          <Step n={2} text="Choisissez le groupe — le bot est ajouté admin avec les bons droits automatiquement." />
+          <Step n={3} text="De retour dans l'app, la connexion est détectée : vous définissez l'offre et le tour est joué." />
         </View>
       </Card>
 
