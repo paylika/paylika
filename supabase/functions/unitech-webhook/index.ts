@@ -418,19 +418,27 @@ async function debugMembers(): Promise<Response> {
   // 2) group_members réellement enregistrés (toutes lignes, via service_role).
   const { data: members, error } = await admin
     .from("group_members")
-    .select("group_id, owner_id, first_name, username, last_seen, in_group")
+    .select("group_id, owner_id, telegram_user_id, first_name, username, last_seen, in_group")
     .order("last_seen", { ascending: false })
     .limit(10);
   trace.group_members = error ? `ERREUR: ${error.message}` : members ?? [];
   trace.group_members_count = members?.length ?? 0;
 
-  // 3) Groupes + leur owner_id (pour comparer avec l'owner des membres → RLS).
-  const { data: groups } = await admin
-    .from("groups")
-    .select("id, name, owner_id")
+  // 3) Abonnements récents + telegram_user_id de l'abonné (source du badge).
+  const { data: subs, error: subErr } = await admin
+    .from("subscriptions")
+    .select("id, group_id, status, expires_at, subscriber_id, subscribers(telegram_user_id, full_name, owner_id)")
     .order("created_at", { ascending: false })
     .limit(10);
-  trace.groups = groups ?? [];
+  trace.subscriptions = subErr ? `ERREUR: ${subErr.message}` : subs ?? [];
+
+  // 4) Abonnés récents (pour voir si telegram_user_id est bien renseigné).
+  const { data: subscribers } = await admin
+    .from("subscribers")
+    .select("id, full_name, telegram_user_id, owner_id, created_at")
+    .order("created_at", { ascending: false })
+    .limit(10);
+  trace.subscribers = subscribers ?? [];
 
   return new Response(JSON.stringify(trace, null, 2), {
     headers: { "content-type": "application/json; charset=utf-8" },
