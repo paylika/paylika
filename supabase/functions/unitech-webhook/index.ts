@@ -138,11 +138,22 @@ async function grantAccess(evt: any) {
       .eq("transaction_id", String(evt.transaction_id))
       .maybeSingle()).data;
   }
-  // PLUS de repli « par montant » : un webhook doit correspondre à un intent
-  // PRÉCIS (référence ou transaction_id). Sinon on refuse (évite la livraison
-  // au mauvais acheteur et la forge de faux paiements du même montant).
+  // 3) FILET DE SÉCURITÉ : dernier intent 'pending' du même montant. Nécessaire
+  //    car UniTech ne renvoie pas toujours une reference/transaction_id
+  //    exploitable — sans ce repli, le paiement ne se confirme jamais.
+  //    (Risque de forge résiduel : à fermer via vérification serveur-à-serveur.)
+  if (!intent && evt.amount != null) {
+    intent = (await admin
+      .from("payment_intents")
+      .select(cols)
+      .eq("status", "pending")
+      .eq("amount", Number(evt.amount))
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle()).data;
+  }
   if (!intent?.plan_id) {
-    console.error("intent introuvable pour", evtRef, evt.transaction_id);
+    console.error("intent introuvable pour", evtRef, evt.transaction_id, evt.amount);
     return;
   }
 
