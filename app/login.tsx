@@ -15,40 +15,83 @@ const MOOV = require("../assets/operators/moov.png");
 const TG_BLUE = "#229ED9";
 const WA_GREEN = "#25D366";
 
-/* ---------- panneau orbite (branding) ---------- */
+/* ---------- orbite (branding) ---------- */
 
-function Bubble({ left, top, size = 56, children }: { left: number; top: number; size?: number; children: React.ReactNode }) {
-  return (
-    <View
-      className="absolute items-center justify-center rounded-full bg-white"
-      style={{
-        left,
-        top,
-        width: size,
-        height: size,
-        shadowColor: colors.bordeaux[900],
-        shadowOpacity: 0.14,
-        shadowRadius: 14,
-        shadowOffset: { width: 0, height: 8 },
-      }}
-    >
-      {children}
-    </View>
+function OrbitArt({ box, bubble, logoSize }: { box: number; bubble: number; logoSize: number }) {
+  const C = box / 2;
+  const R = box * 0.353;
+  const Rin = box * 0.212;
+  const op = (img: any) => (
+    <Image source={img} style={{ width: bubble * 0.56, height: bubble * 0.56, borderRadius: bubble * 0.28 }} resizeMode="contain" />
   );
-}
-
-function Ring({ r, opacity }: { r: number; opacity: number }) {
-  const C = 170;
-  return (
+  const at = (deg: number) => {
+    const a = (deg * Math.PI) / 180;
+    return { left: C + R * Math.cos(a) - bubble / 2, top: C + R * Math.sin(a) - bubble / 2 };
+  };
+  const sats: { deg: number; node: React.ReactNode }[] = [
+    { deg: -90, node: <Icon name="telegram" size={bubble * 0.46} color={TG_BLUE} /> },
+    { deg: -30, node: op(WAVE) },
+    { deg: 30, node: op(ORANGE) },
+    { deg: 90, node: <Icon name="whatsapp" size={bubble * 0.46} color={WA_GREEN} /> },
+    { deg: 150, node: op(MTN) },
+    { deg: 210, node: op(MOOV) },
+  ];
+  const ring = (r: number, opacity: number) => (
     <View
       className="absolute rounded-full"
       style={{ left: C - r, top: C - r, width: r * 2, height: r * 2, borderWidth: 1, borderColor: `rgba(123,17,38,${opacity})` }}
     />
   );
+  return (
+    <View style={{ width: box, height: box }}>
+      {ring(R, 0.18)}
+      {ring(Rin, 0.12)}
+
+      {/* logo central */}
+      <View
+        className="absolute items-center justify-center rounded-full bg-white"
+        style={{
+          left: C - logoSize / 2,
+          top: C - logoSize / 2,
+          width: logoSize,
+          height: logoSize,
+          shadowColor: colors.bordeaux[900],
+          shadowOpacity: 0.18,
+          shadowRadius: 20,
+          shadowOffset: { width: 0, height: 10 },
+        }}
+      >
+        <Logo size={logoSize * 0.55} />
+      </View>
+
+      {/* satellites */}
+      {sats.map((s, i) => {
+        const p = at(s.deg);
+        return (
+          <View
+            key={i}
+            className="absolute items-center justify-center rounded-full bg-white"
+            style={{
+              left: p.left,
+              top: p.top,
+              width: bubble,
+              height: bubble,
+              shadowColor: colors.bordeaux[900],
+              shadowOpacity: 0.14,
+              shadowRadius: 12,
+              shadowOffset: { width: 0, height: 7 },
+            }}
+          >
+            {s.node}
+          </View>
+        );
+      })}
+    </View>
+  );
 }
 
-function OrbitPanel() {
-  const op = (img: any) => <Image source={img} style={{ width: 30, height: 30, borderRadius: 15 }} resizeMode="contain" />;
+/** Panneau plein (grand écran) : titre + orbite + légende. */
+function OrbitPanelBig() {
   return (
     <View className="flex-1 overflow-hidden rounded-[28px]">
       <LinearGradient
@@ -58,58 +101,37 @@ function OrbitPanel() {
         style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
       />
       <View className="flex-1 justify-between p-9">
-        {/* titre */}
         <View style={{ maxWidth: 320 }}>
           <Text className="font-display-x text-ink" style={{ fontSize: 26, letterSpacing: -1, lineHeight: 30 }}>
-            Encaissez et livrez l'accès,{" "}
-            <Text className="text-bordeaux-600">automatiquement.</Text>
+            Encaissez et livrez l'accès, <Text className="text-bordeaux-600">automatiquement.</Text>
           </Text>
           <Text className="mt-2 font-sans text-[13.5px] text-ink-soft" style={{ lineHeight: 20 }}>
             Un seul outil pour vos paiements mobile money et vos accès à vos groupes.
           </Text>
         </View>
-
-        {/* orbite */}
         <View className="items-center justify-center">
-          <View style={{ width: 340, height: 340 }}>
-            <Ring r={120} opacity={0.18} />
-            <Ring r={72} opacity={0.12} />
-
-            {/* logo central */}
-            <View
-              className="absolute items-center justify-center rounded-full bg-white"
-              style={{
-                left: 128,
-                top: 128,
-                width: 84,
-                height: 84,
-                shadowColor: colors.bordeaux[900],
-                shadowOpacity: 0.18,
-                shadowRadius: 22,
-                shadowOffset: { width: 0, height: 12 },
-              }}
-            >
-              <Logo size={46} />
-            </View>
-
-            {/* satellites */}
-            <Bubble left={142} top={22}>
-              <Icon name="telegram" size={26} color={TG_BLUE} />
-            </Bubble>
-            <Bubble left={246} top={82}>{op(WAVE)}</Bubble>
-            <Bubble left={246} top={202}>{op(ORANGE)}</Bubble>
-            <Bubble left={142} top={262}>
-              <Icon name="whatsapp" size={26} color={WA_GREEN} />
-            </Bubble>
-            <Bubble left={38} top={202}>{op(MTN)}</Bubble>
-            <Bubble left={38} top={82}>{op(MOOV)}</Bubble>
-          </View>
+          <OrbitArt box={340} bubble={56} logoSize={84} />
         </View>
-
-        {/* légende */}
         <Text className="font-sans text-[12.5px] text-ink-muted">
           Compatible Wave, Orange Money, MTN, Moov et Telegram — WhatsApp bientôt.
         </Text>
+      </View>
+    </View>
+  );
+}
+
+/** Carte compacte (écran étroit) : orbite au-dessus du formulaire. */
+function OrbitCardCompact() {
+  return (
+    <View className="w-full overflow-hidden rounded-[24px]" style={{ height: 262 }}>
+      <LinearGradient
+        colors={["#FCEEF1", "#F7DAE1", "#FBECEF"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
+      />
+      <View className="flex-1 items-center justify-center">
+        <OrbitArt box={224} bubble={46} logoSize={64} />
       </View>
     </View>
   );
@@ -120,7 +142,7 @@ function OrbitPanel() {
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
-  const wide = width >= 920;
+  const wide = width >= 900;
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -155,8 +177,8 @@ export default function LoginScreen() {
 
   const isSignin = mode === "signin";
 
-  const form = (
-    <View style={{ width: "100%", maxWidth: 380 }}>
+  const formInner = (
+    <>
       {/* marque */}
       <View className="flex-row items-center" style={{ gap: 8 }}>
         <Logo size={30} />
@@ -166,7 +188,7 @@ export default function LoginScreen() {
       </View>
 
       {/* titre */}
-      <View style={{ marginTop: 30 }}>
+      <View style={{ marginTop: 26 }}>
         <Text className="font-display-x text-[26px] text-ink" style={{ letterSpacing: -1 }}>
           {isSignin ? "Content de vous revoir" : "Créez votre compte"}
         </Text>
@@ -178,7 +200,7 @@ export default function LoginScreen() {
       </View>
 
       {/* champs */}
-      <View style={{ marginTop: 24, gap: 14 }}>
+      <View style={{ marginTop: 22, gap: 14 }}>
         <Input label="Email" value={email} onChangeText={setEmail} placeholder="vous@exemple.com" />
         <Input label="Mot de passe" value={password} onChangeText={setPassword} placeholder="••••••••" secureTextEntry />
 
@@ -197,7 +219,7 @@ export default function LoginScreen() {
 
       {/* bascule */}
       <Pressable
-        style={{ marginTop: 22 }}
+        style={{ marginTop: 20 }}
         onPress={() => {
           setMode(isSignin ? "signup" : "signin");
           setError(null);
@@ -216,36 +238,43 @@ export default function LoginScreen() {
           )}
         </Text>
       </Pressable>
-    </View>
+    </>
   );
 
-  return (
-    <View className="flex-1 bg-paper">
-      <View className="flex-1" style={{ flexDirection: wide ? "row" : "column" }}>
-        {/* FORMULAIRE */}
+  if (wide) {
+    return (
+      <View className="flex-1 flex-row bg-paper">
         <View style={{ flex: 1 }}>
           <ScrollView
             className="flex-1"
-            contentContainerStyle={{
-              flexGrow: 1,
-              alignItems: "center",
-              justifyContent: "center",
-              paddingHorizontal: 24,
-              paddingTop: insets.top + 28,
-              paddingBottom: insets.bottom + 28,
-            }}
+            contentContainerStyle={{ flexGrow: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 24, paddingVertical: 32 }}
           >
-            {form}
+            <View style={{ width: "100%", maxWidth: 380 }}>{formInner}</View>
           </ScrollView>
         </View>
-
-        {/* PANNEAU ORBITE — grands écrans */}
-        {wide ? (
-          <View style={{ flex: 1, padding: 12, paddingLeft: 0 }}>
-            <OrbitPanel />
-          </View>
-        ) : null}
+        <View style={{ flex: 1, padding: 12, paddingLeft: 0 }}>
+          <OrbitPanelBig />
+        </View>
       </View>
-    </View>
+    );
+  }
+
+  return (
+    <ScrollView
+      className="flex-1 bg-paper"
+      contentContainerStyle={{
+        flexGrow: 1,
+        alignItems: "center",
+        justifyContent: "center",
+        paddingHorizontal: 22,
+        paddingTop: insets.top + 20,
+        paddingBottom: insets.bottom + 24,
+      }}
+    >
+      <View style={{ width: "100%", maxWidth: 380, gap: 22 }}>
+        <OrbitCardCompact />
+        <View>{formInner}</View>
+      </View>
+    </ScrollView>
   );
 }
