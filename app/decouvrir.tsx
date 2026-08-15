@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { View, Text, ScrollView, Pressable, Image, Animated, Easing, useWindowDimensions } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Logo, Icon, type IconName } from "@/components/Icon";
@@ -116,9 +117,9 @@ export default function DecouvrirScreen() {
 
   return (
     <ScrollView className="flex-1 bg-white" contentContainerStyle={{ alignItems: "center", paddingBottom: insets.bottom + 40 }}>
-      <View style={{ width: "100%", maxWidth: 1040 }}>
-        {/* NAVBAR */}
-        <View style={{ paddingTop: insets.top + 10 }} className="flex-row items-center justify-between px-5 pb-3">
+      {/* NAVBAR — superposée sur le hero, pleine largeur */}
+      <View className="w-full items-center" style={{ position: "absolute", top: 0, left: 0, right: 0, zIndex: 20, paddingTop: insets.top + 10 }}>
+        <View style={{ width: "100%", maxWidth: 1040 }} className="flex-row items-center justify-between px-5 pb-3">
           <View className="flex-row items-center" style={{ gap: 8 }}>
             <Logo size={26} />
             <Text className="font-display text-[19px] text-ink" style={{ letterSpacing: -0.4 }}>
@@ -145,56 +146,83 @@ export default function DecouvrirScreen() {
             </Pressable>
           </View>
         </View>
+      </View>
 
-        {/* HERO */}
-        <View className={`px-5 pt-6 ${wide ? "flex-row items-center" : ""}`} style={{ gap: wide ? 32 : 0 }}>
-          <View style={{ flex: wide ? 1 : undefined }}>
+      {/* HERO — image plein écran, sans bordure, texte par-dessus */}
+      <View style={{ width: "100%", height: wide ? 600 : 640 }}>
+        <Image
+          source={HERO}
+          style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, width: "100%", height: "100%" }}
+          resizeMode="cover"
+        />
+        {/* voile blanc diagonal (bas-gauche) pour la lisibilité du texte */}
+        <LinearGradient
+          colors={["#FFFFFF", "rgba(255,255,255,0.92)", "rgba(255,255,255,0.4)", "rgba(255,255,255,0)"]}
+          locations={[0, 0.36, 0.64, 0.92]}
+          start={{ x: 0, y: 1 }}
+          end={{ x: 1, y: 0 }}
+          style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
+        />
+        {/* fondu vers le blanc en bas pour lier à la section suivante */}
+        <LinearGradient
+          colors={["rgba(255,255,255,0)", "#FFFFFF"]}
+          locations={[0.55, 1]}
+          style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 140 }}
+        />
+        {/* léger voile en haut pour la lisibilité de la navbar */}
+        <LinearGradient
+          colors={["rgba(255,255,255,0.8)", "rgba(255,255,255,0)"]}
+          style={{ position: "absolute", top: 0, left: 0, right: 0, height: insets.top + 84 }}
+        />
+
+        {/* Texte du hero, ancré en bas, contenu centré */}
+        <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, alignItems: "center" }}>
+          <View style={{ width: "100%", maxWidth: 1040, flex: 1, justifyContent: "flex-end" }} className="px-5 pb-12">
             <Rise>
-              <View className="self-start rounded-full bg-sand px-3 py-1">
-                <Text className="font-bold text-[10px] uppercase text-ink-soft" style={{ letterSpacing: 0.6 }}>
-                  Pour les créateurs & entrepreneurs africains
+              <View style={{ maxWidth: 560 }}>
+                <View className="self-start rounded-full bg-bordeaux-50 px-3 py-1">
+                  <Text className="font-bold text-[10px] uppercase text-bordeaux-700" style={{ letterSpacing: 0.6 }}>
+                    Pour les créateurs & entrepreneurs africains
+                  </Text>
+                </View>
+                <Text
+                  className="mt-4 font-display-x text-ink"
+                  style={{ fontSize: wide ? 46 : 34, letterSpacing: -2, lineHeight: wide ? 48 : 38 }}
+                >
+                  Vos abonnements. Vos paiements. Vos accès.{" "}
+                  <Text className="text-bordeaux-600">Automatisés.</Text>
                 </Text>
-              </View>
-              <Text className="mt-4 font-display-x text-[40px] text-ink" style={{ letterSpacing: -2, lineHeight: 42 }}>
-                Vos abonnements.{"\n"}Vos paiements.{"\n"}Vos accès.{"\n"}
-                <Text className="text-bordeaux-600">Automatisés.</Text>
-              </Text>
-              <Text className="mt-4 font-sans text-[15px] text-ink-soft" style={{ lineHeight: 22, maxWidth: 440 }}>
-                Paylika vous permet d'encaisser vos abonnements, gérer vos membres et automatiser leurs accès à vos
-                communautés et contenus.
-              </Text>
-              <View className="mt-6 flex-row flex-wrap" style={{ gap: 10 }}>
-                <Btn label="Commencer gratuitement" onPress={start} />
-                <Btn label="Comment ça marche" onPress={start} kind="ghost" />
+                <Text className="mt-3 font-sans text-ink-soft" style={{ fontSize: 15, lineHeight: 22, maxWidth: 460 }}>
+                  Encaissez par mobile money, livrez l'accès à vos groupes et contenus automatiquement, et gérez les
+                  renouvellements sans effort.
+                </Text>
+                <View className="mt-6 flex-row flex-wrap" style={{ gap: 10 }}>
+                  <Btn label="Commencer gratuitement" onPress={start} />
+                  <Btn label="Comment ça marche" onPress={start} kind="ghost" />
+                </View>
               </View>
             </Rise>
           </View>
-
-          {/* Visuel : vraie photo + notifications flottantes animées */}
-          <Rise delay={140}>
-            <View style={{ flex: wide ? 1 : undefined, marginTop: wide ? 0 : 34 }}>
-              <View className="relative" style={{ alignSelf: "center", width: "100%", maxWidth: 400 }}>
-                {/* halo bordeaux en arrière-plan */}
-                <View
-                  style={{ position: "absolute", top: 22, left: 14, right: 14, bottom: -6, borderRadius: 34, backgroundColor: colors.bordeaux[600], opacity: 0.1 }}
-                />
-                <Image source={HERO} style={{ width: "100%", height: wide ? 410 : 380, borderRadius: 30 }} resizeMode="cover" />
-
-                {/* notifications flottantes */}
-                <Float style={{ position: "absolute", top: 18, right: -6 }}>
-                  <Notif icon="wallet" title="Paiement reçu" sub="5 000 FCFA" color={colors.forest} />
-                </Float>
-                <Float delay={700} style={{ position: "absolute", bottom: 72, left: -8 }}>
-                  <Notif icon="telegram" title="Accès Telegram activé" color={TG_BLUE} />
-                </Float>
-                <Float delay={1300} style={{ position: "absolute", bottom: 16, right: 4 }}>
-                  <Notif icon="bell" title="Rappel envoyé" sub="Expire dans 3 j" color={colors.clay} />
-                </Float>
-              </View>
-            </View>
-          </Rise>
         </View>
 
+        {/* notifications flottantes (montrent ce que fait l'outil) — grands écrans */}
+        {wide ? (
+          <>
+            <Float style={{ position: "absolute", top: 96, right: 40 }}>
+              <Notif icon="wallet" title="Paiement reçu" sub="5 000 FCFA" color={colors.forest} />
+            </Float>
+            <Float delay={700} style={{ position: "absolute", top: 188, right: 92 }}>
+              <Notif icon="telegram" title="Accès Telegram activé" color={TG_BLUE} />
+            </Float>
+            <Float delay={1300} style={{ position: "absolute", top: 280, right: 52 }}>
+              <Notif icon="bell" title="Rappel envoyé" sub="Expire dans 3 j" color={colors.clay} />
+            </Float>
+          </>
+        ) : null}
+      </View>
+
+      {/* CONTENU — reste de la landing */}
+      <View style={{ width: "100%", maxWidth: 1040 }}>
         {/* SOCIAL PROOF */}
         <View className="mt-12 items-center px-5">
           <Text className="text-center font-semibold text-[13px] text-ink-muted">Pensé pour les créateurs et entrepreneurs africains</Text>
