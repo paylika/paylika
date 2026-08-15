@@ -9,6 +9,10 @@ const WAVE = require("../assets/operators/wave.png");
 const ORANGE = require("../assets/operators/orange.png");
 const MTN = require("../assets/operators/mtn.png");
 const MOOV = require("../assets/operators/moov.png");
+const HERO = require("../assets/site/hero.png");
+const P_CREATEURS = require("../assets/site/p-createurs.png");
+const P_FORMATEURS = require("../assets/site/p-formateurs.png");
+const P_COACHS = require("../assets/site/p-coachs.png");
 const TG_BLUE = "#229ED9";
 const WA_GREEN = "#25D366";
 
@@ -44,6 +48,25 @@ function Rise({ children, delay = 0 }: { children: React.ReactNode; delay?: numb
   }, [v, delay]);
   return (
     <Animated.View style={{ opacity: v, transform: [{ translateY: v.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }) }] }}>
+      {children}
+    </Animated.View>
+  );
+}
+
+function Float({ children, delay = 0, style }: { children: React.ReactNode; delay?: number; style?: any }) {
+  const v = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(v, { toValue: 1, duration: 2200, delay, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(v, { toValue: 0, duration: 2200, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [v, delay]);
+  return (
+    <Animated.View style={[style, { transform: [{ translateY: v.interpolate({ inputRange: [0, 1], outputRange: [0, -9] }) }] }]}>
       {children}
     </Animated.View>
   );
@@ -147,46 +170,26 @@ export default function DecouvrirScreen() {
             </Rise>
           </View>
 
-          {/* Visuel produit : mockup + notifications flottantes */}
+          {/* Visuel : vraie photo + notifications flottantes animées */}
           <Rise delay={140}>
-            <View style={{ flex: wide ? 1 : undefined, minHeight: 320, marginTop: wide ? 0 : 28 }}>
-              <View className="items-center justify-center" style={{ paddingVertical: 10 }}>
-                {/* carte centrale (app) */}
+            <View style={{ flex: wide ? 1 : undefined, marginTop: wide ? 0 : 34 }}>
+              <View className="relative" style={{ alignSelf: "center", width: "100%", maxWidth: 400 }}>
+                {/* halo bordeaux en arrière-plan */}
                 <View
-                  className="rounded-[28px] border border-ink/[0.06] bg-white p-5"
-                  style={{ width: 240, shadowColor: colors.bordeaux[900], shadowOpacity: 0.1, shadowRadius: 30, shadowOffset: { width: 0, height: 16 } }}
-                >
-                  <View className="flex-row items-center justify-between">
-                    <View className="flex-row items-center" style={{ gap: 6 }}>
-                      <Logo size={20} />
-                      <Text className="font-display text-[14px] text-ink">Paylika</Text>
-                    </View>
-                    <View className="h-6 w-6 items-center justify-center rounded-full bg-forest">
-                      <Icon name="check" size={13} color="#fff" strokeWidth={2.8} />
-                    </View>
-                  </View>
-                  <Text className="mt-4 font-medium text-[11px] uppercase text-ink-muted" style={{ letterSpacing: 0.4 }}>
-                    Paiement reçu
-                  </Text>
-                  <Text className="font-display-x text-[26px] text-ink" style={{ letterSpacing: -1 }}>
-                    5 000 <Text className="text-[14px] text-ink-muted">FCFA</Text>
-                  </Text>
-                  <View className="mt-3 flex-row items-center rounded-2xl bg-sand px-3 py-2" style={{ gap: 8 }}>
-                    <Icon name="telegram" size={16} color={TG_BLUE} />
-                    <Text className="font-semibold text-[12px] text-ink">Accès activé</Text>
-                  </View>
-                </View>
+                  style={{ position: "absolute", top: 22, left: 14, right: 14, bottom: -6, borderRadius: 34, backgroundColor: colors.bordeaux[600], opacity: 0.1 }}
+                />
+                <Image source={HERO} style={{ width: "100%", height: wide ? 410 : 380, borderRadius: 30 }} resizeMode="cover" />
 
                 {/* notifications flottantes */}
-                <View style={{ position: "absolute", top: 0, right: wide ? 6 : 0 }}>
-                  <Notif icon="wallet" title="Abonnement renouvelé" color={colors.forest} />
-                </View>
-                <View style={{ position: "absolute", bottom: 6, left: wide ? 4 : 0 }}>
+                <Float style={{ position: "absolute", top: 18, right: -6 }}>
+                  <Notif icon="wallet" title="Paiement reçu" sub="5 000 FCFA" color={colors.forest} />
+                </Float>
+                <Float delay={700} style={{ position: "absolute", bottom: 72, left: -8 }}>
+                  <Notif icon="telegram" title="Accès Telegram activé" color={TG_BLUE} />
+                </Float>
+                <Float delay={1300} style={{ position: "absolute", bottom: 16, right: 4 }}>
                   <Notif icon="bell" title="Rappel envoyé" sub="Expire dans 3 j" color={colors.clay} />
-                </View>
-                <View style={{ position: "absolute", top: 84, left: wide ? -6 : 0 }}>
-                  <Notif icon="close" title="Membre retiré" sub="Abonnement expiré" color={colors.bordeaux[600]} />
-                </View>
+                </Float>
               </View>
             </View>
           </Rise>
@@ -361,19 +364,28 @@ export default function DecouvrirScreen() {
           </View>
           <View className="mt-6 flex-row flex-wrap" style={{ gap: 12 }}>
             {[
-              { i: "users" as const, t: "Créateurs", d: "Monétisez votre communauté." },
-              { i: "chart" as const, t: "Formateurs", d: "Vendez vos formations et automatisez vos accès." },
-              { i: "bolt" as const, t: "Coachs", d: "Gérez vos clients et leurs renouvellements." },
-              { i: "shield" as const, t: "Communautés privées", d: "Contrôlez automatiquement les accès." },
+              { img: P_CREATEURS, i: "users" as const, t: "Créateurs", d: "Monétisez votre communauté et vos contenus." },
+              { img: P_FORMATEURS, i: "chart" as const, t: "Formateurs", d: "Vendez vos formations, automatisez les accès." },
+              { img: P_COACHS, i: "bolt" as const, t: "Coachs", d: "Gérez vos clients et leurs renouvellements." },
+              { img: HERO, i: "shield" as const, t: "Communautés", d: "Contrôlez automatiquement qui a accès." },
             ].map((c) => (
-              <View key={c.t} className="rounded-3xl border border-ink/[0.08] bg-white p-5" style={{ flexGrow: 1, flexBasis: "45%", minWidth: 160 }}>
-                <View className="h-10 w-10 items-center justify-center rounded-2xl bg-bordeaux-50">
-                  <Icon name={c.i} size={19} color={colors.bordeaux[600]} />
+              <View
+                key={c.t}
+                className="overflow-hidden rounded-3xl border border-ink/[0.08] bg-white"
+                style={{ flexGrow: 1, flexBasis: "45%", minWidth: 160 }}
+              >
+                <View className="relative">
+                  <Image source={c.img} style={{ width: "100%", height: 150 }} resizeMode="cover" />
+                  <View className="absolute left-3 top-3 h-9 w-9 items-center justify-center rounded-2xl bg-white/95">
+                    <Icon name={c.i} size={17} color={colors.bordeaux[600]} />
+                  </View>
                 </View>
-                <Text className="mt-3 font-display-semi text-[15px] text-ink">{c.t}</Text>
-                <Text className="mt-0.5 font-sans text-[12px] text-ink-muted" style={{ lineHeight: 17 }}>
-                  {c.d}
-                </Text>
+                <View className="p-4">
+                  <Text className="font-display-semi text-[15px] text-ink">{c.t}</Text>
+                  <Text className="mt-0.5 font-sans text-[12px] text-ink-muted" style={{ lineHeight: 17 }}>
+                    {c.d}
+                  </Text>
+                </View>
               </View>
             ))}
           </View>
