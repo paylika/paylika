@@ -422,6 +422,62 @@ export default function DecouvrirScreen() {
           </View>
         </View>
 
+        {/* POURQUOI PAYLIKA — comparaison (concurrents non nommés) */}
+        <View className="mt-20 px-5">
+          <View className="items-center">
+            <Kicker>Pourquoi Paylika</Kicker>
+            <H2>Plus simple, et plus juste pour vous.</H2>
+          </View>
+          <View className={`mt-7 ${wide ? "flex-row" : ""}`} style={{ gap: 12 }}>
+            {/* Ailleurs */}
+            <View className="flex-1 rounded-3xl border border-ink/[0.08] bg-paper p-6">
+              <Text className="font-semibold text-[12px] uppercase text-ink-muted" style={{ letterSpacing: 0.6 }}>
+                Ailleurs
+              </Text>
+              <View className="mt-4" style={{ gap: 12 }}>
+                {[
+                  "Un abonnement mensuel à payer",
+                  "Jusqu'à 15% de commission",
+                  "Des frais sur vos retraits",
+                  "Un nombre d'offres limité par forfait",
+                ].map((t) => (
+                  <View key={t} className="flex-row items-start" style={{ gap: 10 }}>
+                    <View className="mt-0.5 h-5 w-5 items-center justify-center rounded-full bg-sand">
+                      <Icon name="close" size={12} color={colors.muted} strokeWidth={2.4} />
+                    </View>
+                    <Text className="flex-1 font-sans text-[13.5px] text-ink-soft" style={{ lineHeight: 19 }}>
+                      {t}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+            {/* Avec Paylika */}
+            <View className="flex-1 rounded-3xl border border-bordeaux-600 bg-bordeaux-50 p-6">
+              <Text className="font-semibold text-[12px] uppercase text-bordeaux-700" style={{ letterSpacing: 0.6 }}>
+                Avec Paylika
+              </Text>
+              <View className="mt-4" style={{ gap: 12 }}>
+                {[
+                  "Aucun abonnement, jamais",
+                  "10% par vente — tout compris",
+                  "Retraits 100% gratuits, vous recevez net",
+                  "Offres illimitées dès le premier jour",
+                ].map((t) => (
+                  <View key={t} className="flex-row items-start" style={{ gap: 10 }}>
+                    <View className="mt-0.5 h-5 w-5 items-center justify-center rounded-full bg-bordeaux-600">
+                      <Icon name="check" size={12} color="#fff" strokeWidth={2.6} />
+                    </View>
+                    <Text className="flex-1 font-semibold text-[13.5px] text-ink" style={{ lineHeight: 19 }}>
+                      {t}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          </View>
+        </View>
+
         {/* TARIFS */}
         <View className="mt-20 px-5">
           <View className="items-center">
