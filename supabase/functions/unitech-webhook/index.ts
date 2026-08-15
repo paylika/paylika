@@ -1,8 +1,9 @@
 // Paylika — UniTech Pay : webhook de confirmation.
-// Vérifie la signature HMAC, puis crée l'abonnement + le paiement (commission
-// 10 %) et envoie le lien d'accès Telegram.
+// Vérifie la signature HMAC (OBLIGATOIRE), puis crée l'abonnement + le paiement
+// (commission 10 %) et envoie le lien d'accès Telegram.
 //
-// Secrets : UNITECH_API_KEY (secret HMAC), TELEGRAM_BOT_TOKEN
+// Secrets : UNITECH_API_KEY (secret HMAC), TELEGRAM_BOT_TOKEN,
+//           PAYLIKA_DEBUG_SECRET (protège les routes ?debug=).
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -15,6 +16,7 @@ const admin = createClient(
 );
 
 const API_KEY = Deno.env.get("UNITECH_API_KEY") ?? "";
+const DEBUG_SECRET = Deno.env.get("PAYLIKA_DEBUG_SECRET") ?? "";
 const TG_TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN");
 const tg = (method: string, payload: Record<string, unknown>) =>
   fetch(`https://api.telegram.org/bot${TG_TOKEN}/${method}`, {
@@ -35,16 +37,28 @@ async function hmacHex(secret: string, message: string): Promise<string> {
   return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+/** Comparaison à temps constant (évite les attaques temporelles sur la signature). */
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
 Deno.serve(async (req) => {
-  // Diagnostic / récupération manuelle du dernier paiement.
   if (req.method === "GET") {
-    const dbg = new URL(req.url).searchParams.get("debug");
-    if (dbg === "last") return await debugLast();
-    if (dbg === "resend") return await debugResend();
-    if (dbg === "members") return await debugMembers();
-  }
-  // Redirection navigateur après paiement → page de remerciement.
-  if (req.method === "GET") {
+    const url = new URL(req.url);
+    const dbg = url.searchParams.get("debug");
+    // Routes de diagnostic : protégées par un secret (sinon 404, on cache l'existence).
+    if (dbg) {
+      if (!DEBUG_SECRET || url.searchParams.get("key") !== DEBUG_SECRET) {
+        return new Response("not found", { status: 404 });
+      }
+      if (dbg === "last") return await debugLast();
+      if (dbg === "resend") return await debugResend();
+      if (dbg === "members") return await debugMembers();
+    }
+    // Redirection navigateur après paiement → page de remerciement.
     return new Response(
       `<!doctype html><html lang="fr"><head><meta charset="utf-8">` +
         `<meta name="viewport" content="width=device-width,initial-scale=1">` +
@@ -60,17 +74,24 @@ Deno.serve(async (req) => {
 
   const raw = await req.text();
 
-  // Vérification de signature (si présente).
+  // Vérification de signature OBLIGATOIRE (anti-forge).
+  // Sans ça, n'importe qui peut POST un faux "completed" et forger des paiements.
+  if (!API_KEY) {
+    console.error("UNITECH_API_KEY absente — webhook refusé");
+    return new Response("server not configured", { status: 500 });
+  }
   const sigHeader =
     req.headers.get("x-unitechpay-signature") ??
     req.headers.get("X-UnitechPay-Signature") ??
     "";
-  if (API_KEY && sigHeader) {
-    const expected = await hmacHex(API_KEY, raw);
-    if (expected.toLowerCase() !== sigHeader.toLowerCase()) {
-      console.error("signature mismatch");
-      return new Response("bad signature", { status: 401 });
-    }
+  if (!sigHeader) {
+    console.error("webhook sans signature — refusé");
+    return new Response("signature requise", { status: 401 });
+  }
+  const expected = await hmacHex(API_KEY, raw);
+  if (!timingSafeEqual(expected.toLowerCase(), sigHeader.toLowerCase())) {
+    console.error("signature invalide");
+    return new Response("bad signature", { status: 401 });
   }
 
   let evt: any;
@@ -112,37 +133,24 @@ async function grantAccess(evt: any) {
       .eq("transaction_id", String(evt.transaction_id))
       .maybeSingle()).data;
   }
-  // 3) repli : dernier intent 'pending' du même montant
-  if (!intent && evt.amount != null) {
-    intent = (await admin
-      .from("payment_intents")
-      .select(cols)
-      .eq("status", "pending")
-      .eq("amount", Number(evt.amount))
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle()).data;
-  }
+  // PLUS de repli « par montant » : un webhook doit correspondre à un intent
+  // PRÉCIS (référence ou transaction_id). Sinon on refuse (évite la livraison
+  // au mauvais acheteur et la forge de faux paiements du même montant).
   if (!intent?.plan_id) {
     console.error("intent introuvable pour", evtRef, evt.transaction_id);
     return;
   }
 
-  // Référence canonique : celle de l'intent (le webhook UniTech ne renvoie pas
-  // toujours `reference`). Sert au provider_ref ET à l'anti-doublon.
-  const reference = (intent.reference ||
-    evtRef ||
-    (evt.transaction_id != null ? `txn_${evt.transaction_id}` : "")) as string;
+  // Référence canonique = celle de l'intent (PK, non-null garantie).
+  const reference = intent.reference as string;
 
   // Idempotence : ce paiement est-il déjà enregistré ?
-  if (reference) {
-    const { data: seen } = await admin
-      .from("payments")
-      .select("id")
-      .eq("provider_ref", reference)
-      .maybeSingle();
-    if (seen) return;
-  }
+  const { data: seen } = await admin
+    .from("payments")
+    .select("id")
+    .eq("provider_ref", reference)
+    .maybeSingle();
+  if (seen) return;
 
   const { data: plan } = await admin
     .from("plans")
@@ -151,7 +159,13 @@ async function grantAccess(evt: any) {
     .maybeSingle();
   const intervalDays = plan?.interval_days ?? 30;
   const owner = plan?.owner_id ?? null; // le paiement appartient au proprio de l'offre
-  const amount = Number(evt.amount ?? intent.amount ?? plan?.price ?? 0);
+
+  // Montant = PRIX DE L'OFFRE (source de vérité), jamais evt.amount (fourni par
+  // l'appelant, donc falsifiable). On loggue toute divergence pour surveillance.
+  const amount = Number(plan?.price ?? intent.amount ?? 0);
+  if (evt.amount != null && Number(evt.amount) !== amount) {
+    console.error(`montant webhook (${evt.amount}) ≠ prix offre (${amount}) — réf ${reference}`);
+  }
   const telegramUserId = intent.telegram_user_id as number | null;
 
   // Résoudre / créer l'abonné (scopé au propriétaire).
@@ -227,10 +241,11 @@ async function grantAccess(evt: any) {
   });
   if (payErr) console.error("insert payment:", payErr.message);
 
+  // Marque l'intent complété via sa clé réelle (PK).
   await admin
     .from("payment_intents")
     .update({ status: "completed" })
-    .eq("reference", intent.reference ?? reference);
+    .eq("reference", intent.reference);
 }
 
 /** Envoie le lien d'accès Telegram (usage unique) au payeur en privé. */
@@ -269,8 +284,8 @@ async function deliverAccess(
 }
 
 /**
- * Diagnostic (GET ?debug=last) : suit le dernier paiement étape par étape
- * pour identifier POURQUOI le lien d'accès n'est pas parti.
+ * Diagnostic (GET ?debug=last&key=<PAYLIKA_DEBUG_SECRET>) : suit le dernier
+ * paiement étape par étape pour identifier POURQUOI le lien d'accès n'est pas parti.
  */
 async function debugLast(): Promise<Response> {
   const trace: Record<string, unknown> = {};
@@ -324,7 +339,6 @@ async function debugLast(): Promise<Response> {
     trace.payment_recorded = pay ?? "NON — insertion du paiement échouée (voir payments_schema ci-dessous) ou webhook non appelé.";
   }
 
-  // Sonde de schéma : les colonnes utilisées par l'insertion existent-elles ?
   const probe = await admin
     .from("payments")
     .select("provider, provider_ref, commission, net_amount, owner_id")
@@ -333,8 +347,6 @@ async function debugLast(): Promise<Response> {
     ? `⚠️ COLONNE MANQUANTE — exécute payments_schema.sql PUIS multi_tenant.sql : ${probe.error.message}`
     : "OK (toutes les colonnes présentes)";
 
-  // Derniers paiements RÉELLEMENT enregistrés (toutes références confondues) :
-  // tranche le faux négatif dû à une référence webhook ≠ référence intent.
   const { data: recent } = await admin
     .from("payments")
     .select("provider_ref, amount, status, paid_at")
@@ -342,39 +354,12 @@ async function debugLast(): Promise<Response> {
     .limit(3);
   trace.recent_payments = recent?.length ? recent : "AUCUN — la table payments est vide.";
 
-  // Si vraiment aucun paiement, on tente une insertion-sonde pour capturer
-  // l'erreur SQL exacte, puis on la supprime.
-  if (!recent?.length && intent?.plan_id) {
-    const { data: pl } = await admin
-      .from("plans")
-      .select("owner_id")
-      .eq("id", intent.plan_id)
-      .maybeSingle();
-    const probeRef = "debug-probe-cleanup";
-    const { error: insErr } = await admin.from("payments").insert({
-      owner_id: pl?.owner_id ?? null,
-      amount: 1,
-      currency: "XOF",
-      method: "debug",
-      provider: "debug",
-      provider_ref: probeRef,
-      commission: 0,
-      net_amount: 1,
-      status: "completed",
-      paid_at: new Date().toISOString(),
-    });
-    trace.insert_probe = insErr
-      ? `ÉCHEC: ${insErr.message} | details: ${insErr.details ?? ""} | hint: ${insErr.hint ?? ""} | code: ${insErr.code ?? ""}`
-      : "OK (l'insertion fonctionne — le souci vient d'ailleurs)";
-    if (!insErr) await admin.from("payments").delete().eq("provider_ref", probeRef);
-  }
-
   return new Response(JSON.stringify(trace, null, 2), {
     headers: { "content-type": "application/json; charset=utf-8" },
   });
 }
 
-/** Renvoie manuellement le lien d'accès du dernier paiement (GET ?debug=resend). */
+/** Renvoie manuellement le lien d'accès du dernier paiement (GET ?debug=resend&key=…). */
 async function debugResend(): Promise<Response> {
   const { data: intent } = await admin
     .from("payment_intents")
@@ -403,11 +388,10 @@ async function debugResend(): Promise<Response> {
   );
 }
 
-/** Diagnostic roster (GET ?debug=members) : le bot enregistre-t-il les membres ? */
+/** Diagnostic roster (GET ?debug=members&key=…) : le bot enregistre-t-il les membres ? */
 async function debugMembers(): Promise<Response> {
   const trace: Record<string, unknown> = {};
 
-  // 1) Config webhook Telegram : le type "message" est-il bien livré ?
   const info = await tg("getWebhookInfo", {});
   trace.telegram_webhook = {
     url: info?.result?.url ?? null,
@@ -416,7 +400,6 @@ async function debugMembers(): Promise<Response> {
     last_error: info?.result?.last_error_message ?? null,
   };
 
-  // 2) group_members réellement enregistrés (toutes lignes, via service_role).
   const { data: members, error } = await admin
     .from("group_members")
     .select("group_id, owner_id, telegram_user_id, first_name, username, last_seen, in_group")
@@ -425,7 +408,6 @@ async function debugMembers(): Promise<Response> {
   trace.group_members = error ? `ERREUR: ${error.message}` : members ?? [];
   trace.group_members_count = members?.length ?? 0;
 
-  // 3) Abonnements récents + telegram_user_id de l'abonné (source du badge).
   const { data: subs, error: subErr } = await admin
     .from("subscriptions")
     .select("id, owner_id, group_id, status, expires_at, subscriber_id, subscribers(telegram_user_id, full_name, owner_id)")
@@ -433,7 +415,6 @@ async function debugMembers(): Promise<Response> {
     .limit(6);
   trace.subscriptions = subErr ? `ERREUR: ${subErr.message}` : subs ?? [];
 
-  // 4) Abonnés récents (pour voir si telegram_user_id est bien renseigné).
   const { data: subscribers } = await admin
     .from("subscribers")
     .select("id, full_name, telegram_user_id, owner_id, created_at")
