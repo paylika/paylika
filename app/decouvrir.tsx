@@ -291,7 +291,7 @@ export default function DecouvrirScreen() {
           <View className="mt-7 flex-row flex-wrap" style={{ gap: 10 }}>
             {[
               { i: "telegram" as const, c: TG_BLUE, t: "Telegram", d: "Ajout & retrait automatiques des membres.", soon: false },
-              { i: "whatsapp" as const, c: WA_GREEN, t: "WhatsApp", d: "Livraison automatique du lien d'accès.", soon: true },
+              { i: "whatsapp" as const, c: WA_GREEN, t: "WhatsApp", d: "Lien du groupe envoyé après paiement.", soon: false },
               { i: "tag" as const, c: colors.bordeaux[600], t: "Lien ou contenu", d: "Fichier, vidéo, formation, PDF…", soon: false },
               { i: "wallet" as const, c: colors.forest, t: "Simple encaissement", d: "Recevez un paiement, sans groupe.", soon: false },
             ].map((c) => (
@@ -597,7 +597,7 @@ export default function DecouvrirScreen() {
             {[
               [
                 "C'est quoi Paylika, concrètement ?",
-                "Un outil pour faire payer l'accès à vos groupes Telegram privés (WhatsApp bientôt) et automatiser l'ajout et le retrait de vos membres selon leur abonnement.",
+                "Un outil pour faire payer l'accès à vos groupes privés Telegram et WhatsApp. Sur Telegram, l'ajout et le retrait des membres sont automatiques ; sur WhatsApp, le lien du groupe est envoyé automatiquement après le paiement.",
               ],
               [
                 "Comment mes clients paient-ils ?",
