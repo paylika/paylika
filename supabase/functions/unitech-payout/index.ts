@@ -68,32 +68,31 @@ Deno.serve(async (req) => {
     if (destination.replace(/\D/g, "").length < 6)
       return json({ error: "Numéro de réception invalide." }, 400);
 
-    // 3) Recalculer le solde disponible CÔTÉ SERVEUR (scopé au propriétaire).
-    const [{ data: pays }, { data: outs }] = await Promise.all([
-      admin.from("payments").select("amount, status").eq("owner_id", owner),
-      admin.from("payouts").select("amount, status").eq("owner_id", owner),
-    ]);
-    const revenue = (pays ?? [])
-      .filter((p: any) => p.status !== "failed")
-      .reduce((s: number, p: any) => s + (Number(p.amount) || 0), 0);
-    const netEarned = revenue - Math.round(revenue * COMMISSION_RATE);
-    const alreadyOut = (outs ?? [])
-      .filter((p: any) => p.status !== "failed")
-      .reduce((s: number, p: any) => s + (Number(p.amount) || 0), 0);
-    const available = netEarned - alreadyOut;
+    // 3) Débit ATOMIQUE : la fonction Postgres recalcule le solde ET insère le
+    //    payout dans la MÊME transaction (verrou par propriétaire) → pas de
+    //    course possible entre deux retraits simultanés.
+    const { data: payoutId, error: rpcErr } = await admin.rpc("create_payout", {
+      p_owner: owner,
+      p_amount: amount,
+      p_method: method,
+      p_destination: destination,
+      p_country: country,
+    });
+    if (rpcErr) {
+      const m = rpcErr.message || "";
+      if (m.includes("INSUFFICIENT_BALANCE")) {
+        const avail = Number(m.split("INSUFFICIENT_BALANCE:")[1]?.trim() ?? "0") || 0;
+        return json({ error: `Solde insuffisant. Disponible : ${avail} XOF.`, available: avail }, 400);
+      }
+      if (m.includes("INVALID_AMOUNT")) return json({ error: "Montant invalide." }, 400);
+      console.error("create_payout:", m);
+      return json({ error: "Enregistrement impossible (fonction create_payout absente ?)." }, 500);
+    }
+    const payoutId2 = String(payoutId);
 
-    if (amount > available)
-      return json({ error: `Solde insuffisant. Disponible : ${available} XOF.`, available }, 400);
-
-    // 4) Enregistrer le retrait (pending) puis l'exécuter immédiatement.
-    const { data: payout, error: insErr } = await admin
-      .from("payouts")
-      .insert({ owner_id: owner, amount, method, destination, status: "pending" })
-      .select("id")
-      .single();
-    if (insErr || !payout) return json({ error: "Enregistrement impossible." }, 500);
-
+    // 4) Exécuter le décaissement chez UniTech.
     let data: any = null;
+    let networkError = false;
     try {
       const res = await fetch(`${API}?action=withdraw_funds`, {
         method: "POST",
@@ -104,26 +103,34 @@ Deno.serve(async (req) => {
           amount: Math.ceil(amount / (1 - PAYOUT_FEE_RATE)),
           method: PAYOUT_METHOD[method] ?? method,
           account: destination,
+          reference: payoutId2, // clé d'idempotence (si UniTech la respecte)
           // Hors Sénégal : on transmet le pays (retrait international).
           ...(country !== "SN" ? { country } : {}),
         }),
       });
       data = await res.json().catch(() => null);
     } catch {
-      /* réseau */
+      networkError = true;
     }
 
-    const ok = data?.success === true;
-    await admin
-      .from("payouts")
-      .update({ status: ok ? "completed" : "failed" })
-      .eq("id", payout.id);
-
-    if (!ok) {
-      // Le retrait 'failed' ne compte pas dans le solde → l'argent reste dispo.
-      return json({ error: "Le transfert a échoué chez l'opérateur. Solde intact, réessayez.", detail: data }, 502);
+    if (data?.success === true) {
+      await admin.from("payouts").update({ status: "completed" }).eq("id", payoutId2);
+      return json({ ok: true, amount });
     }
-    return json({ ok: true, amount, available: available - amount });
+
+    // Réponse AMBIGUË (réseau coupé / JSON illisible) : UniTech a peut-être QUAND
+    // MÊME envoyé l'argent. On NE restaure PAS le solde (le payout reste 'pending',
+    // donc compté) → évite le double décaissement si l'utilisateur réessaie.
+    if (networkError || data == null) {
+      return json(
+        { error: "Transfert envoyé, confirmation incertaine. On vérifie — ne relancez pas.", pending: true },
+        202,
+      );
+    }
+
+    // Échec EXPLICITE de l'opérateur : l'argent n'est pas parti → on restaure le solde.
+    await admin.from("payouts").update({ status: "failed" }).eq("id", payoutId2);
+    return json({ error: "Le transfert a échoué chez l'opérateur. Solde intact, réessayez.", detail: data }, 502);
   } catch (e) {
     return json({ error: "Erreur serveur.", detail: String(e) }, 500);
   }
