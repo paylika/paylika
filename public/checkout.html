@@ -70,7 +70,7 @@
     { code:"BJ", label:"Bénin", ops:["moov","mtn_money"] }
   ];
   var OPL = { wave:"Wave", wave_money:"Wave", orange_money:"Orange Money", mtn_money:"MTN", moov:"Moov", togocell:"Mixx by Yas", free_money:"Mixx by Yas" };
-  var OPC = { wave:"#1DC6F4", wave_money:"#1DC6F4", orange_money:"#FF7900", mtn_money:"#FFCC00", moov:"#EF7D00", togocell:"#E4002B", free_money:"#E4002B" };
+  var OPIMG = { wave:"wave", wave_money:"wave", orange_money:"orange", mtn_money:"mtn", moov:"moov", togocell:"mixx", free_money:"mixx" };
   var PER = { 1:"Par jour", 7:"Par semaine", 30:"Par mois", 90:"Par 3 mois", 180:"Par 6 mois", 365:"Par an" };
   function perLabel(d){ return d<=0 ? "Paiement unique" : (PER[d] || ("Par "+d+" j")); }
   function fmt(n){ return (Number(n)||0).toLocaleString("fr-FR"); }
@@ -123,13 +123,13 @@
 
     var flags = COUNTRIES.map(function(c){
       return '<div class="pick'+(c.code===state.country?' sel':'')+'" data-country="'+c.code+'">'
-        + '<div class="badge2">'+FLAG[c.code]+'</div><div class="nm">'+c.label+'</div></div>';
+        + '<div class="badge2"><img src="/pk/flags/'+c.code.toLowerCase()+'.png" style="width:100%;height:100%;object-fit:cover" alt=""></div><div class="nm">'+c.label+'</div></div>';
     }).join("");
 
     var cc = currentCountry();
     var ops = cc.ops.map(function(k){
       return '<div class="pick'+(k===state.op?' sel':'')+'" data-op="'+k+'">'
-        + '<div class="badge2"><span class="op" style="color:'+(OPC[k]||"#111")+'">'+(OPL[k]||k).split(" ")[0]+'</span></div>'
+        + '<div class="badge2"><img src="/pk/ops/'+(OPIMG[k]||"wave")+'.png" style="width:86%;height:86%;object-fit:contain" alt=""></div>'
         + '<div class="nm">'+(OPL[k]||k)+'</div></div>';
     }).join("");
 

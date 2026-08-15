@@ -1,12 +1,22 @@
 // Injecte un splash Paylika dans dist/index.html (affiché avant le bundle JS).
 // Exécuté après `expo export` pour supprimer l'écran blanc au 1er chargement.
-import { readFileSync, writeFileSync, existsSync, copyFileSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, copyFileSync, mkdirSync, readdirSync } from "node:fs";
 
 // Copie les pages autonomes (chargement quasi instantané) dans dist.
 for (const f of ["checkout.html", "access.html"]) {
   if (existsSync("public/" + f)) {
     copyFileSync("public/" + f, "dist/" + f);
     console.log("[standalone] public/" + f + " -> dist/" + f);
+  }
+}
+
+// Copie les drapeaux + logos opérateurs (référencés par checkout.html) sous un
+// chemin stable /pk/ (les assets Expo ont des noms hashés, non référençables).
+for (const [src, dst] of [["assets/flags", "dist/pk/flags"], ["assets/operators", "dist/pk/ops"]]) {
+  if (existsSync(src)) {
+    mkdirSync(dst, { recursive: true });
+    for (const f of readdirSync(src)) if (f.endsWith(".png")) copyFileSync(src + "/" + f, dst + "/" + f);
+    console.log("[assets] " + src + " -> " + dst);
   }
 }
 
