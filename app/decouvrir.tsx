@@ -147,13 +147,18 @@ export default function DecouvrirScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const wide = width >= 860;
-  const start = () => router.push("/login" as any);
+  const start = () => router.push("/login" as any); // connexion
+  const signup = () => router.push("/login?mode=signup" as any); // inscription
 
   return (
-    <ScrollView className="flex-1 bg-white" contentContainerStyle={{ alignItems: "center", paddingBottom: insets.bottom + 24 }}>
-      {/* NAVBAR — superposée sur le hero, pleine largeur */}
-      <View className="w-full items-center" style={{ position: "absolute", top: 0, left: 0, right: 0, zIndex: 20, paddingTop: insets.top + 10 }}>
-        <View style={{ width: "100%", maxWidth: 1040 }} className="flex-row items-center justify-between px-5 pb-3">
+    <ScrollView
+      className="flex-1 bg-white"
+      contentContainerStyle={{ alignItems: "center", paddingBottom: insets.bottom + 24 }}
+      stickyHeaderIndices={[0]}
+    >
+      {/* NAVBAR — collante (toujours visible), pleine largeur */}
+      <View className="w-full items-center border-b border-ink/[0.06] bg-white" style={{ paddingTop: insets.top + 8 }}>
+        <View style={{ width: Math.min(width, 1040) }} className="flex-row items-center justify-between px-5 pb-2.5 pt-1">
           <View className="flex-row items-center" style={{ gap: 8 }}>
             <Logo size={26} />
             <Text className="font-display text-[19px] text-ink" style={{ letterSpacing: -0.4 }}>
@@ -169,13 +174,11 @@ export default function DecouvrirScreen() {
               ))}
             </View>
           ) : null}
-          <View className="flex-row items-center" style={{ gap: 8 }}>
-            {wide ? (
-              <Pressable onPress={start}>
-                <Text className="font-semibold text-[13px] text-ink">Se connecter</Text>
-              </Pressable>
-            ) : null}
-            <Pressable onPress={start} className="rounded-full bg-bordeaux-600 px-4 py-2">
+          <View className="flex-row items-center" style={{ gap: 14 }}>
+            <Pressable onPress={start}>
+              <Text className="font-semibold text-[13px] text-ink">Se connecter</Text>
+            </Pressable>
+            <Pressable onPress={signup} className="rounded-full bg-bordeaux-600 px-4 py-2">
               <Text className="font-semibold text-[13px] text-white">Commencer</Text>
             </Pressable>
           </View>
@@ -186,7 +189,19 @@ export default function DecouvrirScreen() {
       <View style={{ width: "100%", height: wide ? 620 : 660 }}>
         <Image
           source={HERO}
-          style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, width: "100%", height: "100%" }}
+          style={
+            {
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              width: "100%",
+              height: "100%",
+              // sur mobile, on décale le cadrage vers la droite pour garder le téléphone visible
+              objectPosition: wide ? "center" : "72% 42%",
+            } as any
+          }
           resizeMode="cover"
         />
         <LinearGradient
@@ -200,10 +215,6 @@ export default function DecouvrirScreen() {
           colors={["rgba(255,255,255,0)", "#FFFFFF"]}
           locations={[0.55, 1]}
           style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 140 }}
-        />
-        <LinearGradient
-          colors={["rgba(255,255,255,0.8)", "rgba(255,255,255,0)"]}
-          style={{ position: "absolute", top: 0, left: 0, right: 0, height: insets.top + 84 }}
         />
 
         {/* Texte du hero, ancré en bas */}
@@ -223,7 +234,7 @@ export default function DecouvrirScreen() {
                   money, et donnez l'accès automatiquement à chaque paiement.
                 </Text>
                 <View className="mt-6 flex-row flex-wrap items-center" style={{ gap: 10 }}>
-                  <Btn label="Créer mon lien de paiement" onPress={start} />
+                  <Btn label="Créer mon lien de paiement" onPress={signup} />
                   <Btn label="Voir comment ça marche" onPress={start} kind="ghost" icon={null} />
                 </View>
                 <Text className="mt-3 font-sans text-[12px] text-ink-muted">
@@ -443,7 +454,7 @@ export default function DecouvrirScreen() {
                 communauté — on s'occupe des paiements et des accès.
               </Text>
               <View className="mt-6 self-start">
-                <Btn label="Créer mon compte gratuitement" onPress={start} kind="white" />
+                <Btn label="Créer mon compte gratuitement" onPress={signup} kind="white" />
               </View>
             </View>
           </Rise>
@@ -657,7 +668,7 @@ export default function DecouvrirScreen() {
                 ne payez que lorsque vous encaissez.
               </Text>
               <View className="mt-6 flex-row flex-wrap items-center" style={{ gap: 10 }}>
-                <Btn label="Créer mon compte gratuitement" onPress={start} kind="white" />
+                <Btn label="Créer mon compte gratuitement" onPress={signup} kind="white" />
               </View>
               <Text className="mt-3 font-sans text-[12px] text-white/60">10% par vente · retraits sans frais · sans engagement</Text>
             </View>
@@ -700,7 +711,7 @@ export default function DecouvrirScreen() {
                   {col.h}
                 </Text>
                 {col.items.map((it) => (
-                  <Pressable key={it} onPress={start}>
+                  <Pressable key={it} onPress={it === "Créer un compte" ? signup : start}>
                     <Text className="font-medium text-[13px] text-ink-soft">{it}</Text>
                   </Pressable>
                 ))}

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { View, Text, ScrollView, Pressable, Image, Animated, Easing, useWindowDimensions } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import { useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Button } from "@/components/ui";
 import { Input } from "@/components/form";
@@ -166,7 +167,8 @@ export default function LoginScreen() {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const wide = width >= 560;
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const params = useLocalSearchParams<{ mode?: string }>();
+  const [mode, setMode] = useState<"signin" | "signup">(params.mode === "signup" ? "signup" : "signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
