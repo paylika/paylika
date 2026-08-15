@@ -41,10 +41,6 @@ function OrbitArt({ box }: { box: number }) {
   const op = (img: any) => (
     <Image source={img} style={{ width: bubble * 0.56, height: bubble * 0.56, borderRadius: bubble * 0.28 }} resizeMode="contain" />
   );
-  const at = (deg: number) => {
-    const a = (deg * Math.PI) / 180;
-    return { left: C + R * Math.cos(a) - bubble / 2, top: C + R * Math.sin(a) - bubble / 2 };
-  };
   const sats: React.ReactNode[] = [
     <Icon key="tg" name="telegram" size={bubble * 0.46} color={TG_BLUE} />,
     op(WAVE),
@@ -66,30 +62,33 @@ function OrbitArt({ box }: { box: number }) {
       {ring(R, 0.18)}
       {ring(Rin, 0.12)}
 
-      {/* satellites en rotation (origine = centre pour rester dans le cadre) */}
-      <Animated.View
-        style={{ position: "absolute", left: 0, top: 0, width: box, height: box, transformOrigin: "center", transform: [{ rotate }] } as any}
-      >
+      {/* Rotateur : POINT (0×0) placé au centre. Pivoter autour de son coin
+          haut-gauche = pivoter autour du centre → tous les satellites gravitent
+          sur le même rayon, uniformément. */}
+      <Animated.View style={{ position: "absolute", left: C, top: C, width: 0, height: 0, transform: [{ rotate }] }}>
         {angles.map((deg, i) => {
-          const p = at(deg);
+          const a = (deg * Math.PI) / 180;
+          const ox = R * Math.cos(a);
+          const oy = R * Math.sin(a);
           return (
-            <Animated.View
-              key={i}
-              className="absolute items-center justify-center rounded-full bg-white"
-              style={{
-                left: p.left,
-                top: p.top,
-                width: bubble,
-                height: bubble,
-                transformOrigin: "center",
-                transform: [{ rotate: counter }],
-                shadowColor: colors.bordeaux[900],
-                shadowOpacity: 0.14,
-                shadowRadius: 12,
-                shadowOffset: { width: 0, height: 7 },
-              } as any}
-            >
-              {sats[i]}
+            // point placé sur l'orbite ; la contre-rotation garde le logo droit
+            <Animated.View key={i} style={{ position: "absolute", left: ox, top: oy, width: 0, height: 0, transform: [{ rotate: counter }] }}>
+              <View
+                className="items-center justify-center rounded-full bg-white"
+                style={{
+                  position: "absolute",
+                  left: -bubble / 2,
+                  top: -bubble / 2,
+                  width: bubble,
+                  height: bubble,
+                  shadowColor: colors.bordeaux[900],
+                  shadowOpacity: 0.14,
+                  shadowRadius: 12,
+                  shadowOffset: { width: 0, height: 7 },
+                }}
+              >
+                {sats[i]}
+              </View>
             </Animated.View>
           );
         })}
