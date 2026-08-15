@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Paylika — Paiement</title>
+<style>
+  :root { --bordeaux:#7B1126; --bordeaux-700:#640E1F; --ink:#18181B; --soft:#3F3F46; --muted:#71717A; --sand:#F4F4F5; --line:rgba(0,0,0,.09); }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { margin:0; background:#fff; color:var(--ink); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
+  .wrap { max-width:440px; margin:0 auto; padding:22px 18px 40px; }
+  .brand { display:flex; align-items:center; justify-content:center; gap:9px; margin:6px 0 18px; }
+  .brand .mk { width:34px; height:34px; border-radius:10px; background:var(--bordeaux); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-size:20px; }
+  .brand b { font-size:20px; letter-spacing:-.5px; }
+  .brand b span { color:var(--bordeaux); }
+  .card { border:1px solid var(--line); border-radius:20px; padding:18px; margin-bottom:14px; }
+  .eyebrow { font-size:11px; text-transform:uppercase; letter-spacing:.6px; color:var(--muted); font-weight:700; }
+  .oname { font-size:19px; font-weight:700; margin:4px 0 0; }
+  .tier { display:flex; align-items:center; justify-content:space-between; gap:10px; border:1px solid var(--line); border-radius:15px; padding:13px 15px; margin-top:9px; cursor:pointer; }
+  .tier.sel { border-color:var(--bordeaux); background:#F8EAED; }
+  .tier .left { display:flex; align-items:center; gap:11px; }
+  .dot { width:20px; height:20px; border-radius:50%; border:1.5px solid var(--muted); display:flex; align-items:center; justify-content:center; flex:0 0 auto; }
+  .tier.sel .dot { border:0; background:var(--bordeaux); }
+  .tier.sel .dot::after { content:"✓"; color:#fff; font-size:11px; font-weight:800; }
+  .tlabel { font-weight:600; font-size:14px; }
+  .tier.sel .tlabel { font-weight:800; }
+  .badge { display:inline-block; margin-top:4px; font-size:9px; font-weight:800; color:#fff; padding:2px 7px; border-radius:20px; letter-spacing:.2px; }
+  .price { font-weight:800; font-size:16px; white-space:nowrap; }
+  .price .cur { font-size:10px; color:var(--muted); font-weight:600; margin-left:2px; }
+  .price .cmp { text-decoration:line-through; color:var(--muted); font-size:12px; font-weight:600; margin-right:5px; }
+  .flabel { font-size:12px; font-weight:700; color:var(--soft); margin:0 0 8px; }
+  .row { display:flex; gap:9px; overflow-x:auto; padding-bottom:4px; -webkit-overflow-scrolling:touch; }
+  .pick { flex:0 0 auto; width:62px; text-align:center; cursor:pointer; }
+  .pick .badge2 { width:48px; height:48px; border-radius:50%; border:1px solid var(--line); margin:0 auto; overflow:hidden; display:flex; align-items:center; justify-content:center; background:#fff; }
+  .pick.sel .badge2 { border:2.5px solid var(--bordeaux); }
+  .pick .nm { font-size:10px; margin-top:5px; color:var(--muted); font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .pick.sel .nm { color:var(--ink); font-weight:800; }
+  .op { font-size:12px; font-weight:800; }
+  input { width:100%; border:1px solid var(--line); border-radius:14px; padding:13px 14px; font-size:15px; margin-top:5px; outline:none; }
+  input:focus { border-color:var(--bordeaux); }
+  label.fl { font-size:12px; font-weight:700; color:var(--soft); }
+  .pay { width:100%; border:0; background:var(--bordeaux); color:#fff; font-size:15px; font-weight:800; padding:15px; border-radius:16px; margin-top:14px; cursor:pointer; }
+  .pay:disabled { opacity:.55; }
+  .note { text-align:center; font-size:11px; color:var(--muted); margin-top:12px; }
+  .err { color:var(--bordeaux-700); font-size:12px; margin-top:8px; }
+  .center { text-align:center; padding:40px 0; color:var(--muted); }
+  .spin { width:26px;height:26px;border:3px solid rgba(123,17,38,.16);border-top-color:var(--bordeaux);border-radius:50%;animation:s .8s linear infinite;margin:0 auto; }
+  @keyframes s { to { transform:rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand"><span class="mk">P</span><b>Pay<span>lika</span></b></div>
+  <div id="app"><div class="center"><div class="spin"></div><p>Chargement…</p></div></div>
+</div>
+<script>
+(function(){
+  var FN = "https://xkdiodbppotyiyldlwbg.functions.supabase.co";
+  var qs = new URLSearchParams(location.search);
+  var OFFER = qs.get("offer") || qs.get("id") || "";
+  var TG = qs.get("tg") || "";
+
+  var COUNTRIES = [
+    { code:"SN", label:"Sénégal", ops:["wave","orange_money"] },
+    { code:"CI", label:"Côte d'Ivoire", ops:["wave_money","orange_money","mtn_money","moov"] },
+    { code:"BF", label:"Burkina Faso", ops:["orange_money","wave_money","moov"] },
+    { code:"TG", label:"Togo", ops:["moov","togocell"] },
+    { code:"BJ", label:"Bénin", ops:["moov","mtn_money"] }
+  ];
+  var OPL = { wave:"Wave", wave_money:"Wave", orange_money:"Orange Money", mtn_money:"MTN", moov:"Moov", togocell:"Mixx by Yas", free_money:"Mixx by Yas" };
+  var OPC = { wave:"#1DC6F4", wave_money:"#1DC6F4", orange_money:"#FF7900", mtn_money:"#FFCC00", moov:"#EF7D00", togocell:"#E4002B", free_money:"#E4002B" };
+  var PER = { 1:"Par jour", 7:"Par semaine", 30:"Par mois", 90:"Par 3 mois", 180:"Par 6 mois", 365:"Par an" };
+  function perLabel(d){ return d<=0 ? "Paiement unique" : (PER[d] || ("Par "+d+" j")); }
+  function fmt(n){ return (Number(n)||0).toLocaleString("fr-FR"); }
+  var FLAG = {
+    SN:'<svg viewBox="0 0 30 20"><rect width="10" height="20" fill="#00853F"/><rect x="10" width="10" height="20" fill="#FDEF42"/><rect x="20" width="10" height="20" fill="#E31B23"/><text x="15" y="14" font-size="9" fill="#00853F" text-anchor="middle">★</text></svg>',
+    CI:'<svg viewBox="0 0 30 20"><rect width="10" height="20" fill="#FF8200"/><rect x="10" width="10" height="20" fill="#fff"/><rect x="20" width="10" height="20" fill="#009A44"/></svg>',
+    BF:'<svg viewBox="0 0 30 20"><rect width="30" height="10" fill="#EF2B2D"/><rect y="10" width="30" height="10" fill="#009E49"/><text x="15" y="14" font-size="9" fill="#FCD116" text-anchor="middle">★</text></svg>',
+    TG:'<svg viewBox="0 0 30 20"><rect width="30" height="20" fill="#006A4E"/><rect y="4" width="30" height="4" fill="#FFCE00"/><rect y="12" width="30" height="4" fill="#FFCE00"/><rect width="12" height="12" fill="#D21034"/></svg>',
+    BJ:'<svg viewBox="0 0 30 20"><rect width="12" height="20" fill="#008751"/><rect x="12" width="18" height="10" fill="#FCD116"/><rect x="12" y="10" width="18" height="10" fill="#E8112D"/></svg>'
+  };
+
+  var app = document.getElementById("app");
+  var state = { info:null, tier:null, country:"SN", op:"wave", busy:false, err:"" };
+
+  if (!OFFER) { app.innerHTML = '<div class="card"><p>Lien invalide.</p></div>'; return; }
+
+  fetch(FN+"/offer-info?id="+encodeURIComponent(OFFER))
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (!d || !d.tiers || !d.tiers.length) { app.innerHTML = '<div class="card"><p>Offre introuvable.</p></div>'; return; }
+      state.info = d;
+      var byPrice = d.tiers.slice().sort(function(a,b){ return a.price-b.price; });
+      var pop = byPrice[Math.floor((byPrice.length-1)/2)] || byPrice[0];
+      state.tier = pop ? pop.id : d.tiers[0].id;
+      render();
+    })
+    .catch(function(){ app.innerHTML = '<div class="card"><p>Connexion impossible. Réessayez.</p></div>'; });
+
+  function currentCountry(){ return COUNTRIES.filter(function(c){return c.code===state.country;})[0] || COUNTRIES[0]; }
+  function currentTier(){ return state.info.tiers.filter(function(t){return t.id===state.tier;})[0] || state.info.tiers[0]; }
+
+  function render(){
+    var d = state.info;
+    var byPrice = d.tiers.slice().sort(function(a,b){ return a.price-b.price; });
+    var popId = byPrice.length ? byPrice[Math.floor((byPrice.length-1)/2)].id : "";
+    var bestId = byPrice.length ? byPrice[byPrice.length-1].id : "";
+    var multi = d.tiers.length > 1;
+    var cur = d.currency || "XOF";
+
+    var tiers = d.tiers.map(function(t){
+      var sel = t.id===state.tier;
+      var badge = "";
+      if (multi && t.id===popId) badge = '<div class="badge" style="background:'+"#7B1126"+'">Plus populaire</div>';
+      else if (multi && t.id===bestId) badge = '<div class="badge" style="background:#2F6B4F">Meilleure offre</div>';
+      var cmp = t.comparePrice ? '<span class="cmp">'+fmt(t.comparePrice)+'</span>' : '';
+      return '<div class="tier'+(sel?' sel':'')+'" data-tier="'+t.id+'"><div class="left"><div class="dot"></div>'
+        + '<div><div class="tlabel">'+perLabel(t.intervalDays)+'</div>'+badge+'</div></div>'
+        + '<div class="price">'+cmp+fmt(t.price)+'<span class="cur">'+cur+'</span></div></div>';
+    }).join("");
+
+    var flags = COUNTRIES.map(function(c){
+      return '<div class="pick'+(c.code===state.country?' sel':'')+'" data-country="'+c.code+'">'
+        + '<div class="badge2">'+FLAG[c.code]+'</div><div class="nm">'+c.label+'</div></div>';
+    }).join("");
+
+    var cc = currentCountry();
+    var ops = cc.ops.map(function(k){
+      return '<div class="pick'+(k===state.op?' sel':'')+'" data-op="'+k+'">'
+        + '<div class="badge2"><span class="op" style="color:'+(OPC[k]||"#111")+'">'+(OPL[k]||k).split(" ")[0]+'</span></div>'
+        + '<div class="nm">'+(OPL[k]||k)+'</div></div>';
+    }).join("");
+
+    var t = currentTier();
+    app.innerHTML =
+      '<div class="card"><div class="eyebrow">'+(d.tiers.every(function(x){return x.intervalDays<=0;})?"Paiement":"Abonnement")+'</div>'
+      + '<div class="oname">'+esc(d.offerName||"Offre")+'</div>'+tiers+'</div>'
+      + '<div class="card"><div class="flabel">Votre pays</div><div class="row">'+flags+'</div>'
+      + '<div class="flabel" style="margin-top:16px">Moyen de paiement</div><div class="row">'+ops+'</div></div>'
+      + '<div class="card"><label class="fl">Nom (optionnel)</label><input id="nm" placeholder="Ex. Awa Ndiaye" />'
+      + '<label class="fl" style="display:block;margin-top:12px">Numéro de téléphone</label><input id="ph" inputmode="numeric" placeholder="77 000 00 00" />'
+      + (state.err?'<div class="err">'+esc(state.err)+'</div>':'')
+      + '<button class="pay" id="pay"'+(state.busy?' disabled':'')+'>'+(state.busy?"Traitement…":("Payer "+fmt(t.price)+" "+cur))+'</button>'
+      + '<div class="note">Vous serez redirigé vers '+(OPL[state.op]||"l\'opérateur")+' pour confirmer.</div></div>';
+
+    bind();
+  }
+
+  function bind(){
+    [].forEach.call(document.querySelectorAll("[data-tier]"), function(el){
+      el.onclick = function(){ state.tier = el.getAttribute("data-tier"); render(); };
+    });
+    [].forEach.call(document.querySelectorAll("[data-country]"), function(el){
+      el.onclick = function(){ state.country = el.getAttribute("data-country"); state.op = currentCountry().ops[0]; render(); };
+    });
+    [].forEach.call(document.querySelectorAll("[data-op]"), function(el){
+      el.onclick = function(){ state.op = el.getAttribute("data-op"); render(); };
+    });
+    var ph = document.getElementById("ph"); if (ph) ph.oninput = function(){ state._ph = ph.value; };
+    var nm = document.getElementById("nm"); if (nm) nm.oninput = function(){ state._nm = nm.value; };
+    var pay = document.getElementById("pay"); if (pay) pay.onclick = doPay;
+  }
+
+  function doPay(){
+    var ph = (document.getElementById("ph")||{}).value || "";
+    var nm = (document.getElementById("nm")||{}).value || "";
+    if (ph.replace(/\D/g,"").length < 9) { state.err = "Numéro de téléphone invalide."; render(); return; }
+    if (state.busy) return;
+    state.busy = true; state.err = ""; render();
+    fetch(FN+"/unitech-create", {
+      method:"POST", headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ offer: state.tier, tg: TG, country: state.country, operator: state.op, phone: ph.replace(/\s/g,""), fullName: nm.trim() })
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (d && d.ok && d.url) {
+        try { if (d.reference) localStorage.setItem("paylika_last_ref", String(d.reference)); } catch(e){}
+        location.href = d.url; return;
+      }
+      state.busy = false; state.err = (d && d.error) || "Paiement impossible. Réessayez."; render();
+    })
+    .catch(function(){ state.busy = false; state.err = "Connexion impossible. Réessayez."; render(); });
+  }
+
+  function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
+})();
+</script>
+</body>
+</html>

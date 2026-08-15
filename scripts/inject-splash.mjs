@@ -1,6 +1,12 @@
 // Injecte un splash Paylika dans dist/index.html (affiché avant le bundle JS).
 // Exécuté après `expo export` pour supprimer l'écran blanc au 1er chargement.
-import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, copyFileSync } from "node:fs";
+
+// Copie la page de checkout autonome (chargement quasi instantané) dans dist.
+if (existsSync("public/checkout.html")) {
+  copyFileSync("public/checkout.html", "dist/checkout.html");
+  console.log("[checkout] public/checkout.html -> dist/checkout.html");
+}
 
 const FILE = "dist/index.html";
 if (!existsSync(FILE)) { console.log("[splash] dist/index.html introuvable, skip"); process.exit(0); }

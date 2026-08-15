@@ -106,7 +106,8 @@ export function payLinkFor(offre: Pick<Offre, "id" | "deliveryType">): string {
   // Telegram passe par le bot ; les autres modes vont sur la page de paiement.
   return offre.deliveryType === "telegram"
     ? `https://t.me/Paylikabot?start=${offre.id}`
-    : `${APP_URL}/pay/${offre.id}`;
+    : // page de checkout autonome (chargement quasi instantané) plutôt que la SPA
+      `${APP_URL}/checkout.html?offer=${offre.id}`;
 }
 
 /** Upload d'une image de couverture (bucket public) → URL publique. */
