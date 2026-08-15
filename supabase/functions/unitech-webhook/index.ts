@@ -149,14 +149,6 @@ async function grantAccess(evt: any) {
   // Référence canonique = celle de l'intent (PK, non-null garantie).
   const reference = intent.reference as string;
 
-  // Idempotence : ce paiement est-il déjà enregistré ?
-  const { data: seen } = await admin
-    .from("payments")
-    .select("id")
-    .eq("provider_ref", reference)
-    .maybeSingle();
-  if (seen) return;
-
   const { data: plan } = await admin
     .from("plans")
     .select("interval_days, price, owner_id")
@@ -165,11 +157,46 @@ async function grantAccess(evt: any) {
   const intervalDays = plan?.interval_days ?? 30;
   const owner = plan?.owner_id ?? null; // le paiement appartient au proprio de l'offre
 
-  // Montant = PRIX DE L'OFFRE (source de vérité), jamais evt.amount (fourni par
-  // l'appelant, donc falsifiable). On loggue toute divergence pour surveillance.
+  // Montant = PRIX DE L'OFFRE (source de vérité), jamais evt.amount (falsifiable).
   const amount = Number(plan?.price ?? intent.amount ?? 0);
   if (evt.amount != null && Number(evt.amount) !== amount) {
     console.error(`montant webhook (${evt.amount}) ≠ prix offre (${amount}) — réf ${reference}`);
+  }
+  const commission = Math.round(amount * COMMISSION_RATE);
+  const nowTs = Date.now();
+
+  // GARDE D'IDEMPOTENCE ATOMIQUE : on insère la ligne payment EN PREMIER. La
+  // contrainte d'unicité sur provider_ref fait qu'un webhook rejoué (même
+  // concurrent) n'insère rien → aucun 2e lien d'accès n'est livré.
+  let paymentId: string | null = null;
+  const { data: guardRows, error: guardErr } = await admin
+    .from("payments")
+    .upsert(
+      {
+        owner_id: owner,
+        amount,
+        currency: "XOF",
+        method: "unitech",
+        provider: "unitech",
+        provider_ref: reference,
+        commission,
+        net_amount: amount - commission,
+        status: "completed",
+        paid_at: new Date(nowTs).toISOString(),
+      },
+      { onConflict: "provider_ref", ignoreDuplicates: true },
+    )
+    .select("id");
+  if (guardErr) {
+    // Repli (ex. index unique absent) : on NE casse PAS la livraison. Vérif lecture
+    // (moins étanche en concurrence, mais on ne perd jamais un vrai paiement).
+    console.error("garde payment:", guardErr.message);
+    const { data: seen } = await admin.from("payments").select("id").eq("provider_ref", reference).maybeSingle();
+    if (seen) return;
+  } else if (!guardRows || guardRows.length === 0) {
+    return; // déjà traité (webhook rejoué) → pas de double livraison
+  } else {
+    paymentId = guardRows[0].id as string;
   }
   const telegramUserId = intent.telegram_user_id as number | null;
 
@@ -268,22 +295,30 @@ async function grantAccess(evt: any) {
     subscription = sub ?? null;
   }
 
-  const commission = Math.round(amount * COMMISSION_RATE);
-  const { error: payErr } = await admin.from("payments").insert({
-    owner_id: owner,
-    subscription_id: subscription?.id ?? null,
-    subscriber_id: subscriberId,
-    amount,
-    currency: "XOF",
-    method: "unitech",
-    provider: "unitech",
-    provider_ref: reference,
-    commission,
-    net_amount: amount - commission,
-    status: "completed",
-    paid_at: new Date(now).toISOString(),
-  });
-  if (payErr) console.error("insert payment:", payErr.message);
+  // Lier le paiement (déjà inséré par la garde d'idempotence) à l'abonné + l'abonnement.
+  if (paymentId) {
+    await admin
+      .from("payments")
+      .update({ subscriber_id: subscriberId, subscription_id: subscription?.id ?? null })
+      .eq("id", paymentId);
+  } else {
+    // Repli : la garde n'a pas pu insérer (index absent) → insertion classique.
+    const { error: payErr } = await admin.from("payments").insert({
+      owner_id: owner,
+      subscription_id: subscription?.id ?? null,
+      subscriber_id: subscriberId,
+      amount,
+      currency: "XOF",
+      method: "unitech",
+      provider: "unitech",
+      provider_ref: reference,
+      commission,
+      net_amount: amount - commission,
+      status: "completed",
+      paid_at: new Date(now).toISOString(),
+    });
+    if (payErr) console.error("insert payment (repli):", payErr.message);
+  }
 
   // Marque l'intent complété via sa clé réelle (PK).
   await admin
