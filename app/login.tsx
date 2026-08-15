@@ -19,17 +19,18 @@ const PASTEL = ["#FCEEF1", "#F7DAE1", "#FBECEF"] as const;
 /* ---------- orbite animée (branding) ---------- */
 
 function OrbitArt({ box }: { box: number }) {
-  const bubble = box * 0.165;
-  const logoSize = box * 0.247;
+  const bubble = box * 0.155;
+  const logoSize = box * 0.24;
   const C = box / 2;
-  const R = box * 0.353;
-  const Rin = box * 0.212;
+  const R = box * 0.33;
+  const Rin = box * 0.19;
 
-  // rotation lente et continue des satellites autour du centre
+  // rotation lente et continue des satellites autour du centre.
+  // useNativeDriver:false => fiable sur le web pour l'interpolation d'angle.
   const spin = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     const loop = Animated.loop(
-      Animated.timing(spin, { toValue: 1, duration: 46000, easing: Easing.linear, useNativeDriver: true }),
+      Animated.timing(spin, { toValue: 1, duration: 40000, easing: Easing.linear, useNativeDriver: false }),
     );
     loop.start();
     return () => loop.stop();
@@ -65,8 +66,10 @@ function OrbitArt({ box }: { box: number }) {
       {ring(R, 0.18)}
       {ring(Rin, 0.12)}
 
-      {/* satellites en rotation */}
-      <Animated.View style={{ position: "absolute", left: 0, top: 0, width: box, height: box, transform: [{ rotate }] }}>
+      {/* satellites en rotation (origine = centre pour rester dans le cadre) */}
+      <Animated.View
+        style={{ position: "absolute", left: 0, top: 0, width: box, height: box, transformOrigin: "center", transform: [{ rotate }] } as any}
+      >
         {angles.map((deg, i) => {
           const p = at(deg);
           return (
@@ -78,12 +81,13 @@ function OrbitArt({ box }: { box: number }) {
                 top: p.top,
                 width: bubble,
                 height: bubble,
+                transformOrigin: "center",
                 transform: [{ rotate: counter }],
                 shadowColor: colors.bordeaux[900],
                 shadowOpacity: 0.14,
                 shadowRadius: 12,
                 shadowOffset: { width: 0, height: 7 },
-              }}
+              } as any}
             >
               {sats[i]}
             </Animated.View>
@@ -113,14 +117,16 @@ function OrbitArt({ box }: { box: number }) {
 
 /** Panneau plein (split, grand écran) : titre + orbite responsive + légende. */
 function OrbitPanelBig() {
-  const [w, setW] = useState(0);
-  const box = Math.max(230, Math.min(340, (w || 420) - 80));
+  const [size, setSize] = useState({ w: 0, h: 0 });
+  const { w, h } = size;
+  // l'orbite tient dans la largeur ET la hauteur dispo (moins titre + légende)
+  const box = Math.max(210, Math.min(330, (w || 420) - 96, (h || 560) - 210));
   const pad = w && w < 470 ? 22 : 36;
   const titleSize = w && w < 470 ? 21 : 26;
   return (
     <View
       className="flex-1 overflow-hidden rounded-[28px]"
-      onLayout={(e) => setW(e.nativeEvent.layout.width)}
+      onLayout={(e) => setSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}
     >
       <LinearGradient colors={PASTEL} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
       <View className="flex-1 justify-between" style={{ padding: pad }}>
