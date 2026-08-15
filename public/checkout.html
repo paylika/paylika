@@ -87,17 +87,30 @@
 
   if (!OFFER) { app.innerHTML = '<div class="card"><p>Lien invalide.</p></div>'; return; }
 
-  fetch(FN+"/offer-info?id="+encodeURIComponent(OFFER))
-    .then(function(r){ return r.json(); })
-    .then(function(d){
-      if (!d || !d.tiers || !d.tiers.length) { app.innerHTML = '<div class="card"><p>Offre introuvable.</p></div>'; return; }
-      state.info = d;
-      var byPrice = d.tiers.slice().sort(function(a,b){ return a.price-b.price; });
-      var pop = byPrice[Math.floor((byPrice.length-1)/2)] || byPrice[0];
-      state.tier = pop ? pop.id : d.tiers[0].id;
-      render();
-    })
-    .catch(function(){ app.innerHTML = '<div class="card"><p>Connexion impossible. Réessayez.</p></div>'; });
+  // Chargement de l'offre AVEC timeout + réessais automatiques (réseau mobile
+  // lent/instable) : on ne bloque jamais indéfiniment.
+  function loadOffer(attempt){
+    attempt = attempt || 1;
+    var ctrl = new AbortController();
+    var to = setTimeout(function(){ ctrl.abort(); }, 12000);
+    fetch(FN+"/offer-info?id="+encodeURIComponent(OFFER), { signal: ctrl.signal })
+      .then(function(r){ clearTimeout(to); return r.json(); })
+      .then(function(d){
+        if (!d || !d.tiers || !d.tiers.length) { app.innerHTML = '<div class="card"><p>Offre introuvable.</p></div>'; return; }
+        state.info = d;
+        var byPrice = d.tiers.slice().sort(function(a,b){ return a.price-b.price; });
+        var pop = byPrice[Math.floor((byPrice.length-1)/2)] || byPrice[0];
+        state.tier = pop ? pop.id : d.tiers[0].id;
+        render();
+      })
+      .catch(function(){
+        clearTimeout(to);
+        if (attempt < 4) { loadOffer(attempt + 1); return; } // réseau lent → on réessaie
+        app.innerHTML = '<div class="card center"><p class="note">Connexion lente. Vérifiez votre réseau.</p>'
+          + '<button class="pay" onclick="location.reload()">Réessayer</button></div>';
+      });
+  }
+  loadOffer();
 
   function currentCountry(){ return COUNTRIES.filter(function(c){return c.code===state.country;})[0] || COUNTRIES[0]; }
   function currentTier(){ return state.info.tiers.filter(function(t){return t.id===state.tier;})[0] || state.info.tiers[0]; }
