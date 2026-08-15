@@ -79,12 +79,10 @@ function AppShell() {
   }, [loading, session, pathname, isPay, isLogin, isAdminRoute, isAdmin, adminChecked, nextParam, router]);
 
   let content = null;
-  if (isPay || isLanding) {
-    content = <Slot />; // pages publiques (checkout, accès, landing), sans chrome
+  if (isPay || isLanding || isLogin) {
+    content = <Slot />; // pages publiques (checkout, accès, landing, connexion), sans chrome
   } else if (loading) {
     content = null; // brief splash
-  } else if (isLogin) {
-    content = <Slot />;
   } else if (!session) {
     content = null; // redirecting to /login
   } else if (isOnboarding) {
@@ -117,7 +115,10 @@ function AppShell() {
 }
 
 export default function RootLayout() {
-  const [fontsLoaded] = useFonts({
+  // On charge nos polices de marque, mais SANS bloquer le rendu :
+  // sur réseau lent, gated => page blanche. On affiche l'app tout de suite
+  // (police système en repli) et les polices custom s'appliquent au chargement.
+  useFonts({
     BricolageGrotesque_600SemiBold,
     BricolageGrotesque_700Bold,
     BricolageGrotesque_800ExtraBold,
@@ -126,8 +127,6 @@ export default function RootLayout() {
     SpaceGrotesk_600SemiBold,
     SpaceGrotesk_700Bold,
   });
-
-  if (!fontsLoaded) return null;
 
   return (
     <SafeAreaProvider>
