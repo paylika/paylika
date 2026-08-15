@@ -213,14 +213,14 @@ export default function DecouvrirScreen() {
               <View style={{ maxWidth: 580 }}>
                 <Text
                   className="font-display-x text-ink"
-                  style={{ fontSize: wide ? 44 : 33, letterSpacing: -1.8, lineHeight: wide ? 47 : 37 }}
+                  style={{ fontSize: wide ? 44 : 32, letterSpacing: -1.8, lineHeight: wide ? 47 : 36 }}
                 >
-                  Faites payer l'accès à vos groupes privés.{" "}
-                  <Text className="text-bordeaux-600">Paylika gère le reste.</Text>
+                  Une communauté, une audience sur les réseaux ?{" "}
+                  <Text className="text-bordeaux-600">Il est temps de la monétiser.</Text>
                 </Text>
                 <Text className="mt-3 font-sans text-ink-soft" style={{ fontSize: 15.5, lineHeight: 23, maxWidth: 490 }}>
-                  Encaissez vos abonnements par Wave, Orange Money ou MTN. Chaque membre est ajouté à votre groupe Telegram
-                  dès qu'il paie — et retiré automatiquement à l'expiration.
+                  Paylika transforme vos abonnés en revenus : faites payer l'accès à vos groupes Telegram privés par mobile
+                  money, et donnez l'accès automatiquement à chaque paiement.
                 </Text>
                 <View className="mt-6 flex-row flex-wrap items-center" style={{ gap: 10 }}>
                   <Btn label="Créer mon lien de paiement" onPress={start} />

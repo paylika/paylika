@@ -141,7 +141,7 @@ function OrbitPanelBig() {
           <OrbitArt box={box} />
         </View>
         <Text className="font-sans text-[12px] text-ink-muted">
-          Wave · Orange Money · MTN · Moov · Telegram — WhatsApp bientôt.
+          Wave · Orange Money · MTN · Moov · Telegram · WhatsApp
         </Text>
       </View>
     </View>
