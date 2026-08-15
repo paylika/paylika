@@ -44,7 +44,8 @@ Deno.serve(async (req) => {
     // Redirection après paiement selon le mode de livraison.
     const deliveryType = (plan as any).groups?.delivery_type ?? "telegram";
     const APP_URL = "https://paylika.paylika-app.workers.dev";
-    const successUrl = deliveryType === "telegram" ? "https://t.me/Paylikabot" : `${APP_URL}/access`;
+    // Non-Telegram → page de livraison autonome (chargement quasi instantané).
+    const successUrl = deliveryType === "telegram" ? "https://t.me/Paylikabot" : `${APP_URL}/access.html`;
 
     const base: Record<string, unknown> = {
       amount: Number(plan.price),

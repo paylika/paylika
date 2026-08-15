@@ -2,10 +2,12 @@
 // Exécuté après `expo export` pour supprimer l'écran blanc au 1er chargement.
 import { readFileSync, writeFileSync, existsSync, copyFileSync } from "node:fs";
 
-// Copie la page de checkout autonome (chargement quasi instantané) dans dist.
-if (existsSync("public/checkout.html")) {
-  copyFileSync("public/checkout.html", "dist/checkout.html");
-  console.log("[checkout] public/checkout.html -> dist/checkout.html");
+// Copie les pages autonomes (chargement quasi instantané) dans dist.
+for (const f of ["checkout.html", "access.html"]) {
+  if (existsSync("public/" + f)) {
+    copyFileSync("public/" + f, "dist/" + f);
+    console.log("[standalone] public/" + f + " -> dist/" + f);
+  }
 }
 
 const FILE = "dist/index.html";
