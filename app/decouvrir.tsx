@@ -1,6 +1,7 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { View, Text, ScrollView, Pressable, Image, Animated, Easing, useWindowDimensions } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import Svg, { Rect, Polygon, G } from "react-native-svg";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Logo, Icon, type IconName } from "@/components/Icon";
@@ -140,6 +141,63 @@ function PhotoBand({ img, height, children }: { img: any; height: number; childr
   );
 }
 
+// petite étoile 5 branches centrée en (0,0)
+const STAR = "0,-3.2 0.75,-1.04 3.04,-0.99 1.22,0.4 1.88,2.59 0,1.28 -1.88,2.59 -1.22,0.4 -3.04,-0.99 -0.75,-1.04";
+
+/** Drapeaux SVG (pas d'emoji) — SN, CI, BF, TG, BJ. */
+function Flag({ c }: { c: "SN" | "CI" | "BF" | "TG" | "BJ" }) {
+  return (
+    <View style={{ width: 26, height: 18, borderRadius: 4, overflow: "hidden", borderWidth: 1, borderColor: "rgba(0,0,0,0.08)" }}>
+      <Svg width={26} height={18} viewBox="0 0 30 20">
+        {c === "SN" && (
+          <>
+            <Rect x={0} y={0} width={10} height={20} fill="#00853F" />
+            <Rect x={10} y={0} width={10} height={20} fill="#FDEF42" />
+            <Rect x={20} y={0} width={10} height={20} fill="#E31B23" />
+            <G transform="translate(15,10)">
+              <Polygon points={STAR} fill="#00853F" />
+            </G>
+          </>
+        )}
+        {c === "CI" && (
+          <>
+            <Rect x={0} y={0} width={10} height={20} fill="#FF8200" />
+            <Rect x={10} y={0} width={10} height={20} fill="#FFFFFF" />
+            <Rect x={20} y={0} width={10} height={20} fill="#009A44" />
+          </>
+        )}
+        {c === "BF" && (
+          <>
+            <Rect x={0} y={0} width={30} height={10} fill="#EF2B2D" />
+            <Rect x={0} y={10} width={30} height={10} fill="#009E49" />
+            <G transform="translate(15,10)">
+              <Polygon points={STAR} fill="#FCD116" />
+            </G>
+          </>
+        )}
+        {c === "TG" && (
+          <>
+            <Rect x={0} y={0} width={30} height={20} fill="#006A4E" />
+            <Rect x={0} y={4} width={30} height={4} fill="#FFCE00" />
+            <Rect x={0} y={12} width={30} height={4} fill="#FFCE00" />
+            <Rect x={0} y={0} width={12} height={12} fill="#D21034" />
+            <G transform="translate(6,6)">
+              <Polygon points={STAR} fill="#FFFFFF" />
+            </G>
+          </>
+        )}
+        {c === "BJ" && (
+          <>
+            <Rect x={0} y={0} width={12} height={20} fill="#008751" />
+            <Rect x={12} y={0} width={18} height={10} fill="#FCD116" />
+            <Rect x={12} y={10} width={18} height={10} fill="#E8112D" />
+          </>
+        )}
+      </Svg>
+    </View>
+  );
+}
+
 /* ---------- page ---------- */
 
 export default function DecouvrirScreen() {
@@ -150,15 +208,25 @@ export default function DecouvrirScreen() {
   const start = () => router.push("/login" as any); // connexion
   const signup = () => router.push("/login?mode=signup" as any); // inscription
 
+  const [menuOpen, setMenuOpen] = useState(false);
+  const NAV = [
+    { label: "Comment ça marche", id: "comment" },
+    { label: "Pour qui", id: "pourqui" },
+    { label: "Tarifs", id: "tarifs" },
+    { label: "FAQ", id: "faq" },
+  ];
+  const goTo = (id: string) => {
+    setMenuOpen(false);
+    if (typeof document !== "undefined") {
+      (document.getElementById(id) as any)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
+
   return (
-    <ScrollView
-      className="flex-1 bg-white"
-      contentContainerStyle={{ alignItems: "center", paddingBottom: insets.bottom + 24 }}
-      stickyHeaderIndices={[0]}
-    >
-      {/* NAVBAR — collante (toujours visible), pleine largeur */}
-      <View className="w-full items-center border-b border-ink/[0.06] bg-white" style={{ paddingTop: insets.top + 8 }}>
-        <View style={{ width: Math.min(width, 1040) }} className="flex-row items-center justify-between px-5 pb-2.5 pt-1">
+    <ScrollView className="flex-1 bg-white" contentContainerStyle={{ alignItems: "center", paddingBottom: insets.bottom + 24 }}>
+      {/* NAVBAR — superposée sur le hero */}
+      <View className="w-full items-center" style={{ position: "absolute", top: 0, left: 0, right: 0, zIndex: 20, paddingTop: insets.top + 10 }}>
+        <View style={{ width: "100%", maxWidth: 1040 }} className="flex-row items-center justify-between px-5 pb-3">
           <View className="flex-row items-center" style={{ gap: 8 }}>
             <Logo size={26} />
             <Text className="font-display text-[19px] text-ink" style={{ letterSpacing: -0.4 }}>
@@ -167,22 +235,52 @@ export default function DecouvrirScreen() {
           </View>
           {wide ? (
             <View className="flex-row items-center" style={{ gap: 26 }}>
-              {["Comment ça marche", "Pour qui", "Tarifs", "FAQ"].map((t) => (
-                <Text key={t} className="font-medium text-[13px] text-ink-soft">
-                  {t}
-                </Text>
+              {NAV.map((n) => (
+                <Pressable key={n.id} onPress={() => goTo(n.id)}>
+                  <Text className="font-medium text-[13px] text-ink-soft">{n.label}</Text>
+                </Pressable>
               ))}
             </View>
           ) : null}
-          <View className="flex-row items-center" style={{ gap: 14 }}>
-            <Pressable onPress={start}>
-              <Text className="font-semibold text-[13px] text-ink">Se connecter</Text>
-            </Pressable>
+          <View className="flex-row items-center" style={{ gap: 10 }}>
+            {wide ? (
+              <Pressable onPress={start}>
+                <Text className="font-semibold text-[13px] text-ink">Se connecter</Text>
+              </Pressable>
+            ) : null}
             <Pressable onPress={signup} className="rounded-full bg-bordeaux-600 px-4 py-2">
               <Text className="font-semibold text-[13px] text-white">Commencer</Text>
             </Pressable>
+            {!wide ? (
+              <Pressable
+                onPress={() => setMenuOpen((o) => !o)}
+                className="h-9 w-9 items-center justify-center rounded-full border border-ink/10 bg-white/90"
+              >
+                <Icon name={menuOpen ? "close" : "menu"} size={18} color={colors.ink} />
+              </Pressable>
+            ) : null}
           </View>
         </View>
+
+        {/* menu déroulant mobile */}
+        {!wide && menuOpen ? (
+          <View style={{ width: "100%", maxWidth: 1040 }} className="px-5 pt-1">
+            <View
+              className="rounded-2xl border border-ink/[0.08] bg-white p-2"
+              style={{ shadowColor: "#000", shadowOpacity: 0.1, shadowRadius: 22, shadowOffset: { width: 0, height: 12 } }}
+            >
+              {NAV.map((n) => (
+                <Pressable key={n.id} onPress={() => goTo(n.id)} className="rounded-xl px-3 py-3">
+                  <Text className="font-semibold text-[14px] text-ink">{n.label}</Text>
+                </Pressable>
+              ))}
+              <View className="my-1 h-px bg-ink/[0.06]" />
+              <Pressable onPress={start} className="rounded-xl px-3 py-3">
+                <Text className="font-semibold text-[14px] text-bordeaux-700">Se connecter</Text>
+              </Pressable>
+            </View>
+          </View>
+        ) : null}
       </View>
 
       {/* HERO — image plein écran, sans bordure, texte par-dessus */}
@@ -215,6 +313,11 @@ export default function DecouvrirScreen() {
           colors={["rgba(255,255,255,0)", "#FFFFFF"]}
           locations={[0.55, 1]}
           style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 140 }}
+        />
+        {/* léger voile en haut pour la lisibilité de la navbar superposée */}
+        <LinearGradient
+          colors={["rgba(255,255,255,0.85)", "rgba(255,255,255,0)"]}
+          style={{ position: "absolute", top: 0, left: 0, right: 0, height: insets.top + 92 }}
         />
 
         {/* Texte du hero, ancré en bas */}
@@ -263,12 +366,17 @@ export default function DecouvrirScreen() {
 
       {/* CONTENU */}
       <View style={{ width: "100%", maxWidth: 1040 }}>
-        {/* BANDE PAIEMENTS ACCEPTÉS */}
-        <View className="items-center px-5">
-          <Text className="text-center font-semibold text-[12px] uppercase text-ink-muted" style={{ letterSpacing: 0.8 }}>
+        {/* BANDE PAIEMENTS ACCEPTÉS — scroll horizontal */}
+        <View className="items-center">
+          <Text className="px-5 text-center font-semibold text-[12px] uppercase text-ink-muted" style={{ letterSpacing: 0.8 }}>
             Vos clients paient avec ce qu'ils ont déjà
           </Text>
-          <View className="mt-4 flex-row flex-wrap items-center justify-center" style={{ gap: 10 }}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={{ width: "100%", marginTop: 16 }}
+            contentContainerStyle={{ gap: 10, paddingHorizontal: 20, flexGrow: 1, justifyContent: "center" }}
+          >
             {[
               { img: WAVE, t: "Wave" },
               { img: ORANGE, t: "Orange Money" },
@@ -280,7 +388,6 @@ export default function DecouvrirScreen() {
                 <Text className="font-semibold text-[13px] text-ink">{p.t}</Text>
               </View>
             ))}
-            {/* carte bancaire à venir (Stripe) */}
             <View className="flex-row items-center rounded-2xl border border-ink/[0.08] bg-paper px-3.5 py-2.5" style={{ gap: 8 }}>
               <View className="h-[22px] w-[22px] items-center justify-center rounded-full bg-sand">
                 <Icon name="wallet" size={13} color={colors.muted} />
@@ -290,20 +397,31 @@ export default function DecouvrirScreen() {
                 <Text className="font-bold text-[9px] uppercase text-ink-muted">Bientôt</Text>
               </View>
             </View>
-          </View>
+          </ScrollView>
 
-          {/* pays disponibles */}
-          <Text className="mt-8 text-center font-semibold text-[12px] uppercase text-ink-muted" style={{ letterSpacing: 0.8 }}>
+          {/* pays disponibles — scroll horizontal avec drapeaux */}
+          <Text className="mt-8 px-5 text-center font-semibold text-[12px] uppercase text-ink-muted" style={{ letterSpacing: 0.8 }}>
             Disponible dans 5 pays
           </Text>
-          <View className="mt-3 flex-row flex-wrap items-center justify-center" style={{ gap: 8 }}>
-            {["Sénégal", "Côte d'Ivoire", "Burkina Faso", "Togo", "Bénin"].map((c) => (
-              <View key={c} className="flex-row items-center rounded-full bg-sand px-3 py-1.5" style={{ gap: 6 }}>
-                <View className="h-1.5 w-1.5 rounded-full bg-bordeaux-600" />
-                <Text className="font-semibold text-[12px] text-ink">{c}</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={{ width: "100%", marginTop: 12 }}
+            contentContainerStyle={{ gap: 8, paddingHorizontal: 20, flexGrow: 1, justifyContent: "center" }}
+          >
+            {([
+              { code: "SN", name: "Sénégal" },
+              { code: "CI", name: "Côte d'Ivoire" },
+              { code: "BF", name: "Burkina Faso" },
+              { code: "TG", name: "Togo" },
+              { code: "BJ", name: "Bénin" },
+            ] as const).map((c) => (
+              <View key={c.code} className="flex-row items-center rounded-full border border-ink/[0.06] bg-sand px-2.5 py-1.5" style={{ gap: 7 }}>
+                <Flag c={c.code} />
+                <Text className="font-semibold text-[12px] text-ink">{c.name}</Text>
               </View>
             ))}
-          </View>
+          </ScrollView>
         </View>
 
         {/* CANAUX DISPONIBLES */}
@@ -414,7 +532,7 @@ export default function DecouvrirScreen() {
         </View>
 
         {/* COMMENT ÇA MARCHE */}
-        <View className="mt-20 px-5">
+        <View nativeID="comment" className="mt-20 px-5">
           <View className="items-center">
             <Kicker>Comment ça marche</Kicker>
             <H2>De l'inscription au premier paiement, en quelques minutes.</H2>
@@ -463,7 +581,7 @@ export default function DecouvrirScreen() {
 
       <View style={{ width: "100%", maxWidth: 1040 }}>
         {/* POUR QUI */}
-        <View className="mt-20 px-5">
+        <View nativeID="pourqui" className="mt-20 px-5">
           <View className="items-center">
             <Kicker>Pour qui ?</Kicker>
             <H2>Pensé pour tous ceux qui vendent l'accès.</H2>
@@ -550,7 +668,7 @@ export default function DecouvrirScreen() {
         </View>
 
         {/* TARIFS */}
-        <View className="mt-20 px-5">
+        <View nativeID="tarifs" className="mt-20 px-5">
           <View className="items-center">
             <Kicker>Tarifs</Kicker>
             <H2>Simple, sans surprise.</H2>
@@ -612,7 +730,7 @@ export default function DecouvrirScreen() {
         </View>
 
         {/* FAQ */}
-        <View className="mt-20 px-5">
+        <View nativeID="faq" className="mt-20 px-5">
           <View className="items-center">
             <Kicker>FAQ</Kicker>
             <H2>Les questions qu'on nous pose.</H2>

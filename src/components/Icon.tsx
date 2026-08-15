@@ -41,7 +41,8 @@ export type IconName =
   | "telegram"
   | "whatsapp"
   | "bolt"
-  | "shield";
+  | "shield"
+  | "menu";
 
 /**
  * Hand-drawn stroke icon set for paylika.
@@ -125,6 +126,13 @@ export function Icon({
       {name === "bolt" && <Polygon points="13 2 4 14 11 14 11 22 20 10 13 10" {...stroke} fill="none" />}
       {name === "shield" && (
         <Path {...stroke} fill="none" d="M12 3l7 3v5c0 4.4-3 7.6-7 9-4-1.4-7-4.6-7-9V6l7-3z" />
+      )}
+      {name === "menu" && (
+        <G {...stroke}>
+          <Line x1={4} y1={7} x2={20} y2={7} />
+          <Line x1={4} y1={12} x2={20} y2={12} />
+          <Line x1={4} y1={17} x2={20} y2={17} />
+        </G>
       )}
       {name === "close" && (
         <G {...stroke}>
