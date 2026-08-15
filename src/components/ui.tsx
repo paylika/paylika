@@ -112,11 +112,13 @@ export function Button({
   icon,
   variant = "dark",
   onPress,
+  disabled = false,
 }: {
   label: string;
   icon?: IconName;
   variant?: "accent" | "dark" | "outline";
   onPress?: () => void;
+  disabled?: boolean;
 }) {
   const box =
     variant === "accent"
@@ -128,8 +130,9 @@ export function Button({
   return (
     <Pressable
       onPress={onPress}
+      disabled={disabled}
       className={`flex-row items-center justify-center rounded-2xl px-5 py-3.5 ${box}`}
-      style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
+      style={({ pressed }) => ({ opacity: disabled ? 0.5 : pressed ? 0.85 : 1 })}
     >
       {icon ? (
         <View className="mr-2">

@@ -163,7 +163,13 @@ export async function fetchSubscribers(): Promise<SubscriberRow[]> {
     .order("created_at", { ascending: false });
   if (error) throw error;
   return (data ?? []).map((s: any) => {
-    const sub = s.subscriptions?.[0];
+    // Choisit l'abonnement le plus pertinent (actif d'abord, puis expiration la
+    // plus lointaine ; NULL = permanent = prioritaire) au lieu d'un arbitraire
+    // subscriptions[0] — sinon statut/date faux et actions sur le mauvais abo.
+    const subs: any[] = s.subscriptions ?? [];
+    const rank = (x: any) => (x.status === "active" ? 1 : 0);
+    const expVal = (x: any) => (x.expires_at == null ? Infinity : new Date(x.expires_at).getTime());
+    const sub = subs.slice().sort((a, b) => rank(b) - rank(a) || expVal(b) - expVal(a))[0];
     return {
       id: s.id,
       name: s.full_name,

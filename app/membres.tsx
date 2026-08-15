@@ -50,6 +50,7 @@ export default function MembresScreen() {
   );
 
   async function invite(m?: Member) {
+    if (inviteBusy !== null) return; // évite le double-envoi (double-tap)
     setInviteBusy(m?.telegramUserId ?? "new");
     setError(null);
     setCopied(false);
@@ -112,6 +113,7 @@ export default function MembresScreen() {
           icon="send"
           variant="outline"
           onPress={() => invite()}
+          disabled={inviteBusy !== null}
         />
       </View>
 

@@ -198,7 +198,14 @@ export default function NouvelleOffreScreen() {
                   key={d.value}
                   label={d.label}
                   active={deliveryType === d.value}
-                  onPress={() => setDeliveryType(d.value)}
+                  onPress={() => {
+                    // Réinitialise la cible en changeant de type, sinon une valeur
+                    // parasite (ex. "storage:…" d'un fichier) reste et casse la livraison.
+                    setDeliveryType(d.value);
+                    setDeliveryTarget("");
+                    setFileName("");
+                    setLinkMode("url");
+                  }}
                 />
               ))}
             </View>
