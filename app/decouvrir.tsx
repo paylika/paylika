@@ -211,14 +211,8 @@ export default function DecouvrirScreen() {
           <View style={{ width: "100%", maxWidth: 1040, flex: 1, justifyContent: "flex-end" }} className="px-5 pb-12">
             <Rise>
               <View style={{ maxWidth: 580 }}>
-                <View className="self-start flex-row items-center rounded-full bg-bordeaux-50 px-3 py-1.5" style={{ gap: 6 }}>
-                  <Icon name="bolt" size={13} color={colors.bordeaux[600]} />
-                  <Text className="font-bold text-[10px] uppercase text-bordeaux-700" style={{ letterSpacing: 0.6 }}>
-                    Paiement mobile money · Accès automatisé
-                  </Text>
-                </View>
                 <Text
-                  className="mt-4 font-display-x text-ink"
+                  className="font-display-x text-ink"
                   style={{ fontSize: wide ? 44 : 33, letterSpacing: -1.8, lineHeight: wide ? 47 : 37 }}
                 >
                   Faites payer l'accès à vos groupes privés.{" "}
