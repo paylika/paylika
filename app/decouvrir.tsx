@@ -280,6 +280,19 @@ export default function DecouvrirScreen() {
               </View>
             </View>
           </View>
+
+          {/* pays disponibles */}
+          <Text className="mt-8 text-center font-semibold text-[12px] uppercase text-ink-muted" style={{ letterSpacing: 0.8 }}>
+            Disponible dans 5 pays
+          </Text>
+          <View className="mt-3 flex-row flex-wrap items-center justify-center" style={{ gap: 8 }}>
+            {["Sénégal", "Côte d'Ivoire", "Burkina Faso", "Togo", "Bénin"].map((c) => (
+              <View key={c} className="flex-row items-center rounded-full bg-sand px-3 py-1.5" style={{ gap: 6 }}>
+                <View className="h-1.5 w-1.5 rounded-full bg-bordeaux-600" />
+                <Text className="font-semibold text-[12px] text-ink">{c}</Text>
+              </View>
+            ))}
+          </View>
         </View>
 
         {/* CANAUX DISPONIBLES */}
@@ -698,7 +711,7 @@ export default function DecouvrirScreen() {
 
         <View className="mt-10 flex-row flex-wrap items-center justify-between border-t border-ink/[0.07] pt-5" style={{ gap: 8 }}>
           <Text className="font-sans text-[12px] text-ink-muted">© 2026 Paylika. Tous droits réservés.</Text>
-          <Text className="font-sans text-[12px] text-ink-muted">Sénégal · Côte d'Ivoire</Text>
+          <Text className="font-sans text-[12px] text-ink-muted">Sénégal · Côte d'Ivoire · Burkina Faso · Togo · Bénin</Text>
         </View>
       </View>
     </ScrollView>
