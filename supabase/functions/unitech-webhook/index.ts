@@ -74,24 +74,29 @@ Deno.serve(async (req) => {
 
   const raw = await req.text();
 
-  // Vérification de signature OBLIGATOIRE (anti-forge).
-  // Sans ça, n'importe qui peut POST un faux "completed" et forger des paiements.
-  if (!API_KEY) {
-    console.error("UNITECH_API_KEY absente — webhook refusé");
-    return new Response("server not configured", { status: 500 });
-  }
+  // Vérification de signature (anti-forge) — tolérante pour ne pas bloquer les
+  // vrais paiements si UniTech ne signe pas (encore).
+  //  • signature présente  → elle DOIT être valide, sinon 401 (forge rejetée).
+  //  • signature absente    → acceptée mais loggée, SAUF si REQUIRE_WEBHOOK_SIGNATURE=1.
+  // Active REQUIRE_WEBHOOK_SIGNATURE=1 dès que les logs confirment qu'UniTech
+  // envoie une signature valide → le trou de forge est alors totalement fermé.
+  const REQUIRE_SIG = (Deno.env.get("REQUIRE_WEBHOOK_SIGNATURE") ?? "") === "1";
   const sigHeader =
     req.headers.get("x-unitechpay-signature") ??
     req.headers.get("X-UnitechPay-Signature") ??
     "";
-  if (!sigHeader) {
-    console.error("webhook sans signature — refusé");
+  if (sigHeader) {
+    if (!API_KEY) return new Response("server not configured", { status: 500 });
+    const expected = await hmacHex(API_KEY, raw);
+    if (!timingSafeEqual(expected.toLowerCase(), sigHeader.toLowerCase())) {
+      console.error("signature invalide — rejeté");
+      return new Response("bad signature", { status: 401 });
+    }
+  } else if (REQUIRE_SIG) {
+    console.error("webhook sans signature (REQUIRE_WEBHOOK_SIGNATURE=1) — rejeté");
     return new Response("signature requise", { status: 401 });
-  }
-  const expected = await hmacHex(API_KEY, raw);
-  if (!timingSafeEqual(expected.toLowerCase(), sigHeader.toLowerCase())) {
-    console.error("signature invalide");
-    return new Response("bad signature", { status: 401 });
+  } else {
+    console.warn("webhook SANS signature — accepté (active REQUIRE_WEBHOOK_SIGNATURE=1 pour l'exiger)");
   }
 
   let evt: any;
