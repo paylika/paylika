@@ -269,6 +269,53 @@ export default function DecouvrirScreen() {
                 <Text className="font-semibold text-[13px] text-ink">{p.t}</Text>
               </View>
             ))}
+            {/* carte bancaire à venir (Stripe) */}
+            <View className="flex-row items-center rounded-2xl border border-ink/[0.08] bg-paper px-3.5 py-2.5" style={{ gap: 8 }}>
+              <View className="h-[22px] w-[22px] items-center justify-center rounded-full bg-sand">
+                <Icon name="wallet" size={13} color={colors.muted} />
+              </View>
+              <Text className="font-semibold text-[13px] text-ink-soft">Carte bancaire</Text>
+              <View className="rounded-full bg-sand px-2 py-0.5">
+                <Text className="font-bold text-[9px] uppercase text-ink-muted">Bientôt</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+
+        {/* CANAUX DISPONIBLES */}
+        <View className="mt-20 px-5">
+          <View className="items-center">
+            <Kicker>Disponible sur</Kicker>
+            <H2>Livrez l'accès là où est votre communauté.</H2>
+          </View>
+          <View className="mt-7 flex-row flex-wrap" style={{ gap: 10 }}>
+            {[
+              { i: "telegram" as const, c: TG_BLUE, t: "Telegram", d: "Ajout & retrait automatiques des membres.", soon: false },
+              { i: "whatsapp" as const, c: WA_GREEN, t: "WhatsApp", d: "Livraison automatique du lien d'accès.", soon: true },
+              { i: "tag" as const, c: colors.bordeaux[600], t: "Lien ou contenu", d: "Fichier, vidéo, formation, PDF…", soon: false },
+              { i: "wallet" as const, c: colors.forest, t: "Simple encaissement", d: "Recevez un paiement, sans groupe.", soon: false },
+            ].map((c) => (
+              <View
+                key={c.t}
+                className="flex-row items-center rounded-2xl border border-ink/[0.08] bg-white px-4 py-3.5"
+                style={{ gap: 12, flexGrow: 1, flexBasis: "45%", minWidth: 240 }}
+              >
+                <View className="h-11 w-11 items-center justify-center rounded-2xl" style={{ backgroundColor: c.c + "1A" }}>
+                  <Icon name={c.i} size={22} color={c.c} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text className="font-display-semi text-[15px] text-ink">{c.t}</Text>
+                  <Text className="font-sans text-[12px] text-ink-muted" style={{ lineHeight: 16 }}>
+                    {c.d}
+                  </Text>
+                </View>
+                <View className={`rounded-full px-2.5 py-1 ${c.soon ? "bg-sand" : "bg-forest"}`}>
+                  <Text className={`font-bold text-[9px] uppercase ${c.soon ? "text-ink-muted" : "text-white"}`}>
+                    {c.soon ? "Bientôt" : "Actif"}
+                  </Text>
+                </View>
+              </View>
+            ))}
           </View>
         </View>
 
