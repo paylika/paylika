@@ -211,23 +211,62 @@ async function grantAccess(evt: any) {
   //    le lien parte même si l'enregistrement du paiement échoue.
   await deliverAccess(intent.group_id ?? null, chatId, reference);
 
-  // 2) Journaliser abonnement + paiement (best-effort, erreurs remontées).
+  // 2) Abonnement : PROLONGER l'abonnement actif existant plutôt que d'en créer
+  //    un doublon. Sans ça, l'ancienne ligne reste 'active' mais périmée → le
+  //    cron expulse un membre qui vient pourtant de renouveler.
   const now = Date.now();
-  const { data: subscription, error: subsErr } = await admin
-    .from("subscriptions")
-    .insert({
-      owner_id: owner,
-      subscriber_id: subscriberId,
-      plan_id: intent.plan_id,
-      group_id: intent.group_id ?? null,
-      status: "active",
-      started_at: new Date(now).toISOString(),
-      // interval 0 = paiement unique → accès permanent (pas d'expiration/kick).
-      expires_at: intervalDays > 0 ? new Date(now + intervalDays * 86400000).toISOString() : null,
-    })
-    .select("id")
-    .maybeSingle();
-  if (subsErr) console.error("insert subscription:", subsErr.message);
+  // interval 0 = paiement unique → accès permanent (pas d'expiration/kick).
+  const newExpiry = intervalDays > 0 ? new Date(now + intervalDays * 86400000).toISOString() : null;
+  let subscription: { id: string } | null = null;
+
+  if (subscriberId && intent.group_id) {
+    const { data: actives } = await admin
+      .from("subscriptions")
+      .select("id, expires_at")
+      .eq("owner_id", owner)
+      .eq("subscriber_id", subscriberId)
+      .eq("group_id", intent.group_id)
+      .eq("status", "active");
+    if (actives && actives.length) {
+      // On prolonge à partir de la date d'expiration la plus lointaine (ou de
+      // maintenant si déjà expiré/permanent).
+      let base = now;
+      for (const a of actives) {
+        if (a.expires_at) base = Math.max(base, new Date(a.expires_at).getTime());
+      }
+      const extended = intervalDays > 0 ? new Date(base + intervalDays * 86400000).toISOString() : null;
+      const keep = actives[0].id;
+      await admin
+        .from("subscriptions")
+        .update({ status: "active", plan_id: intent.plan_id, expires_at: extended })
+        .eq("id", keep);
+      // Consolide d'éventuels doublons en UN SEUL abonnement actif (corrige aussi
+      // le refus de rejoindre quand 2 abonnements actifs existent).
+      const extras = (actives.slice(1) as any[]).map((a) => a.id);
+      if (extras.length) {
+        await admin.from("subscriptions").update({ status: "expired" }).in("id", extras);
+      }
+      subscription = { id: keep };
+    }
+  }
+
+  if (!subscription) {
+    const { data: sub, error: subsErr } = await admin
+      .from("subscriptions")
+      .insert({
+        owner_id: owner,
+        subscriber_id: subscriberId,
+        plan_id: intent.plan_id,
+        group_id: intent.group_id ?? null,
+        status: "active",
+        started_at: new Date(now).toISOString(),
+        expires_at: newExpiry,
+      })
+      .select("id")
+      .maybeSingle();
+    if (subsErr) console.error("insert subscription:", subsErr.message);
+    subscription = sub ?? null;
+  }
 
   const commission = Math.round(amount * COMMISSION_RATE);
   const { error: payErr } = await admin.from("payments").insert({

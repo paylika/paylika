@@ -189,24 +189,22 @@ async function handleJoinRequest(reqEvt: any) {
     .maybeSingle();
   if (!conn?.group_id) return; // chat not linked yet
 
-  const { data: sub } = await admin
-    .from("subscribers")
-    .select("id")
-    .eq("telegram_user_id", userId)
-    .maybeSingle();
-
-  let active = false;
-  if (sub) {
-    const { data: subscription } = await admin
-      .from("subscriptions")
-      .select("id")
-      .eq("subscriber_id", sub.id)
-      .eq("group_id", conn.group_id)
-      .eq("status", "active")
-      .gt("expires_at", new Date().toISOString())
-      .maybeSingle();
-    active = !!subscription;
-  }
+  // Abonnement actif pour CE groupe dont l'abonné a ce telegram_user_id.
+  // On passe par le groupe (donc scopé au bon propriétaire) au lieu de chercher
+  // l'abonné par telegram_user_id seul — qui peut exister chez plusieurs
+  // propriétaires et faisait planter maybeSingle().
+  // expires_at NULL = accès permanent (paiement unique) → considéré actif.
+  const nowIso = new Date().toISOString();
+  const { data: subs } = await admin
+    .from("subscriptions")
+    .select("id, expires_at, subscribers!inner(telegram_user_id)")
+    .eq("group_id", conn.group_id)
+    .eq("status", "active")
+    .eq("subscribers.telegram_user_id", userId)
+    .limit(5);
+  const active = !!(subs ?? []).find(
+    (s: any) => s.expires_at == null || s.expires_at > nowIso,
+  );
 
   if (active) {
     await approveJoin(chatId, userId);
