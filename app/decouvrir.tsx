@@ -198,6 +198,32 @@ function Flag({ c }: { c: "SN" | "CI" | "BF" | "TG" | "BJ" }) {
   );
 }
 
+/** Ruban qui défile tout seul (marquee), en boucle continue. */
+function Marquee({ renderRow, gap = 10, speed = 30 }: { renderRow: () => React.ReactNode; gap?: number; speed?: number }) {
+  const x = useRef(new Animated.Value(0)).current;
+  const [w, setW] = useState(0);
+  useEffect(() => {
+    if (!w) return;
+    x.setValue(0);
+    const anim = Animated.loop(
+      Animated.timing(x, { toValue: -w, duration: (w / speed) * 1000, easing: Easing.linear, useNativeDriver: false }),
+    );
+    anim.start();
+    return () => anim.stop();
+  }, [w, speed, x]);
+  return (
+    <View style={{ width: "100%", overflow: "hidden" }}>
+      <Animated.View style={{ flexDirection: "row", gap, transform: [{ translateX: x }] }}>
+        <View style={{ flexDirection: "row", gap }} onLayout={(e) => setW(e.nativeEvent.layout.width + gap)}>
+          {renderRow()}
+        </View>
+        <View style={{ flexDirection: "row", gap }}>{renderRow()}</View>
+        <View style={{ flexDirection: "row", gap }}>{renderRow()}</View>
+      </Animated.View>
+    </View>
+  );
+}
+
 /* ---------- page ---------- */
 
 export default function DecouvrirScreen() {
@@ -371,57 +397,63 @@ export default function DecouvrirScreen() {
           <Text className="px-5 text-center font-semibold text-[12px] uppercase text-ink-muted" style={{ letterSpacing: 0.8 }}>
             Vos clients paient avec ce qu'ils ont déjà
           </Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={{ width: "100%", marginTop: 16 }}
-            contentContainerStyle={{ gap: 10, paddingHorizontal: 20, flexGrow: 1, justifyContent: "center" }}
-          >
-            {[
-              { img: WAVE, t: "Wave" },
-              { img: ORANGE, t: "Orange Money" },
-              { img: MTN, t: "MTN" },
-              { img: MOOV, t: "Moov" },
-            ].map((p) => (
-              <View key={p.t} className="flex-row items-center rounded-2xl border border-ink/[0.08] bg-white px-3.5 py-2.5" style={{ gap: 8 }}>
-                <Image source={p.img} style={{ width: 22, height: 22, borderRadius: 11 }} resizeMode="contain" />
-                <Text className="font-semibold text-[13px] text-ink">{p.t}</Text>
-              </View>
-            ))}
-            <View className="flex-row items-center rounded-2xl border border-ink/[0.08] bg-paper px-3.5 py-2.5" style={{ gap: 8 }}>
-              <View className="h-[22px] w-[22px] items-center justify-center rounded-full bg-sand">
-                <Icon name="wallet" size={13} color={colors.muted} />
-              </View>
-              <Text className="font-semibold text-[13px] text-ink-soft">Carte bancaire</Text>
-              <View className="rounded-full bg-sand px-2 py-0.5">
-                <Text className="font-bold text-[9px] uppercase text-ink-muted">Bientôt</Text>
-              </View>
-            </View>
-          </ScrollView>
+          <View style={{ width: "100%", marginTop: 16 }}>
+            <Marquee
+              gap={10}
+              speed={28}
+              renderRow={() => (
+                <>
+                  {[
+                    { img: WAVE, t: "Wave" },
+                    { img: ORANGE, t: "Orange Money" },
+                    { img: MTN, t: "MTN" },
+                    { img: MOOV, t: "Moov" },
+                  ].map((p) => (
+                    <View key={p.t} className="flex-row items-center rounded-2xl border border-ink/[0.08] bg-white px-3.5 py-2.5" style={{ gap: 8 }}>
+                      <Image source={p.img} style={{ width: 22, height: 22, borderRadius: 11 }} resizeMode="contain" />
+                      <Text className="font-semibold text-[13px] text-ink">{p.t}</Text>
+                    </View>
+                  ))}
+                  <View key="card" className="flex-row items-center rounded-2xl border border-ink/[0.08] bg-paper px-3.5 py-2.5" style={{ gap: 8 }}>
+                    <View className="h-[22px] w-[22px] items-center justify-center rounded-full bg-sand">
+                      <Icon name="wallet" size={13} color={colors.muted} />
+                    </View>
+                    <Text className="font-semibold text-[13px] text-ink-soft">Carte bancaire</Text>
+                    <View className="rounded-full bg-sand px-2 py-0.5">
+                      <Text className="font-bold text-[9px] uppercase text-ink-muted">Bientôt</Text>
+                    </View>
+                  </View>
+                </>
+              )}
+            />
+          </View>
 
-          {/* pays disponibles — scroll horizontal avec drapeaux */}
+          {/* pays disponibles — marquee auto avec drapeaux */}
           <Text className="mt-8 px-5 text-center font-semibold text-[12px] uppercase text-ink-muted" style={{ letterSpacing: 0.8 }}>
             Disponible dans 5 pays
           </Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={{ width: "100%", marginTop: 12 }}
-            contentContainerStyle={{ gap: 8, paddingHorizontal: 20, flexGrow: 1, justifyContent: "center" }}
-          >
-            {([
-              { code: "SN", name: "Sénégal" },
-              { code: "CI", name: "Côte d'Ivoire" },
-              { code: "BF", name: "Burkina Faso" },
-              { code: "TG", name: "Togo" },
-              { code: "BJ", name: "Bénin" },
-            ] as const).map((c) => (
-              <View key={c.code} className="flex-row items-center rounded-full border border-ink/[0.06] bg-sand px-2.5 py-1.5" style={{ gap: 7 }}>
-                <Flag c={c.code} />
-                <Text className="font-semibold text-[12px] text-ink">{c.name}</Text>
-              </View>
-            ))}
-          </ScrollView>
+          <View style={{ width: "100%", marginTop: 12 }}>
+            <Marquee
+              gap={8}
+              speed={24}
+              renderRow={() => (
+                <>
+                  {([
+                    { code: "SN", name: "Sénégal" },
+                    { code: "CI", name: "Côte d'Ivoire" },
+                    { code: "BF", name: "Burkina Faso" },
+                    { code: "TG", name: "Togo" },
+                    { code: "BJ", name: "Bénin" },
+                  ] as const).map((c) => (
+                    <View key={c.code} className="flex-row items-center rounded-full border border-ink/[0.06] bg-sand px-2.5 py-1.5" style={{ gap: 7 }}>
+                      <Flag c={c.code} />
+                      <Text className="font-semibold text-[12px] text-ink">{c.name}</Text>
+                    </View>
+                  ))}
+                </>
+              )}
+            />
+          </View>
         </View>
 
         {/* CANAUX DISPONIBLES */}
