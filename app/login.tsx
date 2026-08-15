@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { View, Text, ScrollView, Pressable, Image, useWindowDimensions } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { View, Text, ScrollView, Pressable, Image, Animated, Easing, useWindowDimensions } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Button } from "@/components/ui";
@@ -14,13 +14,29 @@ const MTN = require("../assets/operators/mtn.png");
 const MOOV = require("../assets/operators/moov.png");
 const TG_BLUE = "#229ED9";
 const WA_GREEN = "#25D366";
+const PASTEL = ["#FCEEF1", "#F7DAE1", "#FBECEF"] as const;
 
-/* ---------- orbite (branding) ---------- */
+/* ---------- orbite animée (branding) ---------- */
 
-function OrbitArt({ box, bubble, logoSize }: { box: number; bubble: number; logoSize: number }) {
+function OrbitArt({ box }: { box: number }) {
+  const bubble = box * 0.165;
+  const logoSize = box * 0.247;
   const C = box / 2;
   const R = box * 0.353;
   const Rin = box * 0.212;
+
+  // rotation lente et continue des satellites autour du centre
+  const spin = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.timing(spin, { toValue: 1, duration: 46000, easing: Easing.linear, useNativeDriver: true }),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [spin]);
+  const rotate = spin.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "360deg"] });
+  const counter = spin.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "-360deg"] });
+
   const op = (img: any) => (
     <Image source={img} style={{ width: bubble * 0.56, height: bubble * 0.56, borderRadius: bubble * 0.28 }} resizeMode="contain" />
   );
@@ -28,26 +44,54 @@ function OrbitArt({ box, bubble, logoSize }: { box: number; bubble: number; logo
     const a = (deg * Math.PI) / 180;
     return { left: C + R * Math.cos(a) - bubble / 2, top: C + R * Math.sin(a) - bubble / 2 };
   };
-  const sats: { deg: number; node: React.ReactNode }[] = [
-    { deg: -90, node: <Icon name="telegram" size={bubble * 0.46} color={TG_BLUE} /> },
-    { deg: -30, node: op(WAVE) },
-    { deg: 30, node: op(ORANGE) },
-    { deg: 90, node: <Icon name="whatsapp" size={bubble * 0.46} color={WA_GREEN} /> },
-    { deg: 150, node: op(MTN) },
-    { deg: 210, node: op(MOOV) },
+  const sats: React.ReactNode[] = [
+    <Icon key="tg" name="telegram" size={bubble * 0.46} color={TG_BLUE} />,
+    op(WAVE),
+    op(ORANGE),
+    <Icon key="wa" name="whatsapp" size={bubble * 0.46} color={WA_GREEN} />,
+    op(MTN),
+    op(MOOV),
   ];
+  const angles = [-90, -30, 30, 90, 150, 210];
   const ring = (r: number, opacity: number) => (
     <View
       className="absolute rounded-full"
       style={{ left: C - r, top: C - r, width: r * 2, height: r * 2, borderWidth: 1, borderColor: `rgba(123,17,38,${opacity})` }}
     />
   );
+
   return (
     <View style={{ width: box, height: box }}>
       {ring(R, 0.18)}
       {ring(Rin, 0.12)}
 
-      {/* logo central */}
+      {/* satellites en rotation */}
+      <Animated.View style={{ position: "absolute", left: 0, top: 0, width: box, height: box, transform: [{ rotate }] }}>
+        {angles.map((deg, i) => {
+          const p = at(deg);
+          return (
+            <Animated.View
+              key={i}
+              className="absolute items-center justify-center rounded-full bg-white"
+              style={{
+                left: p.left,
+                top: p.top,
+                width: bubble,
+                height: bubble,
+                transform: [{ rotate: counter }],
+                shadowColor: colors.bordeaux[900],
+                shadowOpacity: 0.14,
+                shadowRadius: 12,
+                shadowOffset: { width: 0, height: 7 },
+              }}
+            >
+              {sats[i]}
+            </Animated.View>
+          );
+        })}
+      </Animated.View>
+
+      {/* logo central fixe */}
       <View
         className="absolute items-center justify-center rounded-full bg-white"
         style={{
@@ -63,75 +107,49 @@ function OrbitArt({ box, bubble, logoSize }: { box: number; bubble: number; logo
       >
         <Logo size={logoSize * 0.55} />
       </View>
-
-      {/* satellites */}
-      {sats.map((s, i) => {
-        const p = at(s.deg);
-        return (
-          <View
-            key={i}
-            className="absolute items-center justify-center rounded-full bg-white"
-            style={{
-              left: p.left,
-              top: p.top,
-              width: bubble,
-              height: bubble,
-              shadowColor: colors.bordeaux[900],
-              shadowOpacity: 0.14,
-              shadowRadius: 12,
-              shadowOffset: { width: 0, height: 7 },
-            }}
-          >
-            {s.node}
-          </View>
-        );
-      })}
     </View>
   );
 }
 
-/** Panneau plein (grand écran) : titre + orbite + légende. */
+/** Panneau plein (split, grand écran) : titre + orbite responsive + légende. */
 function OrbitPanelBig() {
+  const [w, setW] = useState(0);
+  const box = Math.max(230, Math.min(340, (w || 420) - 80));
+  const pad = w && w < 470 ? 22 : 36;
+  const titleSize = w && w < 470 ? 21 : 26;
   return (
-    <View className="flex-1 overflow-hidden rounded-[28px]">
-      <LinearGradient
-        colors={["#FCEEF1", "#F7DAE1", "#FBECEF"]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
-      />
-      <View className="flex-1 justify-between p-9">
+    <View
+      className="flex-1 overflow-hidden rounded-[28px]"
+      onLayout={(e) => setW(e.nativeEvent.layout.width)}
+    >
+      <LinearGradient colors={PASTEL} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
+      <View className="flex-1 justify-between" style={{ padding: pad }}>
         <View style={{ maxWidth: 320 }}>
-          <Text className="font-display-x text-ink" style={{ fontSize: 26, letterSpacing: -1, lineHeight: 30 }}>
+          <Text className="font-display-x text-ink" style={{ fontSize: titleSize, letterSpacing: -1, lineHeight: titleSize + 4 }}>
             Encaissez et livrez l'accès, <Text className="text-bordeaux-600">automatiquement.</Text>
           </Text>
-          <Text className="mt-2 font-sans text-[13.5px] text-ink-soft" style={{ lineHeight: 20 }}>
+          <Text className="mt-2 font-sans text-[13px] text-ink-soft" style={{ lineHeight: 19 }}>
             Un seul outil pour vos paiements mobile money et vos accès à vos groupes.
           </Text>
         </View>
         <View className="items-center justify-center">
-          <OrbitArt box={340} bubble={56} logoSize={84} />
+          <OrbitArt box={box} />
         </View>
-        <Text className="font-sans text-[12.5px] text-ink-muted">
-          Compatible Wave, Orange Money, MTN, Moov et Telegram — WhatsApp bientôt.
+        <Text className="font-sans text-[12px] text-ink-muted">
+          Wave · Orange Money · MTN · Moov · Telegram — WhatsApp bientôt.
         </Text>
       </View>
     </View>
   );
 }
 
-/** Carte compacte (écran étroit) : orbite au-dessus du formulaire. */
+/** Carte compacte (petit écran) : orbite au-dessus du formulaire. */
 function OrbitCardCompact() {
   return (
-    <View className="w-full overflow-hidden rounded-[24px]" style={{ height: 262 }}>
-      <LinearGradient
-        colors={["#FCEEF1", "#F7DAE1", "#FBECEF"]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
-      />
+    <View className="w-full overflow-hidden rounded-[24px]" style={{ height: 258 }}>
+      <LinearGradient colors={PASTEL} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} />
       <View className="flex-1 items-center justify-center">
-        <OrbitArt box={224} bubble={46} logoSize={64} />
+        <OrbitArt box={224} />
       </View>
     </View>
   );
@@ -142,7 +160,7 @@ function OrbitCardCompact() {
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
-  const wide = width >= 900;
+  const wide = width >= 560;
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -179,7 +197,6 @@ export default function LoginScreen() {
 
   const formInner = (
     <>
-      {/* marque */}
       <View className="flex-row items-center" style={{ gap: 8 }}>
         <Logo size={30} />
         <Text className="font-display text-[20px] text-ink" style={{ letterSpacing: -0.4 }}>
@@ -187,7 +204,6 @@ export default function LoginScreen() {
         </Text>
       </View>
 
-      {/* titre */}
       <View style={{ marginTop: 26 }}>
         <Text className="font-display-x text-[26px] text-ink" style={{ letterSpacing: -1 }}>
           {isSignin ? "Content de vous revoir" : "Créez votre compte"}
@@ -199,7 +215,6 @@ export default function LoginScreen() {
         </Text>
       </View>
 
-      {/* champs */}
       <View style={{ marginTop: 22, gap: 14 }}>
         <Input label="Email" value={email} onChangeText={setEmail} placeholder="vous@exemple.com" />
         <Input label="Mot de passe" value={password} onChangeText={setPassword} placeholder="••••••••" secureTextEntry />
@@ -217,7 +232,6 @@ export default function LoginScreen() {
         </View>
       </View>
 
-      {/* bascule */}
       <Pressable
         style={{ marginTop: 20 }}
         onPress={() => {
