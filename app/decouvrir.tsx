@@ -19,25 +19,35 @@ const WA_GREEN = "#25D366";
 
 /* ---------- primitives ---------- */
 
-function Btn({ label, onPress, kind = "primary" }: { label: string; onPress: () => void; kind?: "primary" | "ghost" | "white" }) {
+function Btn({
+  label,
+  onPress,
+  kind = "primary",
+  icon = "arrow-up-right",
+}: {
+  label: string;
+  onPress: () => void;
+  kind?: "primary" | "ghost" | "white";
+  icon?: IconName | null;
+}) {
   const base = "flex-row items-center justify-center rounded-full px-6 py-3.5";
   if (kind === "ghost")
     return (
-      <Pressable onPress={onPress} className={`${base} border border-ink/15 bg-white`}>
+      <Pressable onPress={onPress} className={`${base} border border-ink/15 bg-white/80`} style={{ gap: 6 }}>
         <Text className="font-semibold text-[14px] text-ink">{label}</Text>
       </Pressable>
     );
   if (kind === "white")
     return (
-      <Pressable onPress={onPress} className={`${base} bg-white`}>
+      <Pressable onPress={onPress} className={`${base} bg-white`} style={{ gap: 6 }}>
         <Text className="font-semibold text-[14px] text-bordeaux-700">{label}</Text>
-        <Icon name="arrow-up-right" size={17} color={colors.bordeaux[600]} />
+        {icon ? <Icon name={icon} size={17} color={colors.bordeaux[600]} /> : null}
       </Pressable>
     );
   return (
-    <Pressable onPress={onPress} className={`${base} bg-bordeaux-600`}>
+    <Pressable onPress={onPress} className={`${base} bg-bordeaux-600`} style={{ gap: 6 }}>
       <Text className="font-semibold text-[14px] text-white">{label}</Text>
-      <Icon name="arrow-up-right" size={17} color={colors.white} />
+      {icon ? <Icon name={icon} size={17} color={colors.white} /> : null}
     </Pressable>
   );
 }
@@ -73,17 +83,20 @@ function Float({ children, delay = 0, style }: { children: React.ReactNode; dela
   );
 }
 
-function Kicker({ children }: { children: string }) {
+function Kicker({ children, light = false }: { children: string; light?: boolean }) {
   return (
-    <Text className="font-bold text-[11px] uppercase text-bordeaux-600" style={{ letterSpacing: 1 }}>
+    <Text className={`font-bold text-[11px] uppercase ${light ? "text-white/70" : "text-bordeaux-600"}`} style={{ letterSpacing: 1 }}>
       {children}
     </Text>
   );
 }
 
-function H2({ children }: { children: React.ReactNode }) {
+function H2({ children, center = true }: { children: React.ReactNode; center?: boolean }) {
   return (
-    <Text className="mt-2 font-display-x text-[27px] text-ink" style={{ letterSpacing: -1, lineHeight: 31 }}>
+    <Text
+      className={`mt-2 font-display-x text-[27px] text-ink ${center ? "text-center" : ""}`}
+      style={{ letterSpacing: -1, lineHeight: 31, maxWidth: 560 }}
+    >
       {children}
     </Text>
   );
@@ -106,6 +119,27 @@ function Notif({ icon, title, sub, color, style }: { icon: IconName; title: stri
   );
 }
 
+/** Bandeau photo plein écran avec voile bordeaux et texte blanc par-dessus. */
+function PhotoBand({ img, height, children }: { img: any; height: number; children: React.ReactNode }) {
+  return (
+    <View style={{ width: "100%", height }}>
+      <Image source={img} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, width: "100%", height: "100%" }} resizeMode="cover" />
+      <LinearGradient
+        colors={["rgba(51,6,15,0.95)", "rgba(51,6,15,0.8)", "rgba(123,17,38,0.45)"]}
+        locations={[0, 0.55, 1]}
+        start={{ x: 0, y: 0.5 }}
+        end={{ x: 1, y: 0.5 }}
+        style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
+      />
+      <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, alignItems: "center", justifyContent: "center" }}>
+        <View style={{ width: "100%", maxWidth: 1040 }} className="px-6">
+          {children}
+        </View>
+      </View>
+    </View>
+  );
+}
+
 /* ---------- page ---------- */
 
 export default function DecouvrirScreen() {
@@ -116,7 +150,7 @@ export default function DecouvrirScreen() {
   const start = () => router.push("/login" as any);
 
   return (
-    <ScrollView className="flex-1 bg-white" contentContainerStyle={{ alignItems: "center", paddingBottom: insets.bottom + 40 }}>
+    <ScrollView className="flex-1 bg-white" contentContainerStyle={{ alignItems: "center", paddingBottom: insets.bottom + 24 }}>
       {/* NAVBAR — superposée sur le hero, pleine largeur */}
       <View className="w-full items-center" style={{ position: "absolute", top: 0, left: 0, right: 0, zIndex: 20, paddingTop: insets.top + 10 }}>
         <View style={{ width: "100%", maxWidth: 1040 }} className="flex-row items-center justify-between px-5 pb-3">
@@ -128,7 +162,7 @@ export default function DecouvrirScreen() {
           </View>
           {wide ? (
             <View className="flex-row items-center" style={{ gap: 26 }}>
-              {["Fonctionnalités", "Comment ça marche", "Pour qui ?", "FAQ"].map((t) => (
+              {["Comment ça marche", "Pour qui", "Tarifs", "FAQ"].map((t) => (
                 <Text key={t} className="font-medium text-[13px] text-ink-soft">
                   {t}
                 </Text>
@@ -149,13 +183,12 @@ export default function DecouvrirScreen() {
       </View>
 
       {/* HERO — image plein écran, sans bordure, texte par-dessus */}
-      <View style={{ width: "100%", height: wide ? 600 : 640 }}>
+      <View style={{ width: "100%", height: wide ? 620 : 660 }}>
         <Image
           source={HERO}
           style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, width: "100%", height: "100%" }}
           resizeMode="cover"
         />
-        {/* voile blanc diagonal (bas-gauche) pour la lisibilité du texte */}
         <LinearGradient
           colors={["#FFFFFF", "rgba(255,255,255,0.92)", "rgba(255,255,255,0.4)", "rgba(255,255,255,0)"]}
           locations={[0, 0.36, 0.64, 0.92]}
@@ -163,318 +196,79 @@ export default function DecouvrirScreen() {
           end={{ x: 1, y: 0 }}
           style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
         />
-        {/* fondu vers le blanc en bas pour lier à la section suivante */}
         <LinearGradient
           colors={["rgba(255,255,255,0)", "#FFFFFF"]}
           locations={[0.55, 1]}
           style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 140 }}
         />
-        {/* léger voile en haut pour la lisibilité de la navbar */}
         <LinearGradient
           colors={["rgba(255,255,255,0.8)", "rgba(255,255,255,0)"]}
           style={{ position: "absolute", top: 0, left: 0, right: 0, height: insets.top + 84 }}
         />
 
-        {/* Texte du hero, ancré en bas, contenu centré */}
+        {/* Texte du hero, ancré en bas */}
         <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, alignItems: "center" }}>
           <View style={{ width: "100%", maxWidth: 1040, flex: 1, justifyContent: "flex-end" }} className="px-5 pb-12">
             <Rise>
-              <View style={{ maxWidth: 560 }}>
-                <View className="self-start rounded-full bg-bordeaux-50 px-3 py-1">
+              <View style={{ maxWidth: 580 }}>
+                <View className="self-start flex-row items-center rounded-full bg-bordeaux-50 px-3 py-1.5" style={{ gap: 6 }}>
+                  <Icon name="bolt" size={13} color={colors.bordeaux[600]} />
                   <Text className="font-bold text-[10px] uppercase text-bordeaux-700" style={{ letterSpacing: 0.6 }}>
-                    Pour les créateurs & entrepreneurs africains
+                    Paiement mobile money · Accès automatisé
                   </Text>
                 </View>
                 <Text
                   className="mt-4 font-display-x text-ink"
-                  style={{ fontSize: wide ? 46 : 34, letterSpacing: -2, lineHeight: wide ? 48 : 38 }}
+                  style={{ fontSize: wide ? 44 : 33, letterSpacing: -1.8, lineHeight: wide ? 47 : 37 }}
                 >
-                  Vos abonnements. Vos paiements. Vos accès.{" "}
-                  <Text className="text-bordeaux-600">Automatisés.</Text>
+                  Faites payer l'accès à vos groupes privés.{" "}
+                  <Text className="text-bordeaux-600">Paylika gère le reste.</Text>
                 </Text>
-                <Text className="mt-3 font-sans text-ink-soft" style={{ fontSize: 15, lineHeight: 22, maxWidth: 460 }}>
-                  Encaissez par mobile money, livrez l'accès à vos groupes et contenus automatiquement, et gérez les
-                  renouvellements sans effort.
+                <Text className="mt-3 font-sans text-ink-soft" style={{ fontSize: 15.5, lineHeight: 23, maxWidth: 490 }}>
+                  Encaissez vos abonnements par Wave, Orange Money ou MTN. Chaque membre est ajouté à votre groupe Telegram
+                  dès qu'il paie — et retiré automatiquement à l'expiration.
                 </Text>
-                <View className="mt-6 flex-row flex-wrap" style={{ gap: 10 }}>
-                  <Btn label="Commencer gratuitement" onPress={start} />
-                  <Btn label="Comment ça marche" onPress={start} kind="ghost" />
+                <View className="mt-6 flex-row flex-wrap items-center" style={{ gap: 10 }}>
+                  <Btn label="Créer mon lien de paiement" onPress={start} />
+                  <Btn label="Voir comment ça marche" onPress={start} kind="ghost" icon={null} />
                 </View>
+                <Text className="mt-3 font-sans text-[12px] text-ink-muted">
+                  Gratuit à l'inscription · 10% par vente · retraits sans frais
+                </Text>
               </View>
             </Rise>
           </View>
         </View>
 
-        {/* notifications flottantes (montrent ce que fait l'outil) — grands écrans */}
+        {/* notifications flottantes — racontent le cycle complet */}
         {wide ? (
           <>
             <Float style={{ position: "absolute", top: 96, right: 40 }}>
-              <Notif icon="wallet" title="Paiement reçu" sub="5 000 FCFA" color={colors.forest} />
+              <Notif icon="wallet" title="Paiement reçu" sub="5 000 FCFA · Wave" color={colors.forest} />
             </Float>
             <Float delay={700} style={{ position: "absolute", top: 188, right: 92 }}>
-              <Notif icon="telegram" title="Accès Telegram activé" color={TG_BLUE} />
+              <Notif icon="telegram" title="Membre ajouté" sub="Groupe VIP" color={TG_BLUE} />
             </Float>
             <Float delay={1300} style={{ position: "absolute", top: 280, right: 52 }}>
-              <Notif icon="bell" title="Rappel envoyé" sub="Expire dans 3 j" color={colors.clay} />
+              <Notif icon="close" title="Abonnement expiré" sub="Accès retiré" color={colors.bordeaux[600]} />
             </Float>
           </>
         ) : null}
       </View>
 
-      {/* CONTENU — reste de la landing */}
+      {/* CONTENU */}
       <View style={{ width: "100%", maxWidth: 1040 }}>
-        {/* SOCIAL PROOF */}
-        <View className="mt-12 items-center px-5">
-          <Text className="text-center font-semibold text-[13px] text-ink-muted">Pensé pour les créateurs et entrepreneurs africains</Text>
-          <View className="mt-3 flex-row flex-wrap justify-center" style={{ gap: 8 }}>
+        {/* BANDE PAIEMENTS ACCEPTÉS */}
+        <View className="items-center px-5">
+          <Text className="text-center font-semibold text-[12px] uppercase text-ink-muted" style={{ letterSpacing: 0.8 }}>
+            Vos clients paient avec ce qu'ils ont déjà
+          </Text>
+          <View className="mt-4 flex-row flex-wrap items-center justify-center" style={{ gap: 10 }}>
             {[
-              { i: "wallet" as const, t: "Paiements locaux" },
-              { i: "shield" as const, t: "Sécurité" },
-              { i: "bolt" as const, t: "Automatisation" },
-              { i: "users" as const, t: "Gestion des membres" },
-            ].map((c) => (
-              <View key={c.t} className="flex-row items-center rounded-full border border-ink/[0.08] bg-white px-3.5 py-2" style={{ gap: 6 }}>
-                <Icon name={c.i} size={14} color={colors.bordeaux[600]} />
-                <Text className="font-semibold text-[12px] text-ink">{c.t}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-
-        {/* PROBLÈME */}
-        <View className="mt-16 px-5">
-          <View className="items-center">
-            <Kicker>Le problème</Kicker>
-            <Text className="mt-2 text-center font-display-x text-[26px] text-ink" style={{ letterSpacing: -1, lineHeight: 30, maxWidth: 420 }}>
-              Vous ne devriez pas passer votre temps à gérer les paiements.
-            </Text>
-          </View>
-          <View className={`mt-6 ${wide ? "flex-row" : ""}`} style={{ gap: 12 }}>
-            {[
-              { q: "Qui a payé ?", i: "wallet" as const },
-              { q: "Qui doit renouveler ?", i: "bell" as const },
-              { q: "Qui retirer du groupe ?", i: "users" as const },
-            ].map((c) => (
-              <View key={c.q} className="flex-1 rounded-3xl border border-ink/[0.08] bg-paper p-5">
-                <Icon name={c.i} size={20} color={colors.muted} />
-                <Text className="mt-3 font-display-semi text-[17px] text-ink">{c.q}</Text>
-              </View>
-            ))}
-          </View>
-          <View className="mt-6 flex-row items-center justify-center" style={{ gap: 8 }}>
-            <View className="h-6 w-6 items-center justify-center rounded-full bg-bordeaux-600">
-              <Icon name="bolt" size={13} color="#fff" />
-            </View>
-            <Text className="font-display-semi text-[15px] text-bordeaux-700">Paylika s'en occupe automatiquement.</Text>
-          </View>
-        </View>
-
-        {/* COMMENT ÇA MARCHE */}
-        <View className="mt-16 px-5">
-          <View className="items-center">
-            <Kicker>Comment ça marche</Kicker>
-            <H2>En 4 étapes, tout est automatisé</H2>
-          </View>
-          <View className={`mt-6 ${wide ? "flex-row" : ""}`} style={{ gap: 12 }}>
-            {[
-              { n: "01", t: "Créez votre abonnement", d: "Définissez votre prix et votre fréquence." },
-              { n: "02", t: "Partagez votre lien", d: "Votre client choisit son offre et paie." },
-              { n: "03", t: "Paylika vérifie", d: "Le paiement est confirmé automatiquement." },
-              { n: "04", t: "L'accès est automatisé", d: "Accès donné, retiré à l'expiration, réactivé au renouvellement." },
-            ].map((s) => (
-              <View key={s.n} className="flex-1 rounded-3xl border border-ink/[0.08] bg-white p-5">
-                <Text className="font-display-x text-[22px] text-bordeaux-600" style={{ letterSpacing: -1 }}>
-                  {s.n}
-                </Text>
-                <Text className="mt-2 font-display-semi text-[15px] text-ink">{s.t}</Text>
-                <Text className="mt-1 font-sans text-[12px] text-ink-muted" style={{ lineHeight: 17 }}>
-                  {s.d}
-                </Text>
-              </View>
-            ))}
-          </View>
-          <View className="mt-5 flex-row flex-wrap items-center justify-center" style={{ gap: 8 }}>
-            {["Paiement", "Paylika", "Accès", "Renouvellement"].map((t, i) => (
-              <View key={t} className="flex-row items-center" style={{ gap: 8 }}>
-                <View className="rounded-full bg-sand px-3 py-1.5">
-                  <Text className="font-semibold text-[12px] text-ink">{t}</Text>
-                </View>
-                {i < 3 ? <Icon name="arrow-right" size={14} color={colors.bordeaux[600]} /> : null}
-              </View>
-            ))}
-          </View>
-        </View>
-
-        {/* AVANT / APRÈS */}
-        <View className="mt-16 px-5">
-          <View className="items-center">
-            <Kicker>La différence</Kicker>
-            <H2>Avant Paylika, après Paylika</H2>
-          </View>
-          <View className={`mt-6 ${wide ? "flex-row" : ""}`} style={{ gap: 12 }}>
-            <View className="flex-1 rounded-3xl border border-ink/[0.08] bg-paper p-5">
-              <Text className="font-semibold text-[12px] uppercase text-ink-muted" style={{ letterSpacing: 0.6 }}>
-                Avant
-              </Text>
-              <View className="mt-3" style={{ gap: 8 }}>
-                {["Messages WhatsApp", "Captures de paiement", "Tableur Excel", "Vérification manuelle", "Retrait manuel", "Relances à la main"].map((t) => (
-                  <View key={t} className="flex-row items-center" style={{ gap: 8 }}>
-                    <Icon name="close" size={14} color={colors.muted} strokeWidth={2.2} />
-                    <Text className="font-sans text-[13px] text-ink-soft">{t}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-            <View className="flex-1 rounded-3xl border border-bordeaux-600 bg-bordeaux-50 p-5">
-              <Text className="font-semibold text-[12px] uppercase text-bordeaux-700" style={{ letterSpacing: 0.6 }}>
-                Avec Paylika
-              </Text>
-              <View className="mt-3" style={{ gap: 8 }}>
-                {["Paiement", "Confirmation automatique", "Accès automatique", "Rappel automatique", "Renouvellement", "Accès prolongé"].map((t) => (
-                  <View key={t} className="flex-row items-center" style={{ gap: 8 }}>
-                    <Icon name="check" size={14} color={colors.bordeaux[600]} strokeWidth={2.4} />
-                    <Text className="font-semibold text-[13px] text-ink">{t}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-          </View>
-        </View>
-
-        {/* INTÉGRATIONS */}
-        <View className="mt-16 px-5">
-          <View className="items-center">
-            <Kicker>Intégrations</Kicker>
-            <H2>Commencez avec Telegram. Allez plus loin.</H2>
-          </View>
-          <View className="mt-6 rounded-3xl border border-ink/[0.08] bg-white p-5">
-            <View className="flex-row items-center" style={{ gap: 12 }}>
-              <View className="h-12 w-12 items-center justify-center rounded-2xl" style={{ backgroundColor: TG_BLUE + "1A" }}>
-                <Icon name="telegram" size={26} color={TG_BLUE} />
-              </View>
-              <View className="flex-1">
-                <Text className="font-display-semi text-[16px] text-ink">Telegram</Text>
-                <Text className="font-sans text-[12px] text-ink-muted">Ajout au paiement, retrait auto à l'expiration.</Text>
-              </View>
-              <View className="rounded-full bg-forest px-2.5 py-1">
-                <Text className="font-bold text-[10px] uppercase text-white">Actif</Text>
-              </View>
-            </View>
-          </View>
-          <View className="mt-3 flex-row flex-wrap" style={{ gap: 10 }}>
-            {[
-              { t: "WhatsApp", i: "whatsapp" as const, c: WA_GREEN },
-              { t: "Discord", i: "users" as const, c: "#5865F2" },
-              { t: "Espace membre", i: "shield" as const, c: colors.bordeaux[600] },
-              { t: "Site web", i: "chart" as const, c: colors.ink },
-              { t: "API", i: "bolt" as const, c: colors.ink },
-            ].map((c) => (
-              <View
-                key={c.t}
-                className="flex-row items-center rounded-2xl border border-ink/[0.08] bg-paper px-3.5 py-2.5"
-                style={{ gap: 8, flexGrow: 1, flexBasis: "45%", minWidth: 150 }}
-              >
-                <Icon name={c.i} size={16} color={c.c} />
-                <Text className="flex-1 font-semibold text-[13px] text-ink">{c.t}</Text>
-                <View className="rounded-full bg-sand px-2 py-0.5">
-                  <Text className="font-bold text-[9px] uppercase text-ink-muted">Bientôt</Text>
-                </View>
-              </View>
-            ))}
-          </View>
-        </View>
-
-        {/* POUR QUI */}
-        <View className="mt-16 px-5">
-          <View className="items-center">
-            <Kicker>Pour qui ?</Kicker>
-            <H2>Fait pour votre activité</H2>
-          </View>
-          <View className="mt-6 flex-row flex-wrap" style={{ gap: 12 }}>
-            {[
-              { img: P_CREATEURS, i: "users" as const, t: "Créateurs", d: "Monétisez votre communauté et vos contenus." },
-              { img: P_FORMATEURS, i: "chart" as const, t: "Formateurs", d: "Vendez vos formations, automatisez les accès." },
-              { img: P_COACHS, i: "bolt" as const, t: "Coachs", d: "Gérez vos clients et leurs renouvellements." },
-              { img: HERO, i: "shield" as const, t: "Communautés", d: "Contrôlez automatiquement qui a accès." },
-            ].map((c) => (
-              <View
-                key={c.t}
-                className="overflow-hidden rounded-3xl border border-ink/[0.08] bg-white"
-                style={{ flexGrow: 1, flexBasis: "45%", minWidth: 160 }}
-              >
-                <View className="relative">
-                  <Image source={c.img} style={{ width: "100%", height: 150 }} resizeMode="cover" />
-                  <View className="absolute left-3 top-3 h-9 w-9 items-center justify-center rounded-2xl bg-white/95">
-                    <Icon name={c.i} size={17} color={colors.bordeaux[600]} />
-                  </View>
-                </View>
-                <View className="p-4">
-                  <Text className="font-display-semi text-[15px] text-ink">{c.t}</Text>
-                  <Text className="mt-0.5 font-sans text-[12px] text-ink-muted" style={{ lineHeight: 17 }}>
-                    {c.d}
-                  </Text>
-                </View>
-              </View>
-            ))}
-          </View>
-        </View>
-
-        {/* DASHBOARD */}
-        <View className="mt-16 px-5">
-          <View className="items-center">
-            <Kicker>Le tableau de bord</Kicker>
-            <H2>Tout votre business, en un coup d'œil</H2>
-          </View>
-          <View className="mt-6 rounded-3xl border border-ink/[0.08] bg-white p-5">
-            <View className="flex-row flex-wrap" style={{ gap: 10 }}>
-              {[
-                { v: "12 450 FCFA", l: "Revenus ce mois" },
-                { v: "132", l: "Abonnés actifs" },
-                { v: "+24%", l: "Croissance" },
-              ].map((k) => (
-                <View key={k.l} className="rounded-2xl bg-paper p-4" style={{ flexGrow: 1, flexBasis: "30%", minWidth: 100 }}>
-                  <Text className="font-display-x text-[20px] text-ink" style={{ letterSpacing: -0.6 }}>
-                    {k.v}
-                  </Text>
-                  <Text className="mt-0.5 font-sans text-[11px] text-ink-muted">{k.l}</Text>
-                </View>
-              ))}
-            </View>
-            <View className="mt-4" style={{ gap: 8 }}>
-              {[
-                { m: "Awa N.", p: "VIP · Mensuel", s: "Actif", ok: true },
-                { m: "Modou D.", p: "Signaux · Mensuel", s: "Actif", ok: true },
-                { m: "Fatou S.", p: "Formation", s: "Expiré", ok: false },
-              ].map((r) => (
-                <View key={r.m} className="flex-row items-center justify-between border-t border-ink/[0.06] pt-2.5">
-                  <View>
-                    <Text className="font-semibold text-[13px] text-ink">{r.m}</Text>
-                    <Text className="font-sans text-[11px] text-ink-muted">{r.p}</Text>
-                  </View>
-                  <View className={`rounded-full px-2.5 py-1 ${r.ok ? "bg-forest" : "bg-sand"}`}>
-                    <Text className={`font-bold text-[10px] uppercase ${r.ok ? "text-white" : "text-ink-muted"}`}>{r.s}</Text>
-                  </View>
-                </View>
-              ))}
-            </View>
-            <Text className="mt-3 font-sans text-[10px] text-ink-muted">Exemple d'affichage.</Text>
-          </View>
-        </View>
-
-        {/* PAIEMENTS */}
-        <View className="mt-16 px-5">
-          <View className="items-center">
-            <Kicker>Paiements</Kicker>
-            <Text className="mt-2 text-center font-display-x text-[24px] text-ink" style={{ letterSpacing: -0.9, lineHeight: 28, maxWidth: 420 }}>
-              Vos clients paient avec ce qu'ils utilisent déjà.
-            </Text>
-          </View>
-          <View className="mt-6 flex-row flex-wrap justify-center" style={{ gap: 10 }}>
-            {[
-              { img: WAVE, t: "Wave", soon: false },
-              { img: ORANGE, t: "Orange Money", soon: false },
-              { img: MTN, t: "MTN", soon: false },
-              { img: MOOV, t: "Moov", soon: false },
+              { img: WAVE, t: "Wave" },
+              { img: ORANGE, t: "Orange Money" },
+              { img: MTN, t: "MTN" },
+              { img: MOOV, t: "Moov" },
             ].map((p) => (
               <View key={p.t} className="flex-row items-center rounded-2xl border border-ink/[0.08] bg-white px-3.5 py-2.5" style={{ gap: 8 }}>
                 <Image source={p.img} style={{ width: 22, height: 22, borderRadius: 11 }} resizeMode="contain" />
@@ -484,15 +278,209 @@ export default function DecouvrirScreen() {
           </View>
         </View>
 
-        {/* SÉCURITÉ */}
-        <View className="mt-16 px-5">
+        {/* PROBLÈME */}
+        <View className="mt-20 px-5">
+          <View className="items-center">
+            <Kicker>Le vrai problème</Kicker>
+            <H2>Vendre l'accès à un groupe, c'est facile. Le gérer à la main, c'est l'enfer.</H2>
+          </View>
+          <View className="mt-7 flex-row flex-wrap" style={{ gap: 12 }}>
+            {[
+              { i: "wallet" as const, t: "« Envoie la capture Wave »", d: "Vous vérifiez chaque paiement à la main, un client après l'autre." },
+              { i: "users" as const, t: "Ajouts et retraits manuels", d: "Vous ajoutez et sortez chaque membre du groupe vous-même, tous les jours." },
+              { i: "bell" as const, t: "Abonnements oubliés", d: "Personne ne pense à renouveler, et vous perdez de l'argent chaque mois." },
+              { i: "chart" as const, t: "Aucune visibilité", d: "Qui a payé ? Qui a expiré ? Combien vous avez gagné ? Vous ne savez jamais." },
+            ].map((c) => (
+              <View key={c.t} className="rounded-3xl border border-ink/[0.08] bg-paper p-5" style={{ flexGrow: 1, flexBasis: "45%", minWidth: 220 }}>
+                <View className="h-10 w-10 items-center justify-center rounded-2xl bg-white">
+                  <Icon name={c.i} size={19} color={colors.muted} />
+                </View>
+                <Text className="mt-3 font-display-semi text-[16px] text-ink">{c.t}</Text>
+                <Text className="mt-1 font-sans text-[13px] text-ink-muted" style={{ lineHeight: 19 }}>
+                  {c.d}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </View>
+
+        {/* SOLUTION — ce que fait Paylika, clairement */}
+        <View className="mt-20 px-5">
+          <View className="items-center">
+            <Kicker>Ce que fait Paylika</Kicker>
+            <H2>Un outil qui automatise tout, du paiement à l'accès.</H2>
+            <Text className="mt-3 text-center font-sans text-[14px] text-ink-soft" style={{ lineHeight: 21, maxWidth: 500 }}>
+              Vous vendez l'accès. Paylika encaisse, ajoute le membre, le relance et le retire — sans que vous touchiez à
+              quoi que ce soit.
+            </Text>
+          </View>
+          <View className={`mt-7 ${wide ? "flex-row" : ""}`} style={{ gap: 12 }}>
+            {[
+              {
+                i: "wallet" as const,
+                c: colors.bordeaux[600],
+                t: "Encaissez en un lien",
+                d: "Partagez votre lien de paiement. Vos clients paient par mobile money en 30 secondes, sans app à installer.",
+              },
+              {
+                i: "telegram" as const,
+                c: TG_BLUE,
+                t: "Livrez l'accès tout seul",
+                d: "Dès le paiement confirmé, le membre rejoint automatiquement votre groupe Telegram privé.",
+              },
+              {
+                i: "bolt" as const,
+                c: colors.forest,
+                t: "Gérez sans y penser",
+                d: "Retrait à l'expiration, rappel avant l'échéance, réactivation dès le renouvellement. En pilote automatique.",
+              },
+            ].map((c) => (
+              <View key={c.t} className="flex-1 rounded-3xl border border-ink/[0.08] bg-white p-6" style={{ minWidth: 220 }}>
+                <View className="h-12 w-12 items-center justify-center rounded-2xl" style={{ backgroundColor: c.c + "1A" }}>
+                  <Icon name={c.i} size={24} color={c.c} />
+                </View>
+                <Text className="mt-4 font-display-semi text-[17px] text-ink">{c.t}</Text>
+                <Text className="mt-1.5 font-sans text-[13px] text-ink-muted" style={{ lineHeight: 19 }}>
+                  {c.d}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </View>
+
+        {/* COMMENT ÇA MARCHE */}
+        <View className="mt-20 px-5">
+          <View className="items-center">
+            <Kicker>Comment ça marche</Kicker>
+            <H2>De l'inscription au premier paiement, en quelques minutes.</H2>
+          </View>
+          <View className={`mt-7 ${wide ? "flex-row" : ""}`} style={{ gap: 12 }}>
+            {[
+              { n: "01", t: "Créez votre offre", d: "Un prix, une durée. Mensuel, hebdomadaire ou paiement unique." },
+              { n: "02", t: "Partagez votre lien", d: "Dans votre bio, vos stories, ou votre groupe gratuit." },
+              { n: "03", t: "Votre client paie", d: "Wave, Orange Money, MTN — directement depuis son téléphone." },
+              { n: "04", t: "L'accès se gère seul", d: "Ajouté au paiement, retiré à l'expiration, réactivé au renouvellement." },
+            ].map((s) => (
+              <View key={s.n} className="flex-1 rounded-3xl border border-ink/[0.08] bg-white p-5" style={{ minWidth: 200 }}>
+                <Text className="font-display-x text-[24px] text-bordeaux-600" style={{ letterSpacing: -1 }}>
+                  {s.n}
+                </Text>
+                <Text className="mt-2 font-display-semi text-[15px] text-ink">{s.t}</Text>
+                <Text className="mt-1 font-sans text-[12.5px] text-ink-muted" style={{ lineHeight: 18 }}>
+                  {s.d}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      </View>
+
+      {/* BANDEAU PHOTO #1 — manifeste */}
+      <View className="mt-20 w-full">
+        <PhotoBand img={P_FORMATEURS} height={wide ? 340 : 420}>
+          <Rise>
+            <View style={{ maxWidth: 560 }}>
+              <Kicker light>Reprenez votre temps</Kicker>
+              <Text className="mt-2 font-display-x text-white" style={{ fontSize: wide ? 32 : 27, letterSpacing: -1, lineHeight: wide ? 36 : 31 }}>
+                Vous créez le contenu. Paylika encaisse et gère l'accès.
+              </Text>
+              <Text className="mt-3 font-sans text-white/75" style={{ fontSize: 14.5, lineHeight: 21, maxWidth: 470 }}>
+                Fini les captures Wave à vérifier et les membres à ajouter un par un. Concentrez-vous sur votre
+                communauté — on s'occupe des paiements et des accès.
+              </Text>
+              <View className="mt-6 self-start">
+                <Btn label="Créer mon compte gratuitement" onPress={start} kind="white" />
+              </View>
+            </View>
+          </Rise>
+        </PhotoBand>
+      </View>
+
+      <View style={{ width: "100%", maxWidth: 1040 }}>
+        {/* POUR QUI */}
+        <View className="mt-20 px-5">
+          <View className="items-center">
+            <Kicker>Pour qui ?</Kicker>
+            <H2>Pensé pour tous ceux qui vendent l'accès.</H2>
+          </View>
+          <View className="mt-7 flex-row flex-wrap" style={{ gap: 12 }}>
+            {[
+              { img: HERO, i: "chart" as const, t: "Pronostiqueurs sportifs", d: "Vos pronostics VIP dans un canal Telegram privé, payés chaque mois." },
+              { img: P_FORMATEURS, i: "tag" as const, t: "Formateurs & infopreneurs", d: "Vos formations en accès par abonnement, sans plateforme compliquée." },
+              { img: P_COACHS, i: "bolt" as const, t: "Coachs", d: "Un espace privé et payant pour accompagner vos clients suivis." },
+              { img: P_CREATEURS, i: "users" as const, t: "Créateurs & communautés", d: "Monétisez votre communauté Telegram ou WhatsApp en quelques minutes." },
+            ].map((c) => (
+              <View key={c.t} className="overflow-hidden rounded-3xl border border-ink/[0.08] bg-white" style={{ flexGrow: 1, flexBasis: "45%", minWidth: 220 }}>
+                <View className="relative">
+                  <Image source={c.img} style={{ width: "100%", height: 150 }} resizeMode="cover" />
+                  <View className="absolute left-3 top-3 h-9 w-9 items-center justify-center rounded-2xl bg-white/95">
+                    <Icon name={c.i} size={17} color={colors.bordeaux[600]} />
+                  </View>
+                </View>
+                <View className="p-4">
+                  <Text className="font-display-semi text-[15px] text-ink">{c.t}</Text>
+                  <Text className="mt-0.5 font-sans text-[12.5px] text-ink-muted" style={{ lineHeight: 18 }}>
+                    {c.d}
+                  </Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        </View>
+
+        {/* TARIFS */}
+        <View className="mt-20 px-5">
+          <View className="items-center">
+            <Kicker>Tarifs</Kicker>
+            <H2>Simple, sans surprise.</H2>
+          </View>
+          <View className={`mt-7 ${wide ? "flex-row items-stretch" : ""}`} style={{ gap: 12 }}>
+            <View className="rounded-3xl bg-bordeaux-600 p-6" style={{ flex: wide ? 1 : undefined, justifyContent: "center" }}>
+              <Text className="font-display-x text-white" style={{ fontSize: 54, letterSpacing: -2, lineHeight: 56 }}>
+                10<Text style={{ fontSize: 26 }}>%</Text>
+              </Text>
+              <Text className="mt-1 font-semibold text-[14px] text-white">par transaction</Text>
+              <Text className="mt-2 font-sans text-[13px] text-white/75" style={{ lineHeight: 19 }}>
+                Rien d'autre. Pas d'abonnement, pas de frais cachés. Vous ne payez que quand vous encaissez.
+              </Text>
+            </View>
+            <View className="rounded-3xl border border-ink/[0.08] bg-white p-6" style={{ flex: wide ? 1.4 : undefined, gap: 12 }}>
+              {[
+                { t: "Aucun abonnement mensuel", d: "Créez votre compte et vos offres gratuitement." },
+                { t: "Retraits 100% gratuits", d: "Retirez vos gains vers Wave ou Orange Money, quand vous voulez, sans frais." },
+                { t: "Vous gardez le contrôle", d: "Un client paie 5 000 FCFA → vous touchez 4 500 FCFA. Clair, à chaque vente." },
+              ].map((r) => (
+                <View key={r.t} className="flex-row" style={{ gap: 12 }}>
+                  <View className="mt-0.5 h-6 w-6 items-center justify-center rounded-full bg-forest">
+                    <Icon name="check" size={13} color="#fff" strokeWidth={2.6} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text className="font-display-semi text-[15px] text-ink">{r.t}</Text>
+                    <Text className="mt-0.5 font-sans text-[13px] text-ink-muted" style={{ lineHeight: 19 }}>
+                      {r.d}
+                    </Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </View>
+        </View>
+
+        {/* SÉCURITÉ / CONFIANCE */}
+        <View className="mt-20 px-5">
           <View className="rounded-3xl bg-night p-6">
-            <Kicker>Confiance</Kicker>
-            <Text className="mt-2 font-display-x text-[22px] text-white" style={{ letterSpacing: -0.8 }}>
-              Vos paiements et vos membres, sous contrôle.
+            <Kicker light>En confiance</Kicker>
+            <Text className="mt-2 font-display-x text-[22px] text-white" style={{ letterSpacing: -0.8, lineHeight: 26 }}>
+              Vos paiements et vos membres, toujours sous contrôle.
             </Text>
             <View className="mt-4 flex-row flex-wrap" style={{ gap: 10 }}>
-              {["Paiements sécurisés", "Gestion des accès", "Historique des transactions", "Notifications", "Protection des données"].map((t) => (
+              {[
+                "Paiements mobile money sécurisés",
+                "Historique de chaque transaction",
+                "Ajout & retrait automatiques",
+                "Rappels de renouvellement",
+                "Vos données protégées",
+              ].map((t) => (
                 <View key={t} className="flex-row items-center rounded-full bg-white/10 px-3 py-2" style={{ gap: 6 }}>
                   <Icon name="check" size={13} color="#fff" strokeWidth={2.4} />
                   <Text className="font-semibold text-[12px] text-white">{t}</Text>
@@ -502,63 +490,118 @@ export default function DecouvrirScreen() {
           </View>
         </View>
 
-        {/* CTA FINAL */}
-        <View className="mt-16 px-5">
-          <View className="items-center rounded-[32px] bg-bordeaux-600 p-8">
-            <Text className="text-center font-display-x text-[26px] text-white" style={{ letterSpacing: -1, lineHeight: 30, maxWidth: 440 }}>
-              Arrêtez de gérer vos abonnements manuellement.
-            </Text>
-            <Text className="mt-3 text-center font-sans text-[14px] text-white/80" style={{ lineHeight: 20, maxWidth: 420 }}>
-              Paylika automatise les paiements, les renouvellements et les accès — pour que vous vous concentriez sur votre
-              activité.
-            </Text>
-            <View className="mt-6" style={{ minWidth: 260 }}>
-              <Btn label="Commencer gratuitement" onPress={start} kind="white" />
-            </View>
-          </View>
-        </View>
-
         {/* FAQ */}
-        <View className="mt-16 px-5">
+        <View className="mt-20 px-5">
           <View className="items-center">
             <Kicker>FAQ</Kicker>
-            <H2>Questions fréquentes</H2>
+            <H2>Les questions qu'on nous pose.</H2>
           </View>
-          <View className="mt-4">
+          <View className="mt-5">
             {[
-              ["Qu'est-ce que Paylika ?", "Une plateforme qui automatise vos abonnements, paiements et accès à vos communautés et contenus."],
-              ["Comment fonctionne un abonnement ?", "Vous fixez un prix et une fréquence. Le client paie, l'accès est donné, puis géré automatiquement."],
-              ["Comment mes clients paient-ils ?", "Par mobile money (Wave, Orange Money…), via un simple lien. Aucune boutique à créer."],
-              ["Comment fonctionne l'accès Telegram ?", "Le membre est ajouté au paiement et retiré automatiquement à l'expiration de son abonnement."],
-              ["Que se passe-t-il à l'expiration ?", "L'accès est retiré automatiquement, et réactivé dès que le membre renouvelle."],
-              ["Puis-je gérer plusieurs offres ?", "Oui, autant d'offres et de formules que vous voulez, depuis un seul tableau de bord."],
+              [
+                "C'est quoi Paylika, concrètement ?",
+                "Un outil pour faire payer l'accès à vos groupes Telegram privés (WhatsApp bientôt) et automatiser l'ajout et le retrait de vos membres selon leur abonnement.",
+              ],
+              [
+                "Comment mes clients paient-ils ?",
+                "Par mobile money : Wave, Orange Money, MTN, Moov. Un simple lien, aucune application à installer, aucune carte bancaire.",
+              ],
+              [
+                "Comment le membre rejoint mon groupe ?",
+                "Dès que le paiement est confirmé, Paylika ajoute automatiquement le membre à votre groupe privé. Vous ne faites rien.",
+              ],
+              [
+                "Que se passe-t-il à l'expiration ?",
+                "Le membre est retiré automatiquement du groupe, puis réintégré dès qu'il renouvelle son abonnement.",
+              ],
+              [
+                "Combien ça coûte ?",
+                "10% par transaction, sans abonnement mensuel. Les retraits de vos gains sont gratuits.",
+              ],
+              [
+                "Il me faut quoi pour démarrer ?",
+                "Un compte Paylika et votre groupe. Vous créez votre première offre et votre lien de paiement en 2 minutes.",
+              ],
             ].map(([q, a]) => (
-              <View key={q} className="border-b border-ink/[0.07] py-3.5">
-                <Text className="font-semibold text-[14px] text-ink">{q}</Text>
-                <Text className="mt-1 font-sans text-[13px] text-ink-muted" style={{ lineHeight: 19 }}>
+              <View key={q} className="border-b border-ink/[0.07] py-4">
+                <Text className="font-display-semi text-[15px] text-ink">{q}</Text>
+                <Text className="mt-1.5 font-sans text-[13px] text-ink-muted" style={{ lineHeight: 20 }}>
                   {a}
                 </Text>
               </View>
             ))}
           </View>
         </View>
+      </View>
 
-        {/* FOOTER */}
-        <View className="mt-16 border-t border-ink/[0.07] px-5 pt-8">
-          <View className="flex-row items-center" style={{ gap: 8 }}>
-            <Logo size={24} />
-            <Text className="font-display text-[18px] text-ink" style={{ letterSpacing: -0.4 }}>
-              Paylika
-            </Text>
-          </View>
-          <Text className="mt-2 font-sans text-[13px] text-ink-muted">Les abonnements, simplement.</Text>
-          <View className="mt-4 flex-row flex-wrap" style={{ gap: 16 }}>
-            {["Produit", "Fonctionnalités", "FAQ", "Contact", "Conditions", "Confidentialité"].map((t) => (
-              <Text key={t} className="font-medium text-[12px] text-ink-soft">
-                {t}
+      {/* CTA FINAL — bandeau photo */}
+      <View className="mt-20 w-full">
+        <PhotoBand img={P_COACHS} height={wide ? 360 : 440}>
+          <Rise>
+            <View style={{ maxWidth: 560 }}>
+              <Text className="font-display-x text-white" style={{ fontSize: wide ? 34 : 28, letterSpacing: -1, lineHeight: wide ? 38 : 32 }}>
+                Prêt à faire payer votre groupe ?
               </Text>
+              <Text className="mt-3 font-sans text-white/75" style={{ fontSize: 14.5, lineHeight: 21, maxWidth: 460 }}>
+                Créez votre compte, votre première offre et votre lien de paiement en quelques minutes. C'est gratuit — vous
+                ne payez que lorsque vous encaissez.
+              </Text>
+              <View className="mt-6 flex-row flex-wrap items-center" style={{ gap: 10 }}>
+                <Btn label="Créer mon compte gratuitement" onPress={start} kind="white" />
+              </View>
+              <Text className="mt-3 font-sans text-[12px] text-white/60">10% par vente · retraits sans frais · sans engagement</Text>
+            </View>
+          </Rise>
+        </PhotoBand>
+      </View>
+
+      {/* FOOTER */}
+      <View style={{ width: "100%", maxWidth: 1040 }} className="px-5 pt-14">
+        <View className={`${wide ? "flex-row justify-between" : ""}`} style={{ gap: 28 }}>
+          <View style={{ maxWidth: 300 }}>
+            <View className="flex-row items-center" style={{ gap: 8 }}>
+              <Logo size={26} />
+              <Text className="font-display text-[19px] text-ink" style={{ letterSpacing: -0.4 }}>
+                Paylika
+              </Text>
+            </View>
+            <Text className="mt-3 font-sans text-[13px] text-ink-muted" style={{ lineHeight: 20 }}>
+              L'accès payant, automatisé. Encaissez vos abonnements et gérez vos membres, pour les créateurs d'Afrique de
+              l'Ouest.
+            </Text>
+            <View className="mt-4 flex-row" style={{ gap: 8 }}>
+              <View className="h-9 w-9 items-center justify-center rounded-full bg-sand">
+                <Icon name="telegram" size={17} color={TG_BLUE} />
+              </View>
+              <View className="h-9 w-9 items-center justify-center rounded-full bg-sand">
+                <Icon name="whatsapp" size={17} color={WA_GREEN} />
+              </View>
+            </View>
+          </View>
+
+          <View className={`${wide ? "flex-row" : "flex-row flex-wrap"}`} style={{ gap: wide ? 56 : 32 }}>
+            {[
+              { h: "Produit", items: ["Comment ça marche", "Pour qui", "Tarifs", "FAQ"] },
+              { h: "Compte", items: ["Se connecter", "Créer un compte"] },
+              { h: "Légal", items: ["Conditions", "Confidentialité", "Contact"] },
+            ].map((col) => (
+              <View key={col.h} style={{ gap: 10 }}>
+                <Text className="font-bold text-[11px] uppercase text-ink-muted" style={{ letterSpacing: 0.6 }}>
+                  {col.h}
+                </Text>
+                {col.items.map((it) => (
+                  <Pressable key={it} onPress={start}>
+                    <Text className="font-medium text-[13px] text-ink-soft">{it}</Text>
+                  </Pressable>
+                ))}
+              </View>
             ))}
           </View>
+        </View>
+
+        <View className="mt-10 flex-row flex-wrap items-center justify-between border-t border-ink/[0.07] pt-5" style={{ gap: 8 }}>
+          <Text className="font-sans text-[12px] text-ink-muted">© 2026 Paylika. Tous droits réservés.</Text>
+          <Text className="font-sans text-[12px] text-ink-muted">Sénégal · Côte d'Ivoire</Text>
         </View>
       </View>
     </ScrollView>
