@@ -167,10 +167,13 @@ async function grantAccess(evt: any) {
   const intervalDays = plan?.interval_days ?? 30;
   const owner = plan?.owner_id ?? null; // le paiement appartient au proprio de l'offre
 
-  // Montant = PRIX DE L'OFFRE (source de vérité), jamais evt.amount (falsifiable).
+  // Montant enregistré = PRIX DE L'OFFRE (source de vérité), jamais evt.amount.
+  // L'acheteur a payé prix + 2% (frais forfaitaire) ; le vendeur, lui, encaisse
+  // sur son prix plein → commission/net calculés sur `amount` (le prix vendeur).
   const amount = Number(plan?.price ?? intent.amount ?? 0);
-  if (evt.amount != null && Number(evt.amount) !== amount) {
-    console.error(`montant webhook (${evt.amount}) ≠ prix offre (${amount}) — réf ${reference}`);
+  const expectedBuyer = Math.round(amount * 1.02);
+  if (evt.amount != null && Number(evt.amount) !== amount && Number(evt.amount) !== expectedBuyer) {
+    console.error(`montant webhook (${evt.amount}) inattendu (prix ${amount} / total ${expectedBuyer}) — réf ${reference}`);
   }
   const commission = Math.round(amount * COMMISSION_RATE);
   const nowTs = Date.now();

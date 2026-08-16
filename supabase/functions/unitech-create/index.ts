@@ -47,8 +47,14 @@ Deno.serve(async (req) => {
     // Non-Telegram → page de livraison autonome (chargement quasi instantané).
     const successUrl = deliveryType === "telegram" ? "https://t.me/Paylikabot" : `${APP_URL}/access.html`;
 
+    // Frais forfaitaire 2% à la charge de l'ACHETEUR (couvre les frais UniTech).
+    // Le vendeur touche son prix plein ; l'acheteur paie prix + 2%.
+    const BUYER_FEE_RATE = 0.02;
+    const sellerPrice = Number(plan.price);
+    const buyerAmount = Math.round(sellerPrice * (1 + BUYER_FEE_RATE));
+
     const base: Record<string, unknown> = {
-      amount: Number(plan.price),
+      amount: buyerAmount,
       customer_number: String(phone).replace(/\s/g, ""),
       customer_name: fullName || "Client Paylika",
       description: `Paylika : ${plan.name}`,

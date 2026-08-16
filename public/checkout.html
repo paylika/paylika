@@ -147,6 +147,8 @@
     }).join("");
 
     var t = currentTier();
+    var fee = Math.round(t.price * 0.02);   // frais forfaitaire 2% (acheteur)
+    var total = t.price + fee;
     app.innerHTML =
       '<div class="card"><div class="eyebrow">'+(d.tiers.every(function(x){return x.intervalDays<=0;})?"Paiement":"Abonnement")+'</div>'
       + '<div class="oname">'+esc(d.offerName||"Offre")+'</div>'+tiers+'</div>'
@@ -155,7 +157,12 @@
       + '<div class="card"><label class="fl">Nom (optionnel)</label><input id="nm" placeholder="Ex. Awa Ndiaye" />'
       + '<label class="fl" style="display:block;margin-top:12px">Numéro de téléphone</label><input id="ph" inputmode="numeric" placeholder="77 000 00 00" />'
       + (state.err?'<div class="err">'+esc(state.err)+'</div>':'')
-      + '<button class="pay" id="pay"'+(state.busy?' disabled':'')+'>'+(state.busy?"Traitement…":("Payer "+fmt(t.price)+" "+cur))+'</button>'
+      + '<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line);font-size:13px">'
+      +   '<div style="display:flex;justify-content:space-between;color:var(--soft)"><span>Prix</span><span>'+fmt(t.price)+' '+cur+'</span></div>'
+      +   '<div style="display:flex;justify-content:space-between;color:var(--muted);margin-top:4px"><span>Frais</span><span>'+fmt(fee)+' '+cur+'</span></div>'
+      +   '<div style="display:flex;justify-content:space-between;font-weight:800;margin-top:6px"><span>Total</span><span>'+fmt(total)+' '+cur+'</span></div>'
+      + '</div>'
+      + '<button class="pay" id="pay"'+(state.busy?' disabled':'')+'>'+(state.busy?"Traitement…":("Payer "+fmt(total)+" "+cur))+'</button>'
       + '<div class="note">Vous serez redirigé vers '+(OPL[state.op]||"l\'opérateur")+' pour confirmer.</div></div>';
 
     bind();
