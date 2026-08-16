@@ -900,27 +900,25 @@ export type OfferStat = {
   groupName: string;
   price: number;
   intervalDays: number;
-  active: number;
-  total: number;
-  revenue: number;
-  share: number; // % of total revenue
+  active: number; // membres uniques actifs sur cette offre
+  revenue: number; // revenu NET de cette offre
+  share: number; // % du revenu net total
 };
 
 export type Bars = { label: string; value: number; highlight?: boolean }[];
 
 export type Stats = {
-  totalSubscribers: number;
-  activeMembers: number;
-  expiredCount: number;
-  churnPct: number;
-  totalRevenue: number;
-  netRevenue: number;
-  commission: number;
-  mrr: number; // monthly recurring revenue (net of nothing — gross monthly)
-  arpu: number; // net revenue per subscriber
   currency: string;
-  membersByGroup: Bars;
-  revenueByGroup: Bars;
+  totalRevenue: number; // encaissé (paiements complétés)
+  netRevenue: number; // ce que garde le vendeur (après commission 10%)
+  commission: number; // commission Paylika prélevée
+  revenueThisMonth: number; // revenu NET encaissé ce mois-ci
+  salesCount: number; // nombre de ventes (paiements complétés)
+  activeMembers: number; // personnes uniques avec un accès en cours
+  totalMembers: number; // personnes uniques ayant déjà payé
+  newMembersThisMonth: number; // nouveaux membres ce mois
+  membersByGroup: Bars; // membres actifs uniques par groupe
+  revenueByGroup: Bars; // revenu net par groupe
   offers: OfferStat[];
 };
 
@@ -936,16 +934,14 @@ function toBars(m: Map<string, number>): Bars {
 }
 
 export async function fetchStats(): Promise<Stats> {
-  const [plansRes, subsRes, paymentsRes, subsCountRes] = await Promise.all([
-    supabase
-      .from("plans")
-      .select("id, name, price, interval_days, group_id, groups(name, kind)")
-      .order("created_at"),
-    supabase.from("subscriptions").select("id, subscriber_id, plan_id, group_id, status"),
-    supabase
-      .from("payments")
-      .select("amount, currency, subscriptions(plan_id, groups(name))"),
-    supabase.from("subscribers").select("id", { count: "exact", head: true }),
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+
+  const [plansRes, subsRes, paymentsRes, subscribersRes] = await Promise.all([
+    supabase.from("plans").select("id, name, price, interval_days, group_id, groups(name)").order("created_at"),
+    supabase.from("subscriptions").select("subscriber_id, plan_id, status"),
+    supabase.from("payments").select("amount, currency, status, paid_at, subscriptions(plan_id, groups(name))"),
+    supabase.from("subscribers").select("id, created_at"),
   ]);
   if (plansRes.error) throw plansRes.error;
   if (subsRes.error) throw subsRes.error;
@@ -953,55 +949,62 @@ export async function fetchStats(): Promise<Stats> {
 
   const plans = (plansRes.data ?? []) as any[];
   const subs = (subsRes.data ?? []) as any[];
-  const payments = (paymentsRes.data ?? []) as any[];
+  // Revenu : uniquement les paiements COMPLÉTÉS (jamais pending/failed/refunded).
+  const payments = ((paymentsRes.data ?? []) as any[]).filter((p) => p.status === "completed");
+  const subscribers = (subscribersRes.data ?? []) as any[];
 
-  const totalSubscribers = subsCountRes.count ?? subs.length;
-  // Membres actifs = personnes UNIQUES (par abonné), pas nombre d'abonnements
-  // (sinon un client qui repaie est compté plusieurs fois).
-  const activeMembers = new Set(
-    subs.filter((s) => s.status === "active" && s.subscriber_id).map((s) => s.subscriber_id),
-  ).size;
-  const expiredCount = subs.filter((s) => s.status === "expired").length;
-  const totalSubs = subs.length || 1;
-  const churnPct = Math.round((expiredCount / totalSubs) * 1000) / 10;
-
-  let totalRevenue = 0;
   let currency = "XOF";
-  const revByGroup = new Map<string, number>();
-  const revByPlan = new Map<string, number>();
+  let grossTotal = 0;
+  let grossThisMonth = 0;
+  const revByGroupGross = new Map<string, number>();
+  const revByPlanGross = new Map<string, number>();
   for (const p of payments) {
     const amt = Number(p.amount) || 0;
     if (p.currency) currency = p.currency;
-    totalRevenue += amt;
+    grossTotal += amt;
+    if (p.paid_at && new Date(p.paid_at).getTime() >= monthStart) grossThisMonth += amt;
     const g = p.subscriptions?.groups?.name ?? "Autre";
-    revByGroup.set(g, (revByGroup.get(g) ?? 0) + amt);
+    revByGroupGross.set(g, (revByGroupGross.get(g) ?? 0) + amt);
     const pl = p.subscriptions?.plan_id;
-    if (pl) revByPlan.set(pl, (revByPlan.get(pl) ?? 0) + amt);
+    if (pl) revByPlanGross.set(pl, (revByPlanGross.get(pl) ?? 0) + amt);
   }
-  const commission = Math.round(totalRevenue * 0.1);
-  const netRevenue = totalRevenue - commission;
+  const commission = Math.round(grossTotal * 0.1);
+  const totalRevenue = grossTotal;
+  const netRevenue = grossTotal - commission;
+  const revenueThisMonth = Math.round(grossThisMonth * 0.9);
+  const salesCount = payments.length;
 
+  // Membres = personnes UNIQUES (par abonné), jamais nombre d'abonnements.
+  const activeSubs = subs.filter((s) => s.status === "active" && s.subscriber_id);
+  const activeMembers = new Set(activeSubs.map((s) => s.subscriber_id)).size;
+  const totalMembers = subscribers.length;
+  const newMembersThisMonth = subscribers.filter(
+    (s) => s.created_at && new Date(s.created_at).getTime() >= monthStart,
+  ).length;
+
+  // Membres actifs UNIQUES par groupe.
   const planById = new Map(plans.map((p) => [p.id, p]));
-  let mrr = 0;
-  const memByGroup = new Map<string, number>();
-  for (const s of subs) {
-    if (s.status !== "active") continue;
-    const pl = planById.get(s.plan_id);
-    if (pl) {
-      const months = Math.max(1, (pl.interval_days || 30) / 30);
-      mrr += (Number(pl.price) || 0) / months;
-      const g = pl.groups?.name ?? "Autre";
-      memByGroup.set(g, (memByGroup.get(g) ?? 0) + 1);
-    }
+  const memSetByGroup = new Map<string, Set<string>>();
+  for (const s of activeSubs) {
+    const g = planById.get(s.plan_id)?.groups?.name ?? "Autre";
+    if (!memSetByGroup.has(g)) memSetByGroup.set(g, new Set());
+    memSetByGroup.get(g)!.add(s.subscriber_id);
   }
-  mrr = Math.round(mrr);
-  const arpu = totalSubscribers ? Math.round(netRevenue / totalSubscribers) : 0;
+  const memByGroup = new Map<string, number>();
+  for (const [g, set] of memSetByGroup) memByGroup.set(g, set.size);
+
+  // Revenu NET par groupe (pour le graphe).
+  const netRevByGroup = new Map<string, number>();
+  for (const [g, v] of revByGroupGross) netRevByGroup.set(g, Math.round(v * 0.9));
 
   const offers: OfferStat[] = plans
     .map((pl) => {
-      const active = subs.filter((s) => s.plan_id === pl.id && s.status === "active").length;
-      const total = subs.filter((s) => s.plan_id === pl.id).length;
-      const revenue = revByPlan.get(pl.id) ?? 0;
+      const active = new Set(
+        subs
+          .filter((s) => s.plan_id === pl.id && s.status === "active" && s.subscriber_id)
+          .map((s) => s.subscriber_id),
+      ).size;
+      const revenue = Math.round((revByPlanGross.get(pl.id) ?? 0) * 0.9);
       return {
         id: pl.id,
         name: pl.name,
@@ -1009,26 +1012,24 @@ export async function fetchStats(): Promise<Stats> {
         price: Number(pl.price) || 0,
         intervalDays: pl.interval_days,
         active,
-        total,
         revenue,
-        share: totalRevenue ? Math.round((revenue / totalRevenue) * 100) : 0,
+        share: netRevenue ? Math.round((revenue / netRevenue) * 100) : 0,
       };
     })
     .sort((a, b) => b.revenue - a.revenue);
 
   return {
-    totalSubscribers,
-    activeMembers,
-    expiredCount,
-    churnPct,
+    currency,
     totalRevenue,
     netRevenue,
     commission,
-    mrr,
-    arpu,
-    currency,
+    revenueThisMonth,
+    salesCount,
+    activeMembers,
+    totalMembers,
+    newMembersThisMonth,
     membersByGroup: toBars(memByGroup),
-    revenueByGroup: toBars(revByGroup),
+    revenueByGroup: toBars(netRevByGroup),
     offers,
   };
 }

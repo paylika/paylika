@@ -63,13 +63,12 @@ function OfferStatCard({ o, currency }: { o: OfferStat; currency: string }) {
             {formatInt(o.revenue)}
           </Text>
           <Text className="font-medium text-[11px] text-ink-muted">
-            {currency} · {o.share}% du revenu
+            {currency} net · {o.share}%
           </Text>
         </View>
       </View>
       <View className="mt-3 flex-row border-t border-ink/[0.06] pt-3">
-        <Mini label="Abonnés actifs" value={String(o.active)} />
-        <Mini label="Total" value={String(o.total)} />
+        <Mini label="Membres actifs" value={String(o.active)} />
         <Mini label="Prix" value={`${formatInt(o.price)} ${currency}`} />
       </View>
     </Card>
@@ -94,12 +93,12 @@ export default function StatsScreen() {
   const cur = data?.currency ?? "XOF";
   const kpis = data
     ? [
-        { label: "MRR (mensuel)", value: formatInt(data.mrr), unit: cur, accent: true },
-        { label: "Membres actifs", value: formatInt(data.activeMembers), sub: `sur ${formatInt(data.totalSubscribers)}` },
-        { label: "Total abonnés", value: formatInt(data.totalSubscribers) },
-        { label: "Revenu net", value: formatInt(data.netRevenue), unit: cur, sub: "après commission" },
-        { label: "Taux de churn", value: `${data.churnPct}%`, sub: `${data.expiredCount} expiré(s)` },
-        { label: "Revenu / abonné", value: formatInt(data.arpu), unit: cur, sub: "ARPU" },
+        { label: "Revenu net", value: formatInt(data.netRevenue), unit: cur, accent: true, sub: `brut ${formatInt(data.totalRevenue)}` },
+        { label: "Ce mois", value: formatInt(data.revenueThisMonth), unit: cur, sub: "revenu net" },
+        { label: "Membres actifs", value: formatInt(data.activeMembers), sub: `sur ${formatInt(data.totalMembers)} au total` },
+        { label: "Ventes", value: formatInt(data.salesCount), sub: "paiements" },
+        { label: "Nouveaux membres", value: formatInt(data.newMembersThisMonth), sub: "ce mois" },
+        { label: "Commission Paylika", value: formatInt(data.commission), unit: cur, sub: "10% prélevé" },
       ]
     : [];
 
