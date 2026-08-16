@@ -271,15 +271,20 @@ export async function deleteSubscriber(id: string): Promise<void> {
   if (error) throw error;
 }
 
-export type Group = { id: string; name: string; kind: string };
+export type Group = { id: string; name: string; kind: string; telegramChatId?: string | null };
 
 export async function fetchGroups(): Promise<Group[]> {
   const { data, error } = await supabase
     .from("groups")
-    .select("id, name, kind")
+    .select("id, name, kind, telegram_chat_id")
     .order("created_at", { ascending: true });
   if (error) throw error;
-  return (data ?? []) as Group[];
+  return (data ?? []).map((g: any) => ({
+    id: g.id,
+    name: g.name,
+    kind: g.kind,
+    telegramChatId: g.telegram_chat_id ?? null,
+  }));
 }
 
 export type Tier = { intervalDays: number; price: number; comparePrice?: number | null };

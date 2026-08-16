@@ -121,6 +121,9 @@ export default function NouvelleOffreScreen() {
   }
 
   const isTelegram = deliveryType === "telegram";
+  // Telegram : uniquement les groupes réellement CONNECTÉS (bot ajouté), sinon
+  // taper un nom crée un groupe fantôme (doublon + livraison impossible).
+  const telegramGroups = (groups ?? []).filter((g) => g.kind === "telegram" && g.telegramChatId);
   const needsTarget = deliveryType === "whatsapp" || deliveryType === "link";
   // Telegram : on peut relier un groupe déjà connecté ; sinon on nomme l'offre.
   const usingExisting = isTelegram && groupChoice !== NEW;
@@ -223,22 +226,30 @@ export default function NouvelleOffreScreen() {
             <View>
               <FieldLabel>Groupe / canal Telegram</FieldLabel>
               <Text className="mb-2 font-sans text-[11px] text-ink-muted">
-                Reliez un groupe déjà connecté, ou nommez-en un nouveau.
+                Choisissez un groupe déjà connecté (le bot y est admin).
               </Text>
               {groupsLoading ? (
                 <ActivityIndicator color={colors.bordeaux[600]} />
-              ) : (
+              ) : telegramGroups.length ? (
                 <View className="flex-row flex-wrap" style={{ gap: 8 }}>
-                  {(groups ?? []).map((g) => (
+                  {telegramGroups.map((g) => (
                     <Chip key={g.id} label={g.name} active={groupChoice === g.id} onPress={() => setGroupChoice(g.id)} />
                   ))}
-                  <Chip label="+ Nouveau" active={groupChoice === NEW} onPress={() => setGroupChoice(NEW)} />
+                </View>
+              ) : (
+                <View className="rounded-2xl bg-sand p-3">
+                  <Text className="font-sans text-[12px] text-ink-soft" style={{ lineHeight: 17 }}>
+                    Aucun groupe connecté. Ajoutez @Paylikabot comme administrateur de votre groupe, puis reliez-le.
+                  </Text>
+                  <View className="mt-2 self-start">
+                    <Button label="Connecter un groupe" variant="outline" onPress={() => router.push("/acces" as any)} />
+                  </View>
                 </View>
               )}
             </View>
           ) : null}
 
-          {!usingExisting ? (
+          {!isTelegram ? (
             <Input
               label="Nom de l'offre"
               value={name}
