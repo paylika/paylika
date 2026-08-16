@@ -149,8 +149,11 @@
     var t = currentTier();
     var fee = Math.round(t.price * 0.02);   // frais forfaitaire 2% (acheteur)
     var total = t.price + fee;
+    var cover = (d.salesPage && d.salesPage.cover)
+      ? '<div style="display:flex;justify-content:center;margin-bottom:14px"><img src="'+esc(d.salesPage.cover)+'" alt="" style="width:190px;height:190px;object-fit:cover;border-radius:18px" /></div>'
+      : '';
     app.innerHTML =
-      '<div class="card"><div class="eyebrow">'+(d.tiers.every(function(x){return x.intervalDays<=0;})?"Paiement":"Abonnement")+'</div>'
+      '<div class="card">'+cover+'<div class="eyebrow">'+(d.tiers.every(function(x){return x.intervalDays<=0;})?"Paiement":"Abonnement")+'</div>'
       + '<div class="oname">'+esc(d.offerName||"Offre")+'</div>'+tiers+'</div>'
       + '<div class="card"><div class="flabel">Votre pays</div><div class="row">'+flags+'</div>'
       + '<div class="flabel" style="margin-top:16px">Moyen de paiement</div><div class="row">'+ops+'</div></div>'

@@ -5,6 +5,7 @@ import { Screen, PageTitle } from "@/components/Screen";
 import { Card, Button, Eyebrow } from "@/components/ui";
 import { Input, Chip, FieldLabel } from "@/components/form";
 import { Icon } from "@/components/Icon";
+import { CoverPicker } from "@/components/CoverPicker";
 import { colors } from "@/theme/colors";
 import * as DocumentPicker from "expo-document-picker";
 import {
@@ -101,6 +102,7 @@ export default function NouvelleOffreScreen() {
   const [linkMode, setLinkMode] = useState<"url" | "file">("url");
   const [fileName, setFileName] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [cover, setCover] = useState<string | null>(null);
   const [tiers, setTiers] = useState<TierForm[]>([{ days: 30, price: "", compare: "" }]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -170,6 +172,7 @@ export default function NouvelleOffreScreen() {
         deliveryTarget: needsTarget ? deliveryTarget.trim() : null,
         groupId: usingExisting ? groupChoice : undefined,
         newGroupName: usingExisting ? undefined : offerName,
+        salesPage: cover ? { cover } : null,
         tiers: validTiers.map((t) => ({
           intervalDays: isTelegram ? t.days : 0, // 0 = paiement unique
           price: num(t.price),
@@ -356,6 +359,9 @@ export default function NouvelleOffreScreen() {
           ) : null}
         </View>
       </Card>
+
+      {/* Image de couverture (optionnelle) */}
+      <CoverPicker value={cover} onChange={setCover} />
 
       {/* Prix : récurrence (Telegram) OU paiement unique (autres) */}
       {isTelegram ? (

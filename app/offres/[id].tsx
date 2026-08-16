@@ -5,8 +5,16 @@ import { Screen, PageTitle } from "@/components/Screen";
 import { Card, Button, Tag } from "@/components/ui";
 import { Input } from "@/components/form";
 import { Icon } from "@/components/Icon";
+import { CoverPicker } from "@/components/CoverPicker";
 import { colors } from "@/theme/colors";
-import { fetchOffre, fetchGroupPlans, updateOfferTiers, PERIODICITIES } from "@/data/queries";
+import {
+  fetchOffre,
+  fetchGroupPlans,
+  updateOfferTiers,
+  updateSalesPage,
+  PERIODICITIES,
+  type SalesPage,
+} from "@/data/queries";
 
 type TierState = { id?: string; price: string; compare: string };
 
@@ -82,6 +90,7 @@ export default function EditOffreScreen() {
   const [offerName, setOfferName] = useState("");
   const [isTelegram, setIsTelegram] = useState(true);
   const [tiers, setTiers] = useState<Record<number, TierState>>({});
+  const [salesPage, setSalesPage] = useState<SalesPage | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -98,6 +107,7 @@ export default function EditOffreScreen() {
         setGroupName(o.groupName);
         setOfferName((o.name.split(" — ")[0] || o.name).trim());
         setIsTelegram(o.deliveryType === "telegram");
+        setSalesPage(o.salesPage ?? null);
         const plans = await fetchGroupPlans(o.groupId);
         const map: Record<number, TierState> = {};
         for (const p of plans) {
@@ -131,6 +141,17 @@ export default function EditOffreScreen() {
   }
   function setTier(days: number, t: TierState) {
     setTiers((prev) => ({ ...prev, [days]: t }));
+  }
+
+  // L'image se sauvegarde tout de suite (comme la photo de profil).
+  async function onCover(url: string | null) {
+    const next: SalesPage = { ...(salesPage ?? {}), cover: url };
+    setSalesPage(next);
+    try {
+      await updateSalesPage(groupId, next);
+    } catch (e: any) {
+      setError(e?.message ?? "Image non enregistrée.");
+    }
   }
 
   async function save() {
@@ -183,6 +204,8 @@ export default function EditOffreScreen() {
               </View>
             ) : null}
           </Card>
+
+          <CoverPicker value={salesPage?.cover ?? null} onChange={onCover} />
 
           {isTelegram ? (
             <Card>

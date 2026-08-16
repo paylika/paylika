@@ -30,6 +30,7 @@ type OfferInfo = {
   groupName: string;
   currency: string;
   deliveryType?: string;
+  salesPage?: { cover?: string | null } | null;
   tiers: Tier[];
 };
 
@@ -256,6 +257,15 @@ export default function PayScreen() {
           <>
             {/* Offre + formules */}
             <Card>
+              {info.salesPage?.cover ? (
+                <View className="mb-3 items-center">
+                  <Image
+                    source={{ uri: info.salesPage.cover }}
+                    style={{ width: 180, height: 180, borderRadius: 18 }}
+                    resizeMode="cover"
+                  />
+                </View>
+              ) : null}
               <Eyebrow>{info.tiers.every((t) => t.intervalDays <= 0) ? "Paiement" : "Abonnement"}</Eyebrow>
               <Text className="mt-1 font-display-semi text-[19px] text-ink">{info.offerName}</Text>
 
