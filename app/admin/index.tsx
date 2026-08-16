@@ -2,19 +2,11 @@ import { useCallback, useState } from "react";
 import { View, Text, ActivityIndicator, Pressable } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { Screen } from "@/components/Screen";
-import { Card, Button, Eyebrow } from "@/components/ui";
-import { Input } from "@/components/form";
+import { Card, Eyebrow } from "@/components/ui";
 import { Icon, type IconName } from "@/components/Icon";
 import { colors } from "@/theme/colors";
 import { formatInt } from "@/components/cards";
-import {
-  adminOverview,
-  adminOwners,
-  adminGetSettings,
-  adminSetSettings,
-  type AdminOverview,
-  type AdminOwner,
-} from "@/lib/admin";
+import { adminOverview, adminOwners, type AdminOverview, type AdminOwner } from "@/lib/admin";
 
 function Kpi({ label, value, sub, accent }: { label: string; value: string; sub?: string; accent?: boolean }) {
   return (
@@ -58,35 +50,17 @@ export default function AdminPilotage() {
   const [ov, setOv] = useState<AdminOverview | null>(null);
   const [owners, setOwners] = useState<AdminOwner[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [pixelId, setPixelId] = useState("");
-  const [savingPixel, setSavingPixel] = useState(false);
-  const [pixelSaved, setPixelSaved] = useState(false);
 
   const load = useCallback(async () => {
     try {
       setError(null);
-      const [o, ow, s] = await Promise.all([adminOverview(), adminOwners(), adminGetSettings()]);
+      const [o, ow] = await Promise.all([adminOverview(), adminOwners()]);
       setOv(o);
       setOwners(ow);
-      setPixelId(s.metaPixelId ?? "");
     } catch (e: any) {
       setError(e?.message ?? "Chargement impossible.");
     }
   }, []);
-
-  async function savePixel() {
-    setSavingPixel(true);
-    setPixelSaved(false);
-    try {
-      await adminSetSettings(pixelId.trim());
-      setPixelSaved(true);
-      setTimeout(() => setPixelSaved(false), 2000);
-    } catch (e: any) {
-      setError(e?.message ?? "Enregistrement impossible.");
-    } finally {
-      setSavingPixel(false);
-    }
-  }
 
   useFocusEffect(
     useCallback(() => {
@@ -147,6 +121,12 @@ export default function AdminPilotage() {
           sub="Flux de paiements en temps réel"
           onPress={() => router.push("/admin/transactions" as any)}
         />
+        <NavCard
+          icon="bolt"
+          title="Marketing · Pixel"
+          sub="Pixel Meta + pubs Facebook"
+          onPress={() => router.push("/admin/marketing" as any)}
+        />
       </View>
 
       {/* Top propriétaires */}
@@ -185,32 +165,6 @@ export default function AdminPilotage() {
           </View>
         </Card>
       ) : null}
-
-      {/* Marketing · Pixel Meta (pubs Facebook) */}
-      <Card>
-        <Eyebrow>Marketing · Pixel Meta</Eyebrow>
-        <Text className="mt-1 font-sans text-[12px] text-ink-muted" style={{ lineHeight: 17 }}>
-          Pour tes pubs Facebook : colle l'ID de ton Pixel Meta. L'événement « inscription » se déclenche à chaque
-          création de compte (objectif « Ventes / Conversions »).
-        </Text>
-        <View className="mt-3">
-          <Input
-            label="ID du Pixel Meta"
-            value={pixelId}
-            onChangeText={setPixelId}
-            placeholder="Ex. 1234567890123456"
-            keyboardType="numeric"
-          />
-        </View>
-        <View className="mt-3 self-start">
-          <Button
-            label={savingPixel ? "Enregistrement…" : pixelSaved ? "Enregistré ✓" : "Enregistrer le pixel"}
-            icon="check"
-            variant="accent"
-            onPress={savePixel}
-          />
-        </View>
-      </Card>
     </Screen>
   );
 }
