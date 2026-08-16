@@ -877,7 +877,7 @@ export async function fetchStats(): Promise<Stats> {
       .from("plans")
       .select("id, name, price, interval_days, group_id, groups(name, kind)")
       .order("created_at"),
-    supabase.from("subscriptions").select("id, plan_id, group_id, status"),
+    supabase.from("subscriptions").select("id, subscriber_id, plan_id, group_id, status"),
     supabase
       .from("payments")
       .select("amount, currency, subscriptions(plan_id, groups(name))"),
@@ -892,7 +892,11 @@ export async function fetchStats(): Promise<Stats> {
   const payments = (paymentsRes.data ?? []) as any[];
 
   const totalSubscribers = subsCountRes.count ?? subs.length;
-  const activeMembers = subs.filter((s) => s.status === "active").length;
+  // Membres actifs = personnes UNIQUES (par abonné), pas nombre d'abonnements
+  // (sinon un client qui repaie est compté plusieurs fois).
+  const activeMembers = new Set(
+    subs.filter((s) => s.status === "active" && s.subscriber_id).map((s) => s.subscriber_id),
+  ).size;
   const expiredCount = subs.filter((s) => s.status === "expired").length;
   const totalSubs = subs.length || 1;
   const churnPct = Math.round((expiredCount / totalSubs) * 1000) / 10;

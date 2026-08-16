@@ -123,7 +123,7 @@ Deno.serve(async (req) => {
 async function grantAccess(evt: any) {
   const evtRef = (evt.reference ?? "") as string;
 
-  const cols = "plan_id, group_id, telegram_user_id, amount, reference";
+  const cols = "plan_id, group_id, telegram_user_id, amount, reference, customer_phone, customer_name";
   let intent: any = null;
   // 1) par référence (si UniTech en fournit une)
   if (evtRef) {
@@ -243,6 +243,26 @@ async function grantAccess(evt: any) {
         .select("id")
         .maybeSingle();
       if (subErr) console.error("insert subscriber:", subErr.message);
+      subscriberId = sub?.id ?? null;
+    }
+  } else if (intent.customer_phone) {
+    // Acheteur non-Telegram : identité unique = téléphone (scopé au propriétaire).
+    // Un même numéro réutilise le même abonné → plus de doublon à chaque paiement.
+    const phone = String(intent.customer_phone);
+    const { data: existing } = await admin
+      .from("subscribers")
+      .select("id")
+      .eq("owner_id", owner)
+      .eq("phone", phone)
+      .maybeSingle();
+    subscriberId = existing?.id ?? null;
+    if (!subscriberId) {
+      const { data: sub, error: subErr } = await admin
+        .from("subscribers")
+        .insert({ owner_id: owner, full_name: intent.customer_name || "Client", phone })
+        .select("id")
+        .maybeSingle();
+      if (subErr) console.error("insert subscriber (phone):", subErr.message);
       subscriberId = sub?.id ?? null;
     }
   }

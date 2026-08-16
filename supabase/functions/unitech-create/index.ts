@@ -105,6 +105,9 @@ Deno.serve(async (req) => {
         plan_id: plan.id,
         group_id: plan.group_id,
         telegram_user_id: tg ? Number(tg) : null,
+        // Identité de l'acheteur non-Telegram (pour le dédupliquer côté webhook).
+        customer_phone: String(phone).replace(/\s/g, ""),
+        customer_name: (fullName || "").trim() || null,
         amount: Number(plan.price),
         status: "pending",
       },
