@@ -73,37 +73,36 @@ Deno.serve(async (req) => {
   }
 
   const raw = await req.text();
+  let evt: any;
+  try {
+    evt = JSON.parse(raw);
+  } catch {
+    return new Response("bad request", { status: 400 });
+  }
 
-  // Vérification de signature (anti-forge) — tolérante pour ne pas bloquer les
-  // vrais paiements si UniTech ne signe pas (encore).
-  //  • signature présente  → elle DOIT être valide, sinon 401 (forge rejetée).
-  //  • signature absente    → acceptée mais loggée, SAUF si REQUIRE_WEBHOOK_SIGNATURE=1.
-  // Active REQUIRE_WEBHOOK_SIGNATURE=1 dès que les logs confirment qu'UniTech
-  // envoie une signature valide → le trou de forge est alors totalement fermé.
+  // Vérification de signature — Méthode 2 UniTech (« CDN-proof ») : HMAC-SHA256
+  // hex sur la chaîne canonique `event|reference|amount|status|signed_at`,
+  // comparée au champ `signature` du body. La clé API est le secret HMAC.
+  //  • signature présente → doit être valide, sinon 401 (forge rejetée).
+  //  • signature absente   → acceptée + loggée, SAUF si REQUIRE_WEBHOOK_SIGNATURE=1.
+  // Une fois un vrai paiement validé, mets REQUIRE_WEBHOOK_SIGNATURE=1 → le trou
+  // de forge est totalement fermé (impossible sans la clé API).
   const REQUIRE_SIG = (Deno.env.get("REQUIRE_WEBHOOK_SIGNATURE") ?? "") === "1";
-  const sigHeader =
-    req.headers.get("x-unitechpay-signature") ??
-    req.headers.get("X-UnitechPay-Signature") ??
-    "";
-  if (sigHeader) {
+  const provided = String(evt.signature ?? "");
+  if (provided) {
     if (!API_KEY) return new Response("server not configured", { status: 500 });
-    const expected = await hmacHex(API_KEY, raw);
-    if (!timingSafeEqual(expected.toLowerCase(), sigHeader.toLowerCase())) {
-      console.error("signature invalide — rejeté");
+    const canonical =
+      `${evt.event ?? ""}|${evt.reference ?? ""}|${evt.amount ?? ""}|${evt.status ?? ""}|${evt.signed_at ?? ""}`;
+    const expected = await hmacHex(API_KEY, canonical);
+    if (!timingSafeEqual(expected.toLowerCase(), provided.toLowerCase())) {
+      console.error("signature webhook invalide — rejeté");
       return new Response("bad signature", { status: 401 });
     }
   } else if (REQUIRE_SIG) {
     console.error("webhook sans signature (REQUIRE_WEBHOOK_SIGNATURE=1) — rejeté");
     return new Response("signature requise", { status: 401 });
   } else {
-    console.warn("webhook SANS signature — accepté (active REQUIRE_WEBHOOK_SIGNATURE=1 pour l'exiger)");
-  }
-
-  let evt: any;
-  try {
-    evt = JSON.parse(raw);
-  } catch {
-    return new Response("bad request", { status: 400 });
+    console.warn("webhook SANS champ signature — accepté (active REQUIRE_WEBHOOK_SIGNATURE=1 une fois validé)");
   }
 
   try {
