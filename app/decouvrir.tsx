@@ -248,8 +248,32 @@ export default function DecouvrirScreen() {
     }
   };
 
+  // CTA sticky : apparaît dès qu'on a dépassé le hero (plus besoin de remonter
+  // en haut pour s'inscrire → moins d'abandons).
+  const [showCta, setShowCta] = useState(false);
+  const ctaV = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(ctaV, {
+      toValue: showCta ? 1 : 0,
+      duration: 240,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [showCta, ctaV]);
+  const onScroll = (e: any) => {
+    const y = e?.nativeEvent?.contentOffset?.y ?? 0;
+    const next = y > 560;
+    setShowCta((prev) => (prev === next ? prev : next));
+  };
+
   return (
-    <ScrollView className="flex-1 bg-white" contentContainerStyle={{ alignItems: "center", paddingBottom: insets.bottom + 24 }}>
+    <View style={{ flex: 1 }}>
+    <ScrollView
+      className="flex-1 bg-white"
+      onScroll={onScroll}
+      scrollEventThrottle={16}
+      contentContainerStyle={{ alignItems: "center", paddingBottom: insets.bottom + (wide ? 24 : 96) }}
+    >
       {/* NAVBAR — superposée sur le hero */}
       <View className="w-full items-center" style={{ position: "absolute", top: 0, left: 0, right: 0, zIndex: 20, paddingTop: insets.top + 10 }}>
         <View style={{ width: "100%", maxWidth: 1040 }} className="flex-row items-center justify-between px-5 pb-3">
@@ -876,5 +900,51 @@ export default function DecouvrirScreen() {
         </View>
       </View>
     </ScrollView>
+
+      {/* CTA sticky — visible dès qu'on scrolle, pour s'inscrire sans remonter */}
+      <Animated.View
+        pointerEvents={showCta ? "auto" : "none"}
+        style={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          bottom: 0,
+          alignItems: "center",
+          opacity: ctaV,
+          transform: [{ translateY: ctaV.interpolate({ inputRange: [0, 1], outputRange: [90, 0] }) }],
+          backgroundColor: "rgba(255,255,255,0.97)",
+          borderTopWidth: 1,
+          borderTopColor: "rgba(24,24,27,0.08)",
+          paddingHorizontal: 16,
+          paddingTop: 12,
+          paddingBottom: insets.bottom + 12,
+          shadowColor: "#000",
+          shadowOpacity: 0.08,
+          shadowRadius: 20,
+          shadowOffset: { width: 0, height: -6 },
+        }}
+      >
+        <View style={{ width: "100%", maxWidth: 1040 }} className="flex-row items-center justify-between">
+          <View className="flex-1 pr-3">
+            <Text className="font-display-semi text-[14.5px] text-ink" style={{ letterSpacing: -0.2 }}>
+              Prêt à monétiser ta communauté ?
+            </Text>
+            <Text className="mt-0.5 font-sans text-[11.5px] text-ink-muted">
+              Gratuit · sans carte · prêt en 2 minutes
+            </Text>
+          </View>
+          <Pressable
+            onPress={signup}
+            className="flex-row items-center rounded-full bg-bordeaux-600 px-5 py-3"
+            style={{ gap: 6 }}
+          >
+            <Text className="font-semibold text-[14px] text-white">
+              {wide ? "Créer mon compte gratuitement" : "Créer mon compte"}
+            </Text>
+            <Icon name="arrow-up-right" size={16} color={colors.white} />
+          </Pressable>
+        </View>
+      </Animated.View>
+    </View>
   );
 }
