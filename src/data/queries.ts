@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { commissionOn, sellerNet } from "@/lib/pricing";
 
 /** Tiny async loader: fetches on mount and exposes `reload` (pull-to-refresh). */
 export function useAsync<T>(fn: () => Promise<T>) {
@@ -581,8 +582,6 @@ export async function createSimpleOffer(input: {
   return data.id as string;
 }
 
-const COMMISSION_RATE = 0.1; // 10% — see docs/ROADMAP.md
-
 export type Transaction = {
   id: string;
   kind: "in" | "out";
@@ -628,7 +627,7 @@ export async function fetchMoney(): Promise<Money> {
     totalRevenue += Number(p.amount) || 0;
     if (p.currency) currency = p.currency;
   }
-  const commission = Math.round(totalRevenue * COMMISSION_RATE);
+  const commission = commissionOn(totalRevenue);
   const netEarned = totalRevenue - commission;
 
   let paidOut = 0;
@@ -643,7 +642,7 @@ export async function fetchMoney(): Promise<Money> {
       label: p.subscriptions?.groups?.name
         ? `Paiement — ${p.subscriptions.groups.name}`
         : "Paiement reçu",
-      amount: Math.round((Number(p.amount) || 0) * (1 - COMMISSION_RATE)),
+      amount: sellerNet(Number(p.amount) || 0),
       date: p.paid_at,
       status: p.status,
     })),
@@ -978,7 +977,7 @@ export async function fetchStats(): Promise<Stats> {
     const pl = p.subscriptions?.plan_id;
     if (pl) revByPlanGross.set(pl, (revByPlanGross.get(pl) ?? 0) + amt);
   }
-  const commission = Math.round(grossTotal * 0.1);
+  const commission = commissionOn(grossTotal);
   const totalRevenue = grossTotal;
   const netRevenue = grossTotal - commission;
   const revenueThisMonth = Math.round(grossThisMonth * 0.9);

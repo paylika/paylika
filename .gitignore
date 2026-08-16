@@ -41,3 +41,7 @@ yarn-error.*
 /ios
 /android
 image site/
+
+# tests e2e (Playwright)
+test-results/
+playwright-report/
