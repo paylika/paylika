@@ -21,7 +21,7 @@ import {
 
 const NEW = "__new__";
 
-type TierForm = { days: number; price: string; compare: string };
+type TierForm = { days: number; price: string; compare: string; introPrice: string; introPeriods: string };
 
 function TierCard({
   index,
@@ -83,6 +83,35 @@ function TierCard({
             />
           </View>
         </View>
+
+        {/* Prix de lancement (promo) — optionnel */}
+        <View className="rounded-2xl border border-ink/10 bg-sand/50 p-3">
+          <Text className="font-semibold text-[12.5px] text-ink">Prix de lancement (option)</Text>
+          <Text className="mt-0.5 font-sans text-[11px] text-ink-muted" style={{ lineHeight: 15 }}>
+            Un tarif réduit pour les premières périodes, puis le prix ci-dessus.
+          </Text>
+          <View className="mt-2.5 flex-row" style={{ gap: 10 }}>
+            <View style={{ flex: 1 }}>
+              <Input
+                label="Prix promo"
+                value={tier.introPrice}
+                onChangeText={(v) => onChange({ ...tier, introPrice: v })}
+                keyboardType="numeric"
+                suffix="XOF"
+                placeholder="500"
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Input
+                label="Nb de périodes"
+                value={tier.introPeriods}
+                onChangeText={(v) => onChange({ ...tier, introPeriods: v })}
+                keyboardType="numeric"
+                placeholder="3"
+              />
+            </View>
+          </View>
+        </View>
       </View>
     </Card>
   );
@@ -103,7 +132,9 @@ export default function NouvelleOffreScreen() {
   const [fileName, setFileName] = useState("");
   const [uploading, setUploading] = useState(false);
   const [cover, setCover] = useState<string | null>(null);
-  const [tiers, setTiers] = useState<TierForm[]>([{ days: 30, price: "", compare: "" }]);
+  const [tiers, setTiers] = useState<TierForm[]>([
+    { days: 30, price: "", compare: "", introPrice: "", introPeriods: "" },
+  ]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -154,7 +185,7 @@ export default function NouvelleOffreScreen() {
     // pick a periodicity not already used
     const used = new Set(tiers.map((t) => t.days));
     const next = PERIODICITIES.find((p) => !used.has(p.days))?.days ?? 30;
-    setTiers((prev) => [...prev, { days: next, price: "", compare: "" }]);
+    setTiers((prev) => [...prev, { days: next, price: "", compare: "", introPrice: "", introPeriods: "" }]);
   }
   function removeTier(i: number) {
     setTiers((prev) => prev.filter((_, idx) => idx !== i));
@@ -173,11 +204,18 @@ export default function NouvelleOffreScreen() {
         groupId: usingExisting ? groupChoice : undefined,
         newGroupName: usingExisting ? undefined : offerName,
         salesPage: cover ? { cover } : null,
-        tiers: validTiers.map((t) => ({
-          intervalDays: isTelegram ? t.days : 0, // 0 = paiement unique
-          price: num(t.price),
-          comparePrice: num(t.compare) > 0 ? num(t.compare) : null,
-        })),
+        tiers: validTiers.map((t) => {
+          const ip = num(t.introPrice);
+          const ipe = num(t.introPeriods);
+          const introOK = isTelegram && ip > 0 && ipe > 0;
+          return {
+            intervalDays: isTelegram ? t.days : 0, // 0 = paiement unique
+            price: num(t.price),
+            comparePrice: num(t.compare) > 0 ? num(t.compare) : null,
+            introPrice: introOK ? ip : null,
+            introPeriods: introOK ? ipe : null,
+          };
+        }),
       });
       router.replace("/offres");
     } catch (e: any) {

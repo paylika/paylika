@@ -23,6 +23,8 @@ type Tier = {
   intervalDays: number;
   price: number;
   comparePrice: number | null;
+  introPrice?: number | null;
+  introPeriods?: number | null;
 };
 type OfferInfo = {
   id: string;
@@ -309,6 +311,11 @@ export default function PayScreen() {
                                 {badge.text}
                               </Text>
                             </View>
+                          ) : null}
+                          {t.introPrice != null && t.introPeriods ? (
+                            <Text className="mt-1 font-semibold text-[11px] text-bordeaux-700">
+                              Lancement : {formatInt(t.introPrice)} × {t.introPeriods}, puis {formatInt(t.price)}
+                            </Text>
                           ) : null}
                         </View>
                       </View>

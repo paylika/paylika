@@ -36,7 +36,7 @@ Deno.serve(async (req) => {
 
     const { data: plan } = await admin
       .from("plans")
-      .select("id, name, price, group_id, groups(delivery_type)")
+      .select("id, name, price, intro_price, intro_periods, group_id, groups(delivery_type)")
       .eq("id", offer)
       .maybeSingle();
     if (!plan) return json({ error: "Offre introuvable." }, 404);
@@ -47,15 +47,35 @@ Deno.serve(async (req) => {
     // Non-Telegram → page de livraison autonome (chargement quasi instantané).
     const successUrl = deliveryType === "telegram" ? "https://t.me/Paylikabot" : `${APP_URL}/access.html`;
 
+    // Prix de lancement (promo) : le vendeur peut fixer un prix réduit pour les
+    // `intro_periods` PREMIERS paiements de cette formule, puis le prix normal.
+    // On compte les paiements DÉJÀ complétés par cet acheteur pour cette formule
+    // (sur payment_intents 'completed', par téléphone ou telegram_user_id).
+    const normalizedPhone = String(phone).replace(/\s/g, "");
+    const regularPrice = Number(plan.price);
+    const introPrice = (plan as any).intro_price != null ? Number((plan as any).intro_price) : null;
+    const introPeriods = (plan as any).intro_periods != null ? Number((plan as any).intro_periods) : 0;
+
+    let effectivePrice = regularPrice;
+    if (introPrice != null && introPeriods > 0) {
+      let q = admin
+        .from("payment_intents")
+        .select("reference", { count: "exact", head: true })
+        .eq("plan_id", plan.id)
+        .eq("status", "completed");
+      q = tg ? q.eq("telegram_user_id", Number(tg)) : q.eq("customer_phone", normalizedPhone);
+      const { count } = await q;
+      if ((count ?? 0) < introPeriods) effectivePrice = introPrice;
+    }
+
     // Frais forfaitaire 2% à la charge de l'ACHETEUR (couvre les frais UniTech).
     // Le vendeur touche son prix plein ; l'acheteur paie prix + 2%.
     const BUYER_FEE_RATE = 0.02;
-    const sellerPrice = Number(plan.price);
-    const buyerAmount = Math.round(sellerPrice * (1 + BUYER_FEE_RATE));
+    const buyerAmount = Math.round(effectivePrice * (1 + BUYER_FEE_RATE));
 
     const base: Record<string, unknown> = {
       amount: buyerAmount,
-      customer_number: String(phone).replace(/\s/g, ""),
+      customer_number: normalizedPhone,
       customer_name: fullName || "Client Paylika",
       description: `Paylika : ${plan.name}`,
       callback_success: successUrl,
@@ -106,9 +126,11 @@ Deno.serve(async (req) => {
         group_id: plan.group_id,
         telegram_user_id: tg ? Number(tg) : null,
         // Identité de l'acheteur non-Telegram (pour le dédupliquer côté webhook).
-        customer_phone: String(phone).replace(/\s/g, ""),
+        customer_phone: normalizedPhone,
         customer_name: (fullName || "").trim() || null,
-        amount: Number(plan.price),
+        // Prix vendeur RÉELLEMENT appliqué (promo ou normal) → source de vérité
+        // pour la commission côté webhook.
+        amount: effectivePrice,
         status: "pending",
       },
       { onConflict: "reference" },

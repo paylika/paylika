@@ -167,10 +167,11 @@ async function grantAccess(evt: any) {
   const intervalDays = plan?.interval_days ?? 30;
   const owner = plan?.owner_id ?? null; // le paiement appartient au proprio de l'offre
 
-  // Montant enregistré = PRIX DE L'OFFRE (source de vérité), jamais evt.amount.
-  // L'acheteur a payé prix + 2% (frais forfaitaire) ; le vendeur, lui, encaisse
-  // sur son prix plein → commission/net calculés sur `amount` (le prix vendeur).
-  const amount = Number(plan?.price ?? intent.amount ?? 0);
+  // Montant enregistré = PRIX VENDEUR RÉELLEMENT APPLIQUÉ (source de vérité),
+  // jamais evt.amount. C'est intent.amount, figé par unitech-create : il tient
+  // compte du prix de lancement (promo) si l'acheteur y a droit ; sinon = prix
+  // normal. L'acheteur a payé ce montant + 2% ; commission/net calculés dessus.
+  const amount = Number(intent.amount ?? plan?.price ?? 0);
   const expectedBuyer = Math.round(amount * 1.02);
   if (evt.amount != null && Number(evt.amount) !== amount && Number(evt.amount) !== expectedBuyer) {
     console.error(`montant webhook (${evt.amount}) inattendu (prix ${amount} / total ${expectedBuyer}) — réf ${reference}`);

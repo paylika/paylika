@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
   // Toutes les formules de la même offre (= même groupe), triées par durée.
   const { data: sibs } = await admin
     .from("plans")
-    .select("id, price, compare_price, interval_days")
+    .select("id, price, compare_price, intro_price, intro_periods, interval_days")
     .eq("group_id", b.group_id)
     .order("interval_days", { ascending: true });
 
@@ -69,6 +69,9 @@ Deno.serve(async (req) => {
     intervalDays: p.interval_days,
     price: Number(p.price) || 0,
     comparePrice: p.compare_price != null ? Number(p.compare_price) : null,
+    // Prix de lancement (promo) pour affichage au checkout.
+    introPrice: p.intro_price != null ? Number(p.intro_price) : null,
+    introPeriods: p.intro_periods != null ? Number(p.intro_periods) : null,
   }));
 
   return json({

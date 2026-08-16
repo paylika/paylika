@@ -300,7 +300,14 @@ export async function fetchGroups(): Promise<Group[]> {
   }));
 }
 
-export type Tier = { intervalDays: number; price: number; comparePrice?: number | null };
+export type Tier = {
+  intervalDays: number;
+  price: number;
+  comparePrice?: number | null;
+  // Prix de lancement (option) : intro_price pour les intro_periods 1ers paiements.
+  introPrice?: number | null;
+  introPeriods?: number | null;
+};
 export type NewOffer = {
   offerName: string;
   currency: string;
@@ -345,6 +352,8 @@ export async function createOffer(input: NewOffer): Promise<string[]> {
     name: `${input.offerName} — ${intervalLabel(t.intervalDays)}`,
     price: t.price,
     compare_price: t.comparePrice ?? null,
+    intro_price: t.introPrice ?? null,
+    intro_periods: t.introPeriods ?? null,
     currency: input.currency,
     interval_days: t.intervalDays,
   }));
@@ -418,10 +427,19 @@ export async function deleteOffer(id: string): Promise<void> {
 /** Toutes les formules (plans) d'un groupe — pour l'éditeur d'offre. */
 export async function fetchGroupPlans(
   groupId: string,
-): Promise<{ id: string; intervalDays: number; price: number; comparePrice: number | null }[]> {
+): Promise<
+  {
+    id: string;
+    intervalDays: number;
+    price: number;
+    comparePrice: number | null;
+    introPrice: number | null;
+    introPeriods: number | null;
+  }[]
+> {
   const { data, error } = await supabase
     .from("plans")
-    .select("id, interval_days, price, compare_price")
+    .select("id, interval_days, price, compare_price, intro_price, intro_periods")
     .eq("group_id", groupId)
     .order("interval_days", { ascending: true });
   if (error) throw error;
@@ -430,6 +448,8 @@ export async function fetchGroupPlans(
     intervalDays: p.interval_days,
     price: Number(p.price) || 0,
     comparePrice: p.compare_price != null ? Number(p.compare_price) : null,
+    introPrice: p.intro_price != null ? Number(p.intro_price) : null,
+    introPeriods: p.intro_periods != null ? Number(p.intro_periods) : null,
   }));
 }
 
@@ -441,7 +461,14 @@ export async function fetchGroupPlans(
 export async function updateOfferTiers(input: {
   groupId: string;
   offerName: string;
-  tiers: { id?: string; intervalDays: number; price: number; comparePrice?: number | null }[];
+  tiers: {
+    id?: string;
+    intervalDays: number;
+    price: number;
+    comparePrice?: number | null;
+    introPrice?: number | null;
+    introPeriods?: number | null;
+  }[];
 }): Promise<void> {
   const owner = await currentUserId();
   const { data: existing, error: e0 } = await supabase.from("plans").select("id").eq("group_id", input.groupId);
@@ -459,6 +486,8 @@ export async function updateOfferTiers(input: {
       name: `${input.offerName} — ${intervalLabel(t.intervalDays)}`,
       price: t.price,
       compare_price: t.comparePrice ?? null,
+      intro_price: t.introPrice ?? null,
+      intro_periods: t.introPeriods ?? null,
       interval_days: t.intervalDays,
       currency: "XOF",
     };

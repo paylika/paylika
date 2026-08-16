@@ -16,7 +16,15 @@ import {
   type SalesPage,
 } from "@/data/queries";
 
-type TierState = { id?: string; price: string; compare: string };
+type TierState = {
+  id?: string;
+  price: string;
+  compare: string;
+  introPrice: string;
+  introPeriods: string;
+};
+
+const EMPTY_TIER: TierState = { price: "", compare: "", introPrice: "", introPeriods: "" };
 
 /** Ligne « périodicité à cocher » (identique à l'onboarding) : coche + prix. */
 function PeriodRow({
@@ -76,6 +84,35 @@ function PeriodRow({
           </View>
         </View>
       ) : null}
+      {selected ? (
+        <View className="mt-2.5 rounded-2xl border border-ink/10 bg-card p-3">
+          <Text className="font-semibold text-[12.5px] text-ink">Prix de lancement (option)</Text>
+          <Text className="mt-0.5 font-sans text-[11px] text-ink-muted" style={{ lineHeight: 15 }}>
+            Tarif réduit pour les premières périodes, puis le prix ci-dessus.
+          </Text>
+          <View className="mt-2.5 flex-row" style={{ gap: 8 }}>
+            <View style={{ flex: 1 }}>
+              <Input
+                label="Prix promo"
+                value={tier.introPrice}
+                onChangeText={(v) => onChange({ ...tier, introPrice: v })}
+                keyboardType="numeric"
+                suffix="XOF"
+                placeholder="500"
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Input
+                label="Nb de périodes"
+                value={tier.introPeriods}
+                onChangeText={(v) => onChange({ ...tier, introPeriods: v })}
+                keyboardType="numeric"
+                placeholder="3"
+              />
+            </View>
+          </View>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -115,6 +152,8 @@ export default function EditOffreScreen() {
             id: p.id,
             price: String(p.price),
             compare: p.comparePrice != null ? String(p.comparePrice) : "",
+            introPrice: p.introPrice != null ? String(p.introPrice) : "",
+            introPeriods: p.introPeriods != null ? String(p.introPeriods) : "",
           };
         }
         setTiers(map);
@@ -135,7 +174,7 @@ export default function EditOffreScreen() {
     setTiers((prev) => {
       const next = { ...prev };
       if (next[days]) delete next[days];
-      else if (Object.keys(next).length < 3) next[days] = { price: "", compare: "" };
+      else if (Object.keys(next).length < 3) next[days] = { ...EMPTY_TIER };
       return next;
     });
   }
@@ -161,12 +200,19 @@ export default function EditOffreScreen() {
     try {
       const tierArray = selectedDays
         .filter((d) => num(tiers[d].price) > 0)
-        .map((d) => ({
-          id: tiers[d].id,
-          intervalDays: isTelegram ? d : 0,
-          price: num(tiers[d].price),
-          comparePrice: tiers[d].compare ? num(tiers[d].compare) : null,
-        }));
+        .map((d) => {
+          const ip = num(tiers[d].introPrice);
+          const ipe = num(tiers[d].introPeriods);
+          const introOK = isTelegram && ip > 0 && ipe > 0;
+          return {
+            id: tiers[d].id,
+            intervalDays: isTelegram ? d : 0,
+            price: num(tiers[d].price),
+            comparePrice: tiers[d].compare ? num(tiers[d].compare) : null,
+            introPrice: introOK ? ip : null,
+            introPeriods: introOK ? ipe : null,
+          };
+        });
       await updateOfferTiers({ groupId, offerName: offerName || groupName || "Offre", tiers: tierArray });
       router.replace("/offres");
     } catch (e: any) {
@@ -175,7 +221,7 @@ export default function EditOffreScreen() {
     }
   }
 
-  const t0 = tiers[0] ?? { price: "", compare: "" };
+  const t0 = tiers[0] ?? EMPTY_TIER;
 
   return (
     <Screen>
@@ -223,7 +269,7 @@ export default function EditOffreScreen() {
                       selected={selected}
                       disabled={selectedDays.length >= 3}
                       onToggle={() => toggle(p.days)}
-                      tier={tiers[p.days] ?? { price: "", compare: "" }}
+                      tier={tiers[p.days] ?? EMPTY_TIER}
                       onChange={(t) => setTier(p.days, t)}
                     />
                   );

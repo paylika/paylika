@@ -129,8 +129,12 @@
       if (multi && t.id===popId) badge = '<div class="badge" style="background:'+"#7B1126"+'">Plus populaire</div>';
       else if (multi && t.id===bestId) badge = '<div class="badge" style="background:#2F6B4F">Meilleure offre</div>';
       var cmp = t.comparePrice ? '<span class="cmp">'+fmt(t.comparePrice)+'</span>' : '';
+      var intro = (t.introPrice!=null && t.introPeriods)
+        ? '<div style="font-size:11px;color:#7B1126;font-weight:600;margin-top:3px">Lancement : '
+          + fmt(t.introPrice)+' '+cur+' les '+t.introPeriods+' première'+(t.introPeriods>1?'s':'')+', puis '+fmt(t.price)+'</div>'
+        : '';
       return '<div class="tier'+(sel?' sel':'')+'" data-tier="'+t.id+'"><div class="left"><div class="dot"></div>'
-        + '<div><div class="tlabel">'+perLabel(t.intervalDays)+'</div>'+badge+'</div></div>'
+        + '<div><div class="tlabel">'+perLabel(t.intervalDays)+'</div>'+badge+intro+'</div></div>'
         + '<div class="price">'+cmp+fmt(t.price)+'<span class="cur">'+cur+'</span></div></div>';
     }).join("");
 
