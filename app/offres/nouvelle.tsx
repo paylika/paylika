@@ -231,10 +231,19 @@ export default function NouvelleOffreScreen() {
               {groupsLoading ? (
                 <ActivityIndicator color={colors.bordeaux[600]} />
               ) : telegramGroups.length ? (
-                <View className="flex-row flex-wrap" style={{ gap: 8 }}>
+                <View className="flex-row flex-wrap items-center" style={{ gap: 8 }}>
                   {telegramGroups.map((g) => (
                     <Chip key={g.id} label={g.name} active={groupChoice === g.id} onPress={() => setGroupChoice(g.id)} />
                   ))}
+                  {/* Connecter un AUTRE groupe (ouvre Telegram pour ajouter le bot). */}
+                  <Pressable
+                    onPress={() => router.push("/onboarding?mode=add" as any)}
+                    className="flex-row items-center rounded-full border border-bordeaux-600 px-3 py-2"
+                    style={{ gap: 5 }}
+                  >
+                    <Icon name="plus" size={14} color={colors.bordeaux[600]} />
+                    <Text className="font-semibold text-[13px] text-bordeaux-700">Connecter un groupe</Text>
+                  </Pressable>
                 </View>
               ) : (
                 <View className="rounded-2xl bg-sand p-3">
@@ -242,7 +251,7 @@ export default function NouvelleOffreScreen() {
                     Aucun groupe connecté. Ajoutez @Paylikabot comme administrateur de votre groupe, puis reliez-le.
                   </Text>
                   <View className="mt-2 self-start">
-                    <Button label="Connecter un groupe" variant="outline" onPress={() => router.push("/acces" as any)} />
+                    <Button label="Connecter un groupe" variant="outline" onPress={() => router.push("/onboarding?mode=add" as any)} />
                   </View>
                 </View>
               )}
