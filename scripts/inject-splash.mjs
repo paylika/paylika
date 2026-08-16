@@ -2,6 +2,13 @@
 // Exécuté après `expo export` pour supprimer l'écran blanc au 1er chargement.
 import { readFileSync, writeFileSync, existsSync, copyFileSync, mkdirSync, readdirSync } from "node:fs";
 
+// En-têtes de sécurité Cloudflare (_headers) — nom à underscore souvent ignoré
+// par la copie public/, on le force ici.
+if (existsSync("public/_headers")) {
+  copyFileSync("public/_headers", "dist/_headers");
+  console.log("[headers] public/_headers -> dist/_headers");
+}
+
 // Copie les pages autonomes (chargement quasi instantané) dans dist.
 for (const f of ["checkout.html", "access.html"]) {
   if (existsSync("public/" + f)) {

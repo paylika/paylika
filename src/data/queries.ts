@@ -110,12 +110,31 @@ export function payLinkFor(offre: Pick<Offre, "id" | "deliveryType">): string {
       `${APP_URL}/checkout.html?offer=${offre.id}`;
 }
 
+/**
+ * Garde-fou d'upload : refuse les fichiers trop lourds et les types dangereux.
+ * (Complète les policies du bucket ; validation la plus proche de l'utilisateur.)
+ */
+function guardUpload(size: number, type: string, opts: { maxMB: number; kind: "image" | "content" }) {
+  if (size > opts.maxMB * 1024 * 1024) {
+    throw new Error(`Fichier trop volumineux (max ${opts.maxMB} Mo).`);
+  }
+  const t = (type || "").toLowerCase();
+  if (opts.kind === "image") {
+    if (t && !/^image\/(png|jpe?g|webp|gif)$/.test(t)) {
+      throw new Error("Format d'image non supporté (PNG, JPG, WEBP ou GIF).");
+    }
+  } else if (/^(text\/html|image\/svg\+xml|application\/x-msdownload|application\/x-sh|application\/x-httpd-php)$/.test(t)) {
+    throw new Error("Type de fichier non autorisé.");
+  }
+}
+
 /** Upload d'une image de couverture (bucket public) → URL publique. */
 export async function uploadCover(uri: string, mimeType?: string): Promise<string> {
   const owner = await currentUserId();
   const resp = await fetch(uri);
   const blob = await resp.blob();
   const type = mimeType || blob.type || "image/jpeg";
+  guardUpload(blob.size, type, { maxMB: 5, kind: "image" });
   const ext = type.includes("png") ? "png" : "jpg";
   const path = `${owner}/cover_${Date.now()}.${ext}`;
   const { error } = await supabase.storage
@@ -133,14 +152,13 @@ export async function uploadContent(uri: string, fileName: string, mimeType?: st
   const owner = await currentUserId();
   const resp = await fetch(uri);
   const blob = await resp.blob();
+  const type = mimeType || blob.type || "application/octet-stream";
+  guardUpload(blob.size, type, { maxMB: 50, kind: "content" });
   const safe = (fileName || "fichier").replace(/[^\w.\-]+/g, "_").slice(-60);
   const path = `${owner}/${Date.now()}-${safe}`;
   const { error } = await supabase.storage
     .from("content")
-    .upload(path, blob, {
-      contentType: mimeType || blob.type || "application/octet-stream",
-      upsert: true,
-    });
+    .upload(path, blob, { contentType: type, upsert: true });
   if (error) throw error;
   return `storage:${path}`;
 }
@@ -673,6 +691,7 @@ export async function uploadAvatar(uri: string, mimeType?: string): Promise<stri
   const resp = await fetch(uri);
   const blob = await resp.blob();
   const type = mimeType || blob.type || "image/jpeg";
+  guardUpload(blob.size, type, { maxMB: 5, kind: "image" });
   const ext = type.includes("png") ? "png" : "jpg";
   const path = `${owner}/avatar_${Date.now()}.${ext}`;
   const { error } = await supabase.storage
