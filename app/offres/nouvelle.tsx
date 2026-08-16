@@ -10,6 +10,7 @@ import * as DocumentPicker from "expo-document-picker";
 import {
   useAsync,
   fetchGroups,
+  fetchOffres,
   createOffer,
   uploadContent,
   PERIODICITIES,
@@ -91,6 +92,7 @@ export default function NouvelleOffreScreen() {
   const { first } = useLocalSearchParams<{ first?: string }>();
   const onboarding = first === "1";
   const { data: groups, loading: groupsLoading } = useAsync(fetchGroups);
+  const { data: offres } = useAsync(fetchOffres);
 
   const [deliveryType, setDeliveryType] = useState<DeliveryType>("telegram");
   const [groupChoice, setGroupChoice] = useState<string>(NEW);
@@ -121,9 +123,12 @@ export default function NouvelleOffreScreen() {
   }
 
   const isTelegram = deliveryType === "telegram";
-  // Telegram : uniquement les groupes réellement CONNECTÉS (bot ajouté), sinon
-  // taper un nom crée un groupe fantôme (doublon + livraison impossible).
-  const telegramGroups = (groups ?? []).filter((g) => g.kind === "telegram" && g.telegramChatId);
+  // Groupes Telegram réellement CONNECTÉS (bot ajouté). On EXCLUT ceux qui ont
+  // déjà une offre : on les modifie via le crayon (✎) dans « Offres », pas en
+  // recréant une offre (ce qui ferait un doublon).
+  const groupsWithOffer = new Set((offres ?? []).map((o) => o.groupId));
+  const connectedTgGroups = (groups ?? []).filter((g) => g.kind === "telegram" && g.telegramChatId);
+  const telegramGroups = connectedTgGroups.filter((g) => !groupsWithOffer.has(g.id));
   const needsTarget = deliveryType === "whatsapp" || deliveryType === "link";
   // Telegram : on peut relier un groupe déjà connecté ; sinon on nomme l'offre.
   const usingExisting = isTelegram && groupChoice !== NEW;
@@ -248,7 +253,9 @@ export default function NouvelleOffreScreen() {
               ) : (
                 <View className="rounded-2xl bg-sand p-3">
                   <Text className="font-sans text-[12px] text-ink-soft" style={{ lineHeight: 17 }}>
-                    Aucun groupe connecté. Ajoutez @Paylikabot comme administrateur de votre groupe, puis reliez-le.
+                    {connectedTgGroups.length
+                      ? "Tous vos groupes connectés ont déjà une offre. Pour la changer, utilisez le crayon ✎ dans « Offres ». Ou connectez un nouveau groupe."
+                      : "Aucun groupe connecté. Ajoutez @Paylikabot comme administrateur de votre groupe, puis reliez-le."}
                   </Text>
                   <View className="mt-2 self-start">
                     <Button label="Connecter un groupe" variant="outline" onPress={() => router.push("/onboarding?mode=add" as any)} />
