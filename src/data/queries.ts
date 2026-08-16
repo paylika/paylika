@@ -404,6 +404,63 @@ export async function deleteOffer(id: string): Promise<void> {
   if (error) throw error;
 }
 
+/** Toutes les formules (plans) d'un groupe — pour l'éditeur d'offre. */
+export async function fetchGroupPlans(
+  groupId: string,
+): Promise<{ id: string; intervalDays: number; price: number; comparePrice: number | null }[]> {
+  const { data, error } = await supabase
+    .from("plans")
+    .select("id, interval_days, price, compare_price")
+    .eq("group_id", groupId)
+    .order("interval_days", { ascending: true });
+  if (error) throw error;
+  return (data ?? []).map((p: any) => ({
+    id: p.id,
+    intervalDays: p.interval_days,
+    price: Number(p.price) || 0,
+    comparePrice: p.compare_price != null ? Number(p.compare_price) : null,
+  }));
+}
+
+/**
+ * Met à jour TOUTES les formules d'une offre (un groupe) : modifie les
+ * existantes, ajoute les nouvelles, supprime celles retirées. Permet d'ajouter
+ * une périodicité à une offre existante depuis le crayon.
+ */
+export async function updateOfferTiers(input: {
+  groupId: string;
+  offerName: string;
+  tiers: { id?: string; intervalDays: number; price: number; comparePrice?: number | null }[];
+}): Promise<void> {
+  const owner = await currentUserId();
+  const { data: existing, error: e0 } = await supabase.from("plans").select("id").eq("group_id", input.groupId);
+  if (e0) throw e0;
+  const keptIds = new Set(input.tiers.filter((t) => t.id).map((t) => t.id as string));
+  const toDelete = (existing ?? []).map((p: any) => p.id as string).filter((pid) => !keptIds.has(pid));
+  if (toDelete.length) {
+    const { error } = await supabase.from("plans").delete().in("id", toDelete);
+    if (error) throw error;
+  }
+  for (const t of input.tiers) {
+    const row = {
+      owner_id: owner,
+      group_id: input.groupId,
+      name: `${input.offerName} — ${intervalLabel(t.intervalDays)}`,
+      price: t.price,
+      compare_price: t.comparePrice ?? null,
+      interval_days: t.intervalDays,
+      currency: "XOF",
+    };
+    if (t.id) {
+      const { error } = await supabase.from("plans").update(row).eq("id", t.id);
+      if (error) throw error;
+    } else {
+      const { error } = await supabase.from("plans").insert(row);
+      if (error) throw error;
+    }
+  }
+}
+
 export type Connection = {
   chatId: number;
   title: string | null;
