@@ -29,13 +29,15 @@ export function useAsync<T>(fn: () => Promise<T>) {
   return { data, loading, error, reload };
 }
 
+// Libellés simples/quotidiens (certains ne comprennent pas « hebdomadaire »,
+// « trimestriel »…). Cohérents avec la page de paiement.
 export const PERIODICITIES: { label: string; days: number }[] = [
-  { label: "Journalier", days: 1 },
-  { label: "Hebdomadaire", days: 7 },
-  { label: "Mensuel", days: 30 },
-  { label: "Trimestriel", days: 90 },
-  { label: "Semestriel", days: 180 },
-  { label: "Annuel", days: 365 },
+  { label: "Par jour", days: 1 },
+  { label: "Par semaine", days: 7 },
+  { label: "Par mois", days: 30 },
+  { label: "Par 3 mois", days: 90 },
+  { label: "Par 6 mois", days: 180 },
+  { label: "Par an", days: 365 },
 ];
 
 export function intervalLabel(days: number): string {
