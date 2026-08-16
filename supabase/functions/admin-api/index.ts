@@ -79,6 +79,10 @@ Deno.serve(async (req) => {
         return json({ transactions: await transactions() });
       case "users":
         return json({ users: await usersDirectory() });
+      case "get_settings":
+        return json(await getSettings());
+      case "set_settings":
+        return json(await setSettings(String(body.metaPixelId ?? "")));
       case "remove_member":
         return json(await removeMemberAdmin(String(body.groupId ?? ""), Number(body.telegramUserId ?? 0)));
       case "resend_link":
@@ -92,6 +96,20 @@ Deno.serve(async (req) => {
 });
 
 // -------- Agrégats plateforme --------
+
+async function getSettings() {
+  const { data } = await admin.from("platform_settings").select("meta_pixel_id").eq("id", 1).maybeSingle();
+  return { metaPixelId: (data as any)?.meta_pixel_id ?? "" };
+}
+
+async function setSettings(metaPixelId: string) {
+  const clean = metaPixelId.trim() || null;
+  const { error } = await admin
+    .from("platform_settings")
+    .upsert({ id: 1, meta_pixel_id: clean, updated_at: new Date().toISOString() }, { onConflict: "id" });
+  if (error) return { ok: false, error: error.message };
+  return { ok: true, metaPixelId: clean ?? "" };
+}
 
 async function loadAll() {
   const [payments, subs, plans, groups, subscribers] = await Promise.all([

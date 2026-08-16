@@ -86,6 +86,10 @@ export type AdminUser = {
   lastSeen: string;
 };
 
+export const adminGetSettings = () => call<{ metaPixelId: string }>("get_settings");
+export const adminSetSettings = (metaPixelId: string) =>
+  call<{ ok: boolean; metaPixelId: string }>("set_settings", { metaPixelId });
+
 export const adminUsers = () => call<{ users: AdminUser[] }>("users").then((r) => r.users);
 export const adminRemoveMember = (groupId: string, telegramUserId: number) =>
   call<{ ok: boolean }>("remove_member", { groupId, telegramUserId });

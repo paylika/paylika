@@ -8,6 +8,7 @@ import { Input } from "@/components/form";
 import { Logo, Icon } from "@/components/Icon";
 import { colors } from "@/theme/colors";
 import { signInWithEmail, signUpWithEmail } from "@/lib/auth";
+import { trackSignup } from "@/lib/pixel";
 
 const WAVE = require("../assets/operators/wave.png");
 const ORANGE = require("../assets/operators/orange.png");
@@ -188,6 +189,7 @@ export default function LoginScreen() {
         // La redirection (admin -> /admin, sinon -> /) est gérée par le layout.
       } else {
         const { needsConfirmation } = await signUpWithEmail(email.trim(), password);
+        trackSignup(); // événement Meta « inscription » pour les pubs Facebook
         if (needsConfirmation) {
           setInfo("Compte créé ! Vérifiez votre email pour confirmer, puis connectez-vous.");
           setMode("signin");

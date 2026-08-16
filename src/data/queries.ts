@@ -47,6 +47,16 @@ export function intervalLabel(days: number): string {
   return `${days} j`;
 }
 
+/** Pixel Meta de Paylika (réglage plateforme, public — présent côté client). */
+export async function fetchPlatformPixelId(): Promise<string | null> {
+  const { data } = await supabase
+    .from("platform_settings")
+    .select("meta_pixel_id")
+    .eq("id", 1)
+    .maybeSingle();
+  return (data?.meta_pixel_id ?? null) as string | null;
+}
+
 export type Offre = {
   id: string;
   name: string;

@@ -22,6 +22,8 @@ import { BottomNav } from "@/components/BottomNav";
 import { AdminBar } from "@/components/AdminBar";
 import { useWide } from "@/components/Screen";
 import { AuthProvider, useAuth } from "@/lib/auth";
+import { fetchPlatformPixelId } from "@/data/queries";
+import { initPixel } from "@/lib/pixel";
 
 function AppShell() {
   const wide = useWide();
@@ -127,6 +129,11 @@ export default function RootLayout() {
     SpaceGrotesk_600SemiBold,
     SpaceGrotesk_700Bold,
   });
+
+  // Pixel Meta Paylika (web) : chargé une fois depuis les réglages plateforme.
+  useEffect(() => {
+    fetchPlatformPixelId().then(initPixel).catch(() => {});
+  }, []);
 
   return (
     <SafeAreaProvider>
