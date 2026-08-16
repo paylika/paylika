@@ -58,7 +58,7 @@ export function TopBar() {
   return (
     <View style={{ paddingTop: insets.top }} className="bg-paper items-center">
       <View style={{ width: "100%", maxWidth: maxW }} className="px-5 pt-2 pb-1">
-        {/* Brand / back + actions */}
+        {/* Une seule ligne : logo + menu (là où était la recherche) + actions */}
         <View className="flex-row items-center justify-between">
           <View className="flex-row items-center" style={{ gap: 10 }}>
             {isSubPage ? (
@@ -71,6 +71,29 @@ export function TopBar() {
             ) : null}
             <Brand />
           </View>
+
+          {/* Menu inline — desktop/tablet ; sur mobile c'est la barre du bas */}
+          {wide ? (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={{ flex: 1 }}
+              className="mx-6"
+              contentContainerStyle={{ gap: 24, alignItems: "center", flexGrow: 1, justifyContent: "center" }}
+            >
+              {TABS.map((tab) => {
+                const active = isActive(pathname, tab.path);
+                return (
+                  <Pressable key={tab.path} onPress={() => router.push(tab.path as any)}>
+                    <Text className={`font-semibold text-[14px] ${active ? "text-bordeaux-700" : "text-ink-muted"}`}>
+                      {tab.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          ) : null}
+
           <View className="flex-row items-center" style={{ gap: 8 }}>
             <Pressable onPress={() => router.push("/notifications" as any)}>
               <View className="h-10 w-10 items-center justify-center rounded-full bg-sand">
@@ -95,43 +118,6 @@ export function TopBar() {
             </Pressable>
           </View>
         </View>
-
-        {/* Tabs — desktop/tablet only; mobile uses the floating bottom nav */}
-        {wide ? (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            className="mt-4"
-            contentContainerStyle={{ gap: 22 }}
-          >
-            {TABS.map((tab) => {
-              const active = isActive(pathname, tab.path);
-              return (
-                <Pressable
-                  key={tab.path}
-                  onPress={() => router.push(tab.path as any)}
-                  className="pb-2"
-                >
-                  <Text
-                    className={`font-semibold text-[14px] ${
-                      active ? "text-ink" : "text-ink-muted"
-                    }`}
-                  >
-                    {tab.label}
-                  </Text>
-                  <View
-                    style={{
-                      height: 2.5,
-                      borderRadius: 2,
-                      marginTop: 6,
-                      backgroundColor: active ? colors.bordeaux[600] : "transparent",
-                    }}
-                  />
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-        ) : null}
       </View>
     </View>
   );
