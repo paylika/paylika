@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
-import { View, Text } from "react-native";
+import { View, Text, Pressable } from "react-native";
 import { useRouter } from "expo-router";
 import { Card, Button, Eyebrow } from "@/components/ui";
 import { Screen, PageHeader, useWide } from "@/components/Screen";
+import { Icon } from "@/components/Icon";
+import { colors } from "@/theme/colors";
 import { useDashboard } from "@/data/useDashboard";
 import { useAsync, fetchMoney, countOffers } from "@/data/queries";
+import { openSupport } from "@/lib/support";
 import {
   RenewalsCard,
   StatCard,
@@ -13,6 +16,42 @@ import {
   formatInt,
 } from "@/components/cards";
 import type { Stat } from "@/data/mock";
+
+/** Étape numérotée de l'onboarding (accueil compte vide). */
+function OnbStep({ n, title, text, last }: { n: number; title: string; text: string; last?: boolean }) {
+  return (
+    <View className={`flex-row ${last ? "" : "border-b border-ink/[0.06] pb-3.5 mb-3.5"}`} style={{ gap: 12 }}>
+      <View className="h-7 w-7 items-center justify-center rounded-full bg-bordeaux-600">
+        <Text className="font-display-x text-[13px] text-white">{n}</Text>
+      </View>
+      <View className="flex-1">
+        <Text className="font-display-semi text-[14px] text-ink">{title}</Text>
+        <Text className="mt-0.5 font-sans text-[12.5px] text-ink-muted" style={{ lineHeight: 18 }}>
+          {text}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+/** Carte de contact support WhatsApp (dispo pour tout le monde). */
+function SupportCard() {
+  return (
+    <Pressable
+      onPress={() => openSupport()}
+      className="flex-row items-center rounded-3xl border border-ink/[0.08] bg-card p-4"
+    >
+      <View className="h-10 w-10 items-center justify-center rounded-full" style={{ backgroundColor: colors.forest + "1A" }}>
+        <Icon name="whatsapp" size={20} color={colors.forest} />
+      </View>
+      <View className="ml-3 flex-1">
+        <Text className="font-display-semi text-[14px] text-ink">Besoin d'aide ?</Text>
+        <Text className="mt-0.5 font-sans text-[12px] text-ink-muted">Écris-nous sur WhatsApp, on te guide.</Text>
+      </View>
+      <Icon name="chevron-right" size={16} color={colors.muted} />
+    </Pressable>
+  );
+}
 
 function BalanceHero({
   available,
@@ -91,26 +130,40 @@ export function DashboardScreen() {
         </View>
 
         <Card>
-          <Eyebrow>Guidé, en 1 minute</Eyebrow>
-          <Text className="mt-2 font-sans text-[13px] text-ink-soft">
-            Connecter un groupe (optionnel) → créer votre offre → partager le lien.
-          </Text>
-          <View className="mt-4">
-            <Button label="Commencer" icon="arrow-right" variant="accent" onPress={() => router.push("/onboarding" as any)} />
-          </View>
+          <OnbStep
+            n={1}
+            title="Crée ton offre"
+            text="Un prix, une périodicité. Connecter un groupe Telegram est optionnel — tu pourras le faire après."
+          />
+          <OnbStep n={2} title="Partage ton lien" text="Colle-le dans ta bio, tes stories, ton groupe gratuit." />
+          <OnbStep
+            n={3}
+            title="Encaisse"
+            text="Ton client paie par mobile money, et l'accès se donne (et se retire) tout seul."
+            last
+          />
         </Card>
 
-        <Card>
-          <Eyebrow>Ou directement</Eyebrow>
-          <View className="mt-3 flex-row" style={{ gap: 10 }}>
-            <View style={{ flex: 1 }}>
-              <Button label="Créer une offre" icon="plus" variant="outline" onPress={() => router.push("/offres/nouvelle" as any)} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Button label="Connecter un groupe" icon="send" variant="outline" onPress={() => router.push("/acces" as any)} />
-            </View>
+        <View className="flex-row" style={{ gap: 10 }}>
+          <View style={{ flex: 1.5 }}>
+            <Button
+              label="Créer mon offre"
+              icon="plus"
+              variant="accent"
+              onPress={() => router.push("/offres/nouvelle" as any)}
+            />
           </View>
-        </Card>
+          <View style={{ flex: 1 }}>
+            <Button
+              label="Guide pas à pas"
+              icon="arrow-right"
+              variant="outline"
+              onPress={() => router.push("/onboarding" as any)}
+            />
+          </View>
+        </View>
+
+        <SupportCard />
       </Screen>
     );
   }
@@ -218,6 +271,8 @@ export function DashboardScreen() {
           />
         </>
       )}
+
+      <SupportCard />
     </Screen>
   );
 }

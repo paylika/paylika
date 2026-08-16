@@ -9,6 +9,7 @@ import { PAYOUT_COUNTRIES, operatorsFor } from "@/data/operators";
 import { Icon, type IconName } from "@/components/Icon";
 import { colors } from "@/theme/colors";
 import { useAuth, signOut } from "@/lib/auth";
+import { openSupport } from "@/lib/support";
 import {
   fetchProfile,
   saveProfile,
@@ -277,6 +278,12 @@ export default function ReglagesScreen() {
           title="Argent & retraits"
           subtitle="Solde et historique"
           onPress={() => router.push("/argent" as any)}
+        />
+        <LinkRow
+          icon="whatsapp"
+          title="Aide · Support WhatsApp"
+          subtitle="Une question ? On te répond directement"
+          onPress={() => openSupport()}
           last
         />
       </Card>
