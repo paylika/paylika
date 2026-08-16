@@ -42,7 +42,10 @@ export type IconName =
   | "whatsapp"
   | "bolt"
   | "shield"
-  | "menu";
+  | "menu"
+  | "refresh"
+  | "alert"
+  | "inbox";
 
 /**
  * Hand-drawn stroke icon set for paylika.
@@ -250,6 +253,25 @@ export function Icon({
           <Path d="M10.6 10.6a3 3 0 0 0 4.2 4.2" />
           <Path d="M9.9 5.1A9.5 9.5 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-2.4 3.3" />
           <Path d="M6.1 6.1A17 17 0 0 0 2 12s3.5 7 10 7a9.4 9.4 0 0 0 3.9-.8" />
+        </G>
+      )}
+      {name === "refresh" && (
+        <G {...stroke}>
+          <Path d="M21 12a9 9 0 1 1-2.64-6.36" />
+          <Polyline points="21 4 21 10 15 10" />
+        </G>
+      )}
+      {name === "alert" && (
+        <G {...stroke}>
+          <Path d="M12 4.5 21 20H3L12 4.5Z" />
+          <Line x1={12} y1={10} x2={12} y2={14} />
+          <Circle cx={12} cy={17} r={0.6} fill={color} stroke="none" />
+        </G>
+      )}
+      {name === "inbox" && (
+        <G {...stroke}>
+          <Path d="M3 12h5l1.5 3h5L21 12" />
+          <Path d="M5 5h14l2 7v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-5L5 5Z" />
         </G>
       )}
     </Svg>

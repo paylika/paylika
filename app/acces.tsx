@@ -3,6 +3,7 @@ import { View, Text, ActivityIndicator, Pressable } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 import { Screen, PageTitle } from "@/components/Screen";
 import { Card, Tag, Eyebrow, Button } from "@/components/ui";
+import { SkeletonList, ErrorState, EmptyState } from "@/components/States";
 import { Chip } from "@/components/form";
 import { Icon } from "@/components/Icon";
 import { colors } from "@/theme/colors";
@@ -111,19 +112,18 @@ export default function AccesScreen() {
       </Card>
 
       {/* Connected groups */}
-      {error ? (
-        <Card>
-          <Text className="font-sans text-[12px] text-bordeaux-700">{error}</Text>
-        </Card>
-      ) : null}
-
-      {connections === null ? (
-        <Card>
-          <View className="items-center py-6">
-            <ActivityIndicator color={colors.bordeaux[600]} />
-          </View>
-        </Card>
-      ) : connections.length ? (
+      {connections === null && error ? (
+        <ErrorState message={error} onRetry={load} />
+      ) : connections === null ? (
+        <SkeletonList count={2} />
+      ) : (
+        <>
+          {error ? (
+            <Card>
+              <Text className="font-sans text-[12px] text-bordeaux-700">{error}</Text>
+            </Card>
+          ) : null}
+          {connections.length ? (
         connections.map((c) => {
           const linked = !!c.groupId;
           const busy = busyChat === c.chatId;
@@ -179,13 +179,22 @@ export default function AccesScreen() {
             </Card>
           );
         })
-      ) : (
-        <Card>
-          <Eyebrow>Aucun groupe connecté</Eyebrow>
-          <Text className="mt-2 font-sans text-[13px] text-ink-muted">
-            Ajoutez @Paylikabot comme admin d'un groupe pour le voir apparaître ici.
-          </Text>
-        </Card>
+          ) : (
+            <EmptyState
+              icon="send"
+              title="Aucun groupe connecté"
+              text="Ajoute @Paylikabot comme admin d'un de tes groupes pour le voir apparaître ici."
+              action={
+                <Button
+                  label="Connecter un groupe"
+                  icon="send"
+                  variant="outline"
+                  onPress={() => router.push("/onboarding?mode=add" as any)}
+                />
+              }
+            />
+          )}
+        </>
       )}
     </Screen>
   );

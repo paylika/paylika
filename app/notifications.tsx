@@ -1,6 +1,7 @@
-import { View, Text, ActivityIndicator } from "react-native";
+import { View, Text } from "react-native";
 import { Screen, PageTitle } from "@/components/Screen";
-import { Card, Eyebrow } from "@/components/ui";
+import { Card } from "@/components/ui";
+import { SkeletonList, ErrorState, EmptyState } from "@/components/States";
 import { Icon, type IconName } from "@/components/Icon";
 import { colors } from "@/theme/colors";
 import { useAsync, fetchNotifications, type Notif } from "@/data/queries";
@@ -38,7 +39,7 @@ function Row({ n, last }: { n: Notif; last: boolean }) {
 }
 
 export default function NotificationsScreen() {
-  const { data, loading, error, reload } = useAsync(fetchNotifications);
+  const { data, error, reload } = useAsync(fetchNotifications);
 
   return (
     <Screen onRefresh={reload}>
@@ -48,29 +49,29 @@ export default function NotificationsScreen() {
         subtitle="Relances, expirations proches et paiements reçus."
       />
 
-      {loading ? (
-        <Card>
-          <View className="items-center py-6">
-            <ActivityIndicator color={colors.bordeaux[600]} />
-          </View>
-        </Card>
-      ) : error ? (
-        <Card>
-          <Text className="font-sans text-[12px] text-bordeaux-700">{error}</Text>
-        </Card>
-      ) : data && data.length ? (
-        <Card>
-          {data.map((n, i) => (
-            <Row key={n.id} n={n} last={i === data.length - 1} />
-          ))}
-        </Card>
+      {data === null && error ? (
+        <ErrorState message={error} onRetry={reload} />
+      ) : data === null ? (
+        <SkeletonList count={3} />
+      ) : data.length ? (
+        <>
+          {error ? (
+            <Card>
+              <Text className="font-sans text-[12px] text-bordeaux-700">{error}</Text>
+            </Card>
+          ) : null}
+          <Card>
+            {data.map((n, i) => (
+              <Row key={n.id} n={n} last={i === data.length - 1} />
+            ))}
+          </Card>
+        </>
       ) : (
-        <Card>
-          <Eyebrow>Rien à signaler</Eyebrow>
-          <Text className="mt-2 font-sans text-[13px] text-ink-muted">
-            Aucune notification pour le moment.
-          </Text>
-        </Card>
+        <EmptyState
+          icon="bell"
+          title="Aucune notification"
+          text="Relances, expirations proches et paiements reçus s'afficheront ici dès qu'il se passe quelque chose."
+        />
       )}
     </Screen>
   );

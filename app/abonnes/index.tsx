@@ -3,6 +3,7 @@ import { View, Text, ActivityIndicator, Pressable } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { Screen, PageHeader } from "@/components/Screen";
 import { Card, Avatar, Tag, Button } from "@/components/ui";
+import { SkeletonList, ErrorState, EmptyState } from "@/components/States";
 import { Chip } from "@/components/form";
 import { Icon } from "@/components/Icon";
 import { colors } from "@/theme/colors";
@@ -179,38 +180,55 @@ export default function AbonnesScreen() {
         <Chip label={`Expirés (${counts.expired})`} active={filter === "expired"} onPress={() => setFilter("expired")} />
       </View>
 
-      {error ? (
-        <Card>
-          <Text className="font-sans text-[12px] text-bordeaux-700">{error}</Text>
-        </Card>
-      ) : null}
-
-      {rows === null ? (
-        <Card>
-          <View className="items-center py-6">
-            <ActivityIndicator color={colors.bordeaux[600]} />
-          </View>
-        </Card>
-      ) : filtered.length ? (
-        filtered.map((s) => (
-          <Row
-            key={s.id}
-            s={s}
-            busy={busyId === s.id}
-            onRenew={() =>
-              s.subscriptionId &&
-              act(s.id, () => extendSubscription(s.subscriptionId!, s.expiresAt, 30))
-            }
-            onExpire={() =>
-              s.subscriptionId && act(s.id, () => cancelSubscription(s.subscriptionId!))
-            }
-            onDelete={() => act(s.id, () => deleteSubscriber(s.id))}
-          />
-        ))
+      {error && rows === null ? (
+        <ErrorState message={error} onRetry={load} />
+      ) : rows === null ? (
+        <SkeletonList count={4} lines={2} />
       ) : (
-        <Card>
-          <Text className="font-sans text-[13px] text-ink-muted">Aucun abonné dans ce filtre.</Text>
-        </Card>
+        <>
+          {error ? (
+            <Card>
+              <Text className="font-sans text-[12px] text-bordeaux-700">{error}</Text>
+            </Card>
+          ) : null}
+          {filtered.length ? (
+            filtered.map((s) => (
+              <Row
+                key={s.id}
+                s={s}
+                busy={busyId === s.id}
+                onRenew={() =>
+                  s.subscriptionId &&
+                  act(s.id, () => extendSubscription(s.subscriptionId!, s.expiresAt, 30))
+                }
+                onExpire={() =>
+                  s.subscriptionId && act(s.id, () => cancelSubscription(s.subscriptionId!))
+                }
+                onDelete={() => act(s.id, () => deleteSubscriber(s.id))}
+              />
+            ))
+          ) : rows.length ? (
+            <EmptyState
+              icon="users"
+              title="Aucun abonné dans ce filtre"
+              text="Change de filtre pour voir tes autres abonnés."
+            />
+          ) : (
+            <EmptyState
+              icon="users"
+              title="Pas encore d'abonné"
+              text="Dès qu'un client paiera ton offre, il apparaîtra ici automatiquement."
+              action={
+                <Button
+                  label="Ajouter manuellement"
+                  icon="plus"
+                  variant="outline"
+                  onPress={() => router.push("/abonnes/nouveau" as any)}
+                />
+              }
+            />
+          )}
+        </>
       )}
     </Screen>
   );

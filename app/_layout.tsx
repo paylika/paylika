@@ -1,7 +1,9 @@
 import "../global.css";
 
 import { useEffect, useRef } from "react";
-import { View, useWindowDimensions } from "react-native";
+import { View, ActivityIndicator, useWindowDimensions } from "react-native";
+import { Logo } from "@/components/Icon";
+import { colors } from "@/theme/colors";
 import { Slot, usePathname, useRouter, useLocalSearchParams } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -22,8 +24,19 @@ import { BottomNav } from "@/components/BottomNav";
 import { AdminBar } from "@/components/AdminBar";
 import { useWide } from "@/components/Screen";
 import { AuthProvider, useAuth } from "@/lib/auth";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { fetchPlatformPixelId } from "@/data/queries";
 import { initPixel } from "@/lib/pixel";
+
+/** Écran de chargement de marque (session en cours de vérification). */
+function BrandLoader() {
+  return (
+    <View className="flex-1 items-center justify-center bg-paper" style={{ gap: 18 }}>
+      <Logo size={46} />
+      <ActivityIndicator color={colors.bordeaux[600]} />
+    </View>
+  );
+}
 
 function AppShell() {
   const wide = useWide();
@@ -84,7 +97,7 @@ function AppShell() {
   if (isPay || isLanding || isLogin) {
     content = <Slot />; // pages publiques (checkout, accès, landing, connexion), sans chrome
   } else if (loading) {
-    content = null; // brief splash
+    content = <BrandLoader />; // vérification de session : loader de marque, pas un écran blanc
   } else if (!session) {
     content = null; // redirecting to /login
   } else if (isOnboarding) {
@@ -138,9 +151,11 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <StatusBar style="dark" />
-      <AuthProvider>
-        <AppShell />
-      </AuthProvider>
+      <ErrorBoundary>
+        <AuthProvider>
+          <AppShell />
+        </AuthProvider>
+      </ErrorBoundary>
     </SafeAreaProvider>
   );
 }

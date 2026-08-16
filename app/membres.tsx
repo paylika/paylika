@@ -3,6 +3,7 @@ import { View, Text, ActivityIndicator, Pressable } from "react-native";
 import { useFocusEffect, useLocalSearchParams } from "expo-router";
 import { Screen, PageTitle } from "@/components/Screen";
 import { Card, Tag, Button, Eyebrow } from "@/components/ui";
+import { SkeletonList, ErrorState, EmptyState } from "@/components/States";
 import { Chip } from "@/components/form";
 import { Icon } from "@/components/Icon";
 import { colors } from "@/theme/colors";
@@ -139,24 +140,30 @@ export default function MembresScreen() {
         </Card>
       ) : null}
 
-      {error ? (
+      {error && members !== null ? (
         <Card>
           <Text className="font-sans text-[12px] text-bordeaux-700">{error}</Text>
         </Card>
       ) : null}
 
-      {members === null ? (
-        <Card>
-          <View className="items-center py-6">
-            <ActivityIndicator color={colors.bordeaux[600]} />
-          </View>
-        </Card>
+      {members === null && error ? (
+        <ErrorState message={error} onRetry={load} />
+      ) : members === null ? (
+        <SkeletonList count={4} lines={2} />
       ) : list.length === 0 ? (
-        <Card>
-          <Text className="font-sans text-[13px] text-ink-muted">
-            Aucun membre détecté pour l'instant. Le roster se remplit dès qu'un membre paie, entre, ou écrit dans le groupe.
-          </Text>
-        </Card>
+        members.length ? (
+          <EmptyState
+            icon="users"
+            title="Aucun membre dans ce filtre"
+            text="Change de filtre pour voir tes autres membres."
+          />
+        ) : (
+          <EmptyState
+            icon="users"
+            title="Pas encore de membre"
+            text="Le roster se remplit dès qu'un membre paie, entre ou écrit dans ton groupe."
+          />
+        )
       ) : (
         list.map((m) => {
           const confirming = confirmId === m.telegramUserId;

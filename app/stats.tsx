@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { View, Text, ActivityIndicator } from "react-native";
+import { View, Text } from "react-native";
 import { useRouter } from "expo-router";
 import { Screen, PageHeader, useWide } from "@/components/Screen";
 import { Card, Button, Eyebrow, Tag } from "@/components/ui";
+import { SkeletonStatsGrid, SkeletonList, ErrorState, EmptyState } from "@/components/States";
 import { Segmented } from "@/components/form";
-import { colors } from "@/theme/colors";
 import { useAsync, fetchStats, type OfferStat } from "@/data/queries";
 import { RevenueCard, formatInt } from "@/components/cards";
 
@@ -88,9 +88,11 @@ export default function StatsScreen() {
   const router = useRouter();
   const wide = useWide();
   const [view, setView] = useState<"global" | "offres">("global");
-  const { data, loading, error, reload } = useAsync(fetchStats);
+  const { data, error, reload } = useAsync(fetchStats);
 
   const cur = data?.currency ?? "XOF";
+  const isEmpty =
+    !!data && data.salesCount === 0 && data.totalMembers === 0 && data.offers.length === 0;
   const kpis = data
     ? [
         { label: "Revenu net", value: formatInt(data.netRevenue), unit: cur, accent: true, sub: `brut ${formatInt(data.totalRevenue)}` },
@@ -128,17 +130,27 @@ export default function StatsScreen() {
         ]}
       />
 
-      {loading ? (
-        <Card>
-          <View className="items-center py-6">
-            <ActivityIndicator color={colors.bordeaux[600]} />
-          </View>
-        </Card>
-      ) : error ? (
-        <Card>
-          <Text className="font-sans text-[12px] text-bordeaux-700">{error}</Text>
-        </Card>
-      ) : !data ? null : view === "global" ? (
+      {data === null && error ? (
+        <ErrorState message={error} onRetry={reload} />
+      ) : data === null ? (
+        <>
+          <SkeletonStatsGrid count={6} />
+          <SkeletonList count={2} />
+        </>
+      ) : isEmpty ? (
+        <EmptyState
+          icon="chart"
+          title="Pas encore de statistiques"
+          text="Tes stats s'afficheront ici dès ta première vente. Partage tes liens d'offres pour lancer la machine."
+        />
+      ) : (
+        <>
+          {error ? (
+            <Card>
+              <Text className="font-sans text-[12px] text-bordeaux-700">{error}</Text>
+            </Card>
+          ) : null}
+          {view === "global" ? (
         <>
           {/* KPI grid */}
           {chunk(kpis, wide ? 3 : 2).map((row, ri) => (
@@ -196,12 +208,14 @@ export default function StatsScreen() {
           {data.offers.length ? (
             data.offers.map((o) => <OfferStatCard key={o.id} o={o} currency={cur} />)
           ) : (
-            <Card>
-              <Text className="font-sans text-[13px] text-ink-muted">
-                Aucune offre pour le moment.
-              </Text>
-            </Card>
+            <EmptyState
+              icon="tag"
+              title="Aucune offre pour l'instant"
+              text="Crée une offre pour suivre ses ventes et ses membres ici."
+            />
           )}
+        </>
+      )}
         </>
       )}
     </Screen>

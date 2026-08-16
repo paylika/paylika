@@ -3,6 +3,7 @@ import { View, Text, Pressable } from "react-native";
 import { useRouter } from "expo-router";
 import { Card, Button, Eyebrow } from "@/components/ui";
 import { Screen, PageHeader, useWide } from "@/components/Screen";
+import { SkeletonCard, SkeletonStatsGrid, SkeletonList, ErrorState } from "@/components/States";
 import { Icon } from "@/components/Icon";
 import { colors } from "@/theme/colors";
 import { useDashboard } from "@/data/useDashboard";
@@ -91,7 +92,7 @@ function BalanceHero({
 export function DashboardScreen() {
   const wide = useWide();
   const router = useRouter();
-  const { data, reload: reloadDash } = useDashboard();
+  const { data, error: dashError, reload: reloadDash } = useDashboard();
   const { data: money, reload: reloadMoney } = useAsync(fetchMoney);
 
   // Onboarding NON bloquant : on détecte un compte vide pour proposer un accueil.
@@ -216,59 +217,71 @@ export function DashboardScreen() {
         }
       />
 
-      {/* Balance + KPIs */}
-      {wide ? (
-        <View className="flex-row" style={{ gap: 16 }}>
-          <View style={{ flex: 1.2 }}>
-            <BalanceHero available={money?.available ?? null} currency={money?.currency ?? "XOF"} />
-          </View>
-          <View style={{ flex: 2, gap: 16 }}>
-            <View className="flex-row" style={{ gap: 16 }}>
-              <StatCard stat={kpis[0]} />
-              <StatCard stat={kpis[1]} />
-            </View>
-            <View className="flex-row" style={{ gap: 16 }}>
-              <SmallStatCard stat={kpis[2]} icon="wallet" />
-              <SmallStatCard stat={kpis[3]} icon="trend-down" />
-            </View>
-          </View>
-        </View>
-      ) : (
+      {dashError && !data ? (
+        <ErrorState message={dashError} onRetry={refresh} />
+      ) : !data ? (
         <>
-          <BalanceHero available={money?.available ?? null} currency={money?.currency ?? "XOF"} />
-          <View className="flex-row" style={{ gap: 14 }}>
-            <StatCard stat={kpis[0]} />
-            <StatCard stat={kpis[1]} />
-          </View>
-          <View className="flex-row" style={{ gap: 14 }}>
-            <SmallStatCard stat={kpis[2]} icon="wallet" />
-            <SmallStatCard stat={kpis[3]} icon="trend-down" />
-          </View>
+          <SkeletonCard lines={2} />
+          <SkeletonStatsGrid count={4} />
+          <SkeletonList count={1} lines={4} />
         </>
-      )}
-
-      {/* Renewals + revenue */}
-      {wide ? (
-        <View className="flex-row" style={{ gap: 16 }}>
-          <View style={{ flex: 1 }}>
-            <RenewalsCard items={data?.renewals} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <RevenueCard
-              bars={data?.revenueByGroup}
-              headline={revenueHeadline}
-              subtitle={revenueSubtitle}
-            />
-          </View>
-        </View>
       ) : (
         <>
-          <RenewalsCard items={data?.renewals} />
-          <RevenueCard
-            bars={data?.revenueByGroup}
-            headline={revenueHeadline}
-            subtitle={revenueSubtitle}
-          />
+          {/* Balance + KPIs */}
+          {wide ? (
+            <View className="flex-row" style={{ gap: 16 }}>
+              <View style={{ flex: 1.2 }}>
+                <BalanceHero available={money?.available ?? null} currency={money?.currency ?? "XOF"} />
+              </View>
+              <View style={{ flex: 2, gap: 16 }}>
+                <View className="flex-row" style={{ gap: 16 }}>
+                  <StatCard stat={kpis[0]} />
+                  <StatCard stat={kpis[1]} />
+                </View>
+                <View className="flex-row" style={{ gap: 16 }}>
+                  <SmallStatCard stat={kpis[2]} icon="wallet" />
+                  <SmallStatCard stat={kpis[3]} icon="trend-down" />
+                </View>
+              </View>
+            </View>
+          ) : (
+            <>
+              <BalanceHero available={money?.available ?? null} currency={money?.currency ?? "XOF"} />
+              <View className="flex-row" style={{ gap: 14 }}>
+                <StatCard stat={kpis[0]} />
+                <StatCard stat={kpis[1]} />
+              </View>
+              <View className="flex-row" style={{ gap: 14 }}>
+                <SmallStatCard stat={kpis[2]} icon="wallet" />
+                <SmallStatCard stat={kpis[3]} icon="trend-down" />
+              </View>
+            </>
+          )}
+
+          {/* Renewals + revenue */}
+          {wide ? (
+            <View className="flex-row" style={{ gap: 16 }}>
+              <View style={{ flex: 1 }}>
+                <RenewalsCard items={data?.renewals} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <RevenueCard
+                  bars={data?.revenueByGroup}
+                  headline={revenueHeadline}
+                  subtitle={revenueSubtitle}
+                />
+              </View>
+            </View>
+          ) : (
+            <>
+              <RenewalsCard items={data?.renewals} />
+              <RevenueCard
+                bars={data?.revenueByGroup}
+                headline={revenueHeadline}
+                subtitle={revenueSubtitle}
+              />
+            </>
+          )}
         </>
       )}
 

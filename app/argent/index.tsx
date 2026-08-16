@@ -1,8 +1,9 @@
 import { useCallback, useState } from "react";
-import { View, Text, ActivityIndicator } from "react-native";
+import { View, Text } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { Screen, PageTitle } from "@/components/Screen";
 import { Card, Button, Eyebrow } from "@/components/ui";
+import { SkeletonCard, SkeletonStatsGrid, SkeletonList, ErrorState, EmptyState } from "@/components/States";
 import { Icon } from "@/components/Icon";
 import { colors } from "@/theme/colors";
 import { fetchMoney, type Money, type Transaction } from "@/data/queries";
@@ -72,20 +73,22 @@ export default function ArgentScreen() {
         subtitle="Solde, retraits gratuits et transparence des flux."
       />
 
-      {error ? (
-        <Card>
-          <Text className="font-sans text-[12px] text-bordeaux-700">{error}</Text>
-        </Card>
-      ) : null}
-
-      {money === null ? (
-        <Card>
-          <View className="items-center py-6">
-            <ActivityIndicator color={colors.bordeaux[600]} />
-          </View>
-        </Card>
+      {money === null && error ? (
+        <ErrorState message={error} onRetry={load} />
+      ) : money === null ? (
+        <>
+          <SkeletonCard lines={2} />
+          <SkeletonStatsGrid />
+          <SkeletonList count={2} />
+        </>
       ) : (
         <>
+          {error ? (
+            <Card>
+              <Text className="font-sans text-[12px] text-bordeaux-700">{error}</Text>
+            </Card>
+          ) : null}
+
           {/* Solde hero */}
           <Card tone="dark">
             <Eyebrow>Solde disponible</Eyebrow>
@@ -147,20 +150,22 @@ export default function ArgentScreen() {
           </View>
 
           {/* Transactions */}
-          <Card>
-            <Eyebrow>Transactions</Eyebrow>
-            {money.transactions.length ? (
+          {money.transactions.length ? (
+            <Card>
+              <Eyebrow>Transactions</Eyebrow>
               <View className="mt-1">
                 {money.transactions.slice(0, 20).map((t, i) => (
                   <TxRow key={t.id} t={t} last={i === Math.min(money.transactions.length, 20) - 1} />
                 ))}
               </View>
-            ) : (
-              <Text className="mt-2 font-sans text-[13px] text-ink-muted">
-                Aucune transaction pour le moment.
-              </Text>
-            )}
-          </Card>
+            </Card>
+          ) : (
+            <EmptyState
+              icon="wallet"
+              title="Pas encore de mouvement"
+              text="Dès que tu encaisses un paiement ou fais un retrait, ton historique s'affiche ici."
+            />
+          )}
         </>
       )}
     </Screen>

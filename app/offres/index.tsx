@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
-import { View, Text, ActivityIndicator, Pressable } from "react-native";
+import { useCallback, useState } from "react";
+import { View, Text, Pressable } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { Screen, PageHeader } from "@/components/Screen";
-import { Card, Button, Tag, Eyebrow } from "@/components/ui";
+import { Card, Button, Tag } from "@/components/ui";
+import { SkeletonList, ErrorState, EmptyState } from "@/components/States";
 import { Icon } from "@/components/Icon";
 import { colors } from "@/theme/colors";
 import { fetchOffres, deleteOffer, intervalLabel, payLinkFor, type Offre } from "@/data/queries";
@@ -155,34 +156,40 @@ export default function OffresScreen() {
         }
       />
 
-      {error ? (
-        <Card>
-          <Text className="font-sans text-[12px] text-bordeaux-700">{error}</Text>
-        </Card>
-      ) : null}
-
-      {offres === null ? (
-        <Card>
-          <View className="items-center py-6">
-            <ActivityIndicator color={colors.bordeaux[600]} />
-          </View>
-        </Card>
+      {offres === null && error ? (
+        <ErrorState message={error} onRetry={load} />
+      ) : offres === null ? (
+        <SkeletonList count={3} />
       ) : offres.length ? (
-        offres.map((o) => (
-          <OffreCard
-            key={o.id}
-            offre={o}
-            onEdit={() => router.push(`/offres/${o.id}` as any)}
-            onDelete={() => onDelete(o.id)}
-          />
-        ))
+        <>
+          {error ? (
+            <Card>
+              <Text className="font-sans text-[12px] text-bordeaux-700">{error}</Text>
+            </Card>
+          ) : null}
+          {offres.map((o) => (
+            <OffreCard
+              key={o.id}
+              offre={o}
+              onEdit={() => router.push(`/offres/${o.id}` as any)}
+              onDelete={() => onDelete(o.id)}
+            />
+          ))}
+        </>
       ) : (
-        <Card>
-          <Eyebrow>Aucune offre</Eyebrow>
-          <Text className="mt-2 font-sans text-[13px] text-ink-muted">
-            Créez votre première offre pour générer un lien de paiement.
-          </Text>
-        </Card>
+        <EmptyState
+          icon="tag"
+          title="Aucune offre pour l'instant"
+          text="Crée ta première offre pour générer un lien de paiement à partager."
+          action={
+            <Button
+              label="Créer une offre"
+              icon="plus"
+              variant="accent"
+              onPress={() => router.push("/offres/nouvelle")}
+            />
+          }
+        />
       )}
     </Screen>
   );
