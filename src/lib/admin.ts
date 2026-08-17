@@ -34,6 +34,8 @@ export type AdminOwner = {
   email: string;
   createdAt: string;
   banned: boolean;
+  whatsapp: string | null;
+  country: string | null;
   groups: number;
   subscribers: number;
   activeSubscribers: number;

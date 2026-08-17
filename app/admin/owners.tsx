@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { View, Text, ActivityIndicator, Pressable } from "react-native";
+import { View, Text, ActivityIndicator, Pressable, Linking, Platform } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { Screen } from "@/components/Screen";
 import { Card, Tag, Eyebrow } from "@/components/ui";
@@ -7,6 +7,15 @@ import { Icon } from "@/components/Icon";
 import { colors } from "@/theme/colors";
 import { formatInt } from "@/components/cards";
 import { adminOwners, adminBan, adminUnban, type AdminOwner } from "@/lib/admin";
+
+/** Ouvre WhatsApp avec le numéro de l'inscrit (capté à l'inscription). */
+function openWa(number: string) {
+  const digits = number.replace(/\D/g, "");
+  if (!digits) return;
+  const url = `https://wa.me/${digits}`;
+  if (Platform.OS === "web" && typeof window !== "undefined") window.open(url, "_blank");
+  else Linking.openURL(url).catch(() => {});
+}
 
 export default function AdminOwners() {
   const router = useRouter();
@@ -77,6 +86,19 @@ export default function AdminOwners() {
                   <Text className="mt-0.5 font-sans text-[12px] text-ink-muted">
                     {o.groups} groupe{o.groups > 1 ? "s" : ""} · {o.activeSubscribers}/{o.subscribers} actifs · MRR {formatInt(o.mrr)} {cur}
                   </Text>
+                  {o.whatsapp ? (
+                    <Pressable
+                      onPress={() => openWa(o.whatsapp!)}
+                      className="mt-2 flex-row items-center self-start rounded-full px-2.5 py-1"
+                      style={{ gap: 5, backgroundColor: colors.forest + "14" }}
+                    >
+                      <Icon name="whatsapp" size={13} color={colors.forest} />
+                      <Text className="font-semibold text-[12px]" style={{ color: colors.forest }}>
+                        {o.whatsapp}
+                        {o.country ? ` · ${o.country}` : ""}
+                      </Text>
+                    </Pressable>
+                  ) : null}
                 </View>
                 {o.banned ? <Tag tone="bordeaux">Exclu</Tag> : <Tag tone="sand">Actif</Tag>}
               </View>

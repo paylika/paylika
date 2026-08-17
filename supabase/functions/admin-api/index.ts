@@ -182,11 +182,15 @@ async function owners() {
       const pl = planById.get(s.plan_id);
       if (pl) mrr += num(pl.price) / monthsOf(pl.interval_days);
     }
+    const meta = u.user_metadata ?? {};
     return {
       id: oid,
       email: u.email ?? "—",
       createdAt: u.created_at,
       banned: !!u.banned_until && new Date(u.banned_until).getTime() > now,
+      // Captés à l'inscription (page /signup) → contacter l'inscrit sur WhatsApp.
+      whatsapp: meta.whatsapp ?? null,
+      country: meta.country ?? null,
       groups: oGroups,
       subscribers: oSubscribers,
       activeSubscribers: oActive.length,
