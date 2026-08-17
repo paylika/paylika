@@ -75,6 +75,8 @@ Deno.serve(async (req) => {
         return json(await setBanned(String(body.ownerId ?? ""), true));
       case "unban":
         return json(await setBanned(String(body.ownerId ?? ""), false));
+      case "delete_owner":
+        return json(await deleteOwner(String(body.ownerId ?? "")));
       case "transactions":
         return json({ transactions: await transactions() });
       case "users":
@@ -354,6 +356,31 @@ async function removeMemberAdmin(groupId: string, telegramUserId: number) {
     .update({ in_group: false })
     .eq("group_id", groupId)
     .eq("telegram_user_id", telegramUserId);
+  return { ok: true };
+}
+
+/** Suppression DÉFINITIVE d'un propriétaire (données + compte Auth). Irréversible. */
+async function deleteOwner(ownerId: string) {
+  if (!ownerId) return { error: "ownerId manquant" };
+  // Sécurité : on ne supprime jamais un compte administrateur.
+  const { data: u } = await admin.auth.admin.getUserById(ownerId);
+  const targetEmail = (u as any)?.user?.email?.toLowerCase();
+  if (targetEmail && ADMIN_EMAILS.includes(targetEmail)) {
+    return { error: "Impossible de supprimer un compte administrateur." };
+  }
+  // Efface les données (ordre = respect des clés étrangères), puis le compte Auth.
+  const tables = ["payments", "payouts", "subscriptions", "telegram_connections", "subscribers", "plans", "groups"];
+  for (const t of tables) {
+    await admin.from(t).delete().eq("owner_id", ownerId);
+  }
+  try {
+    const { data: files } = await admin.storage.from("avatars").list(ownerId);
+    if (files?.length) await admin.storage.from("avatars").remove(files.map((f: any) => `${ownerId}/${f.name}`));
+  } catch {
+    /* best-effort */
+  }
+  const { error } = await admin.auth.admin.deleteUser(ownerId);
+  if (error) return { error: error.message };
   return { ok: true };
 }
 

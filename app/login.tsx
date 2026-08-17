@@ -8,7 +8,7 @@ import { Input } from "@/components/form";
 import { CountryPhone, countryDial } from "@/components/CountryPhone";
 import { Logo, Icon } from "@/components/Icon";
 import { colors } from "@/theme/colors";
-import { signInWithEmail, signUpWithEmail } from "@/lib/auth";
+import { signInWithEmail, signUpWithEmail, phoneTaken } from "@/lib/auth";
 import { trackSignup } from "@/lib/pixel";
 
 const WAVE = require("../assets/operators/wave.png");
@@ -197,9 +197,16 @@ export default function LoginScreen() {
           setBusy(false);
           return;
         }
+        const whatsapp = "+" + countryDial(country) + digits;
+        // Un numéro = un seul compte.
+        if (await phoneTaken(whatsapp)) {
+          setError("Ce numéro WhatsApp a déjà un compte. Connecte-toi.");
+          setBusy(false);
+          return;
+        }
         const { needsConfirmation } = await signUpWithEmail(email.trim(), password, {
           country,
-          whatsapp: "+" + countryDial(country) + digits,
+          whatsapp,
         });
         trackSignup(); // événement Meta « inscription » pour les pubs Facebook
         if (needsConfirmation) {

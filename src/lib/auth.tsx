@@ -144,3 +144,9 @@ export async function updateWhatsApp(country: string, whatsapp: string) {
   const { error } = await supabase.auth.updateUser({ data: { country, whatsapp } });
   if (error) throw error;
 }
+
+/** Un numéro WhatsApp est-il déjà rattaché à un compte ? (anti-doublon) */
+export async function phoneTaken(whatsapp: string): Promise<boolean> {
+  const { data } = await supabase.rpc("phone_taken", { p_phone: whatsapp });
+  return data === true;
+}

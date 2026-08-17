@@ -82,6 +82,7 @@ export const adminOwners = () => call<{ owners: AdminOwner[] }>("owners").then((
 export const adminOwnerDetail = (ownerId: string) => call<AdminOwnerDetail>("owner", { ownerId });
 export const adminBan = (ownerId: string) => call<{ ok: boolean }>("ban", { ownerId });
 export const adminUnban = (ownerId: string) => call<{ ok: boolean }>("unban", { ownerId });
+export const adminDeleteOwner = (ownerId: string) => call<{ ok: boolean }>("delete_owner", { ownerId });
 export const adminResendLink = (groupId: string, telegramUserId: number) =>
   call<{ ok: boolean }>("resend_link", { groupId, telegramUserId });
 export const adminGroupLink = (groupId: string) =>

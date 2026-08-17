@@ -197,6 +197,14 @@
     try {
       if (mode === "signup") {
         var whatsapp = "+" + dialCode() + localNum;
+        // Un numéro = un seul compte.
+        try {
+          var chk = await client.rpc("phone_taken", { p_phone: whatsapp });
+          if (chk && chk.data === true) {
+            busy(false);
+            return showMsg("err", "Ce numéro WhatsApp a déjà un compte. Connecte-toi.");
+          }
+        } catch (e) { /* si la vérif échoue, la contrainte DB reste le garde-fou */ }
         var res = await client.auth.signUp({
           email: email,
           password: pw,

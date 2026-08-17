@@ -36,7 +36,8 @@ export function WhatsAppNudge() {
       await updateWhatsApp(country, "+" + countryDial(country) + digits);
       setDone(true);
     } catch (e: any) {
-      setError(e?.message ?? "Impossible d'enregistrer.");
+      const msg = e?.message ?? "Impossible d'enregistrer.";
+      setError(/duplicate|unique/i.test(msg) ? "Ce numéro est déjà utilisé par un autre compte." : msg);
     } finally {
       setSaving(false);
     }

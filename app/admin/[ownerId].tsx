@@ -1,12 +1,18 @@
 import { useCallback, useState } from "react";
 import { View, Text, ActivityIndicator, Pressable, Linking, Platform } from "react-native";
-import { useLocalSearchParams, useFocusEffect } from "expo-router";
+import { useLocalSearchParams, useFocusEffect, useRouter } from "expo-router";
 import { Screen, PageTitle } from "@/components/Screen";
 import { Card, Tag, Eyebrow } from "@/components/ui";
 import { Icon } from "@/components/Icon";
 import { colors } from "@/theme/colors";
 import { formatInt } from "@/components/cards";
-import { adminOwnerDetail, adminResendLink, adminGroupLink, type AdminOwnerDetail } from "@/lib/admin";
+import {
+  adminOwnerDetail,
+  adminResendLink,
+  adminGroupLink,
+  adminDeleteOwner,
+  type AdminOwnerDetail,
+} from "@/lib/admin";
 
 function openUrl(url: string) {
   if (Platform.OS === "web" && typeof window !== "undefined") window.open(url, "_blank");
@@ -31,6 +37,7 @@ function Stat({ label, value }: { label: string; value: string }) {
 }
 
 export default function AdminOwnerScreen() {
+  const router = useRouter();
   const { ownerId } = useLocalSearchParams<{ ownerId: string }>();
   const id = String(ownerId ?? "");
 
@@ -40,6 +47,20 @@ export default function AdminOwnerScreen() {
   const [sent, setSent] = useState<string | null>(null);
   const [linkBusy, setLinkBusy] = useState<string | null>(null);
   const [genLinks, setGenLinks] = useState<Record<string, string>>({});
+  const [confirmDel, setConfirmDel] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  async function removeOwner() {
+    setDeleting(true);
+    setError(null);
+    try {
+      await adminDeleteOwner(id);
+      router.replace("/admin/owners");
+    } catch (e: any) {
+      setError(e?.message ?? "Suppression impossible.");
+      setDeleting(false);
+    }
+  }
 
   const load = useCallback(async () => {
     try {
@@ -238,6 +259,52 @@ export default function AdminOwnerScreen() {
               </Card>
             );
           })}
+
+          {/* Zone sensible — suppression définitive */}
+          <Card>
+            <Eyebrow>Zone sensible</Eyebrow>
+            {!confirmDel ? (
+              <>
+                <Text className="mt-2 font-sans text-[12.5px] text-ink-muted" style={{ lineHeight: 18 }}>
+                  Supprimer définitivement ce propriétaire : ses offres, abonnés, paiements et son compte.
+                  Irréversible. (Pour un blocage réversible, utilise « Exclure » dans la liste.)
+                </Text>
+                <Pressable
+                  onPress={() => setConfirmDel(true)}
+                  className="mt-3 flex-row items-center justify-center rounded-2xl border border-bordeaux-600 py-3"
+                  style={{ gap: 6 }}
+                >
+                  <Icon name="trash" size={15} color={colors.bordeaux[600]} />
+                  <Text className="font-semibold text-[13px] text-bordeaux-700">Supprimer ce compte</Text>
+                </Pressable>
+              </>
+            ) : (
+              <>
+                <Text className="mt-2 font-semibold text-[13px] text-ink">
+                  Confirmer la suppression définitive de ce compte ?
+                </Text>
+                <View className="mt-3 flex-row" style={{ gap: 10 }}>
+                  <Pressable
+                    onPress={() => setConfirmDel(false)}
+                    className="flex-1 items-center rounded-full border border-ink/15 py-3"
+                  >
+                    <Text className="font-semibold text-[13px] text-ink">Annuler</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={removeOwner}
+                    disabled={deleting}
+                    className="flex-1 items-center rounded-full bg-bordeaux-600 py-3"
+                  >
+                    {deleting ? (
+                      <ActivityIndicator size="small" color={colors.white} />
+                    ) : (
+                      <Text className="font-semibold text-[13px] text-white">Oui, supprimer</Text>
+                    )}
+                  </Pressable>
+                </View>
+              </>
+            )}
+          </Card>
         </>
       )}
     </Screen>
