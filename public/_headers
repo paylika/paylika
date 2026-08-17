@@ -1,3 +1,11 @@
+# Assets au nom hashé (JS, polices) → cache immuable 1 an : un visiteur qui
+# revient (ou reclique une pub) ne re-télécharge PAS le bundle de 1,7 Mo.
+# Le hash dans le nom change à chaque build, donc jamais de contenu périmé.
+/_expo/static/*
+  Cache-Control: public, max-age=31536000, immutable
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
 # En-têtes de sécurité appliqués par Cloudflare à toutes les pages.
 /*
   Strict-Transport-Security: max-age=31536000; includeSubDomains

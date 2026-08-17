@@ -72,11 +72,16 @@ function AppShell() {
       // Destination explicite (ex. on venait de /admin) : on y retourne.
       if (nextParam && nextParam !== "/") {
         router.replace(nextParam as any);
-      } else if (adminChecked) {
-        // Sinon on route selon l'email : admin -> console, sinon -> compte.
-        router.replace((isAdmin ? "/admin" : "/") as any);
+      } else if (adminChecked && isAdmin) {
+        router.replace("/admin" as any);
+      } else {
+        // NON BLOQUANT : on entre dans l'app dès que la session existe, SANS
+        // attendre la vérif admin (une fonction edge au cold-start parfois lent).
+        // Un admin passera par "/" puis sera renvoyé vers /admin quand la vérif
+        // revient (bloc plus bas) — un mini-flash pour l'admin vaut mieux que de
+        // faire patienter CHAQUE inscrit (critique quand des pubs tournent).
+        router.replace("/" as any);
       }
-      // tant que le statut admin n'est pas connu, on attend (pas de flash).
       return;
     }
     if (adminChecked) {
