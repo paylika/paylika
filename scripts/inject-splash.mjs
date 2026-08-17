@@ -10,7 +10,7 @@ if (existsSync("public/_headers")) {
 }
 
 // Copie les pages autonomes (chargement quasi instantané) dans dist.
-for (const f of ["checkout.html", "access.html"]) {
+for (const f of ["checkout.html", "access.html", "signup.html"]) {
   if (existsSync("public/" + f)) {
     copyFileSync("public/" + f, "dist/" + f);
     console.log("[standalone] public/" + f + " -> dist/" + f);

@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Paylika — Créer un compte</title>
+<style>
+  :root{
+    --bordeaux:#7B1126; --bordeaux2:#8F2135; --ink:#18181B; --soft:#3F3F46;
+    --muted:#71717A; --line:#ECECEE; --paper:#FFFFFF; --sand:#F6F4F2;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif;
+    background:var(--sand); color:var(--ink); -webkit-font-smoothing:antialiased;
+    display:flex; align-items:center; justify-content:center; padding:20px;
+  }
+  .card{
+    width:100%; max-width:400px; background:var(--paper); border-radius:24px;
+    padding:26px 22px 24px; box-shadow:0 20px 60px rgba(24,24,27,.10);
+    border:1px solid var(--line);
+  }
+  .brand{display:flex; align-items:center; gap:8px; margin-bottom:22px}
+  .mark{width:30px;height:30px;border-radius:8px;background:var(--bordeaux);display:flex;align-items:center;justify-content:center}
+  .mark svg{width:64%;height:64%}
+  .wm{font-weight:800; font-size:20px; letter-spacing:-.5px}
+  .wm span{color:var(--bordeaux)}
+  h1{font-size:23px; font-weight:800; letter-spacing:-.7px; line-height:1.15}
+  .sub{margin-top:6px; color:var(--muted); font-size:13.5px; line-height:1.45}
+  .field{margin-top:16px}
+  label{display:block; font-size:12.5px; font-weight:600; color:var(--soft); margin-bottom:6px}
+  input{
+    width:100%; padding:14px 15px; border:1.5px solid var(--line); border-radius:14px;
+    font-size:16px; color:var(--ink); background:var(--paper); outline:none;
+  }
+  input:focus{border-color:var(--bordeaux)}
+  select{
+    width:100%; padding:14px 15px; border:1.5px solid var(--line); border-radius:14px;
+    font-size:16px; color:var(--ink); background:var(--paper); outline:none;
+  }
+  select:focus{border-color:var(--bordeaux)}
+  .phone{display:flex; align-items:stretch; gap:8px}
+  .prefix{display:flex; align-items:center; padding:0 14px; border:1.5px solid var(--line); border-radius:14px; font-size:15px; font-weight:700; color:var(--soft); background:var(--sand); white-space:nowrap}
+  .phone input{flex:1}
+  .row{position:relative}
+  .eye{position:absolute; right:12px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--muted); font-size:12px; font-weight:600; cursor:pointer; padding:6px}
+  .btn{
+    width:100%; margin-top:20px; padding:15px; border:none; border-radius:999px;
+    background:var(--bordeaux); color:#fff; font-size:15px; font-weight:700; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+  }
+  .btn:active{background:var(--bordeaux2)}
+  .btn[disabled]{opacity:.6}
+  .msg{margin-top:14px; font-size:13px; line-height:1.45; padding:12px 14px; border-radius:12px; display:none}
+  .msg.err{display:block; background:#FCEBEE; color:#7B1126}
+  .msg.ok{display:block; background:#EAF3EE; color:#2F6B4F}
+  .switch{margin-top:18px; text-align:center; font-size:13.5px; color:var(--muted)}
+  .switch b{color:var(--bordeaux); font-weight:700; cursor:pointer}
+  .rea{margin-top:16px; text-align:center; font-size:11.5px; color:var(--muted)}
+  .spin{width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:inline-block}
+  @keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="brand">
+      <div class="mark">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M7 3h7a5 5 0 0 1 0 10H10" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 21V8l9 6" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div class="wm">Pay<span>lika</span></div>
+    </div>
+
+    <h1 id="title">Crée ton compte</h1>
+    <p class="sub" id="subtitle">Encaisse tes abonnés par mobile money et gère tes accès Telegram automatiquement.</p>
+
+    <div class="field">
+      <label for="email">Email</label>
+      <input id="email" type="email" inputmode="email" autocomplete="email" placeholder="toi@exemple.com" />
+    </div>
+    <div class="field su">
+      <label for="country">Pays</label>
+      <select id="country">
+        <option value="SN" data-code="221">Sénégal (+221)</option>
+        <option value="CI" data-code="225">Côte d'Ivoire (+225)</option>
+        <option value="BF" data-code="226">Burkina Faso (+226)</option>
+        <option value="TG" data-code="228">Togo (+228)</option>
+        <option value="BJ" data-code="229">Bénin (+229)</option>
+      </select>
+    </div>
+    <div class="field su">
+      <label for="wa">Numéro WhatsApp</label>
+      <div class="phone">
+        <span class="prefix" id="prefix">+221</span>
+        <input id="wa" type="tel" inputmode="numeric" autocomplete="tel" placeholder="77 000 00 00" />
+      </div>
+    </div>
+    <div class="field">
+      <label for="pw">Mot de passe</label>
+      <div class="row">
+        <input id="pw" type="password" autocomplete="new-password" placeholder="6 caractères minimum" />
+        <button class="eye" id="eye" type="button">Voir</button>
+      </div>
+    </div>
+
+    <button class="btn" id="submit"><span id="btnlabel">Créer mon compte gratuitement</span></button>
+
+    <div class="msg" id="msg"></div>
+
+    <div class="switch" id="switch">Déjà un compte ? <b id="toggle">Se connecter</b></div>
+    <div class="rea" id="rea">Gratuit · sans carte · paiement par mobile money</div>
+  </div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+  var SUPABASE_URL = "https://xkdiodbppotyiyldlwbg.supabase.co";
+  var SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhrZGlvZGJwcG90eWl5bGRsd2JnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY1NDU5OTEsImV4cCI6MjEwMjEyMTk5MX0.k0IAo04J5fJo_c6V7VHFUoFiKd26Eej5bfG-aavHFbQ";
+
+  // Client Supabase avec la MÊME storageKey par défaut que l'app (même ref) :
+  // la session créée ici est reprise automatiquement par l'app au redirect.
+  var client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON, {
+    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false },
+  });
+
+  var mode = "signup"; // signup | signin
+  var $ = function (id) { return document.getElementById(id); };
+
+  // ----- Meta Pixel (acquisition) : chargé depuis les réglages plateforme -----
+  function initPixel(id) {
+    if (!id || window.fbq) return;
+    !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+    n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script',
+    'https://connect.facebook.net/en_US/fbevents.js');
+    window.fbq('init', id);
+    window.fbq('track', 'PageView');
+  }
+  client.from("platform_settings").select("meta_pixel_id").eq("id", 1).maybeSingle()
+    .then(function (r) { initPixel(r && r.data && r.data.meta_pixel_id); })
+    .catch(function () {});
+
+  // Si déjà connecté, on entre directement dans l'app.
+  client.auth.getSession().then(function (r) {
+    if (r && r.data && r.data.session) window.location.replace("/");
+  });
+
+  function setMode(m) {
+    mode = m;
+    $("title").textContent = m === "signup" ? "Crée ton compte" : "Content de te revoir";
+    $("subtitle").textContent = m === "signup"
+      ? "Encaisse tes abonnés par mobile money et gère tes accès Telegram automatiquement."
+      : "Connecte-toi pour gérer tes offres, tes abonnés et tes retraits.";
+    $("btnlabel").textContent = m === "signup" ? "Créer mon compte gratuitement" : "Se connecter";
+    $("switch").innerHTML = m === "signup"
+      ? 'Déjà un compte ? <b id="toggle">Se connecter</b>'
+      : 'Pas encore de compte ? <b id="toggle">Créer un compte</b>';
+    $("rea").style.display = m === "signup" ? "block" : "none";
+    // Pays + WhatsApp uniquement à l'inscription.
+    var su = document.querySelectorAll(".su");
+    for (var i = 0; i < su.length; i++) su[i].style.display = m === "signup" ? "" : "none";
+    $("msg").className = "msg";
+    document.getElementById("toggle").onclick = function () { setMode(m === "signup" ? "signin" : "signup"); };
+  }
+
+  function dialCode() { return $("country").selectedOptions[0].getAttribute("data-code"); }
+  $("country").onchange = function () { $("prefix").textContent = "+" + dialCode(); };
+
+  function showMsg(kind, text) { var m = $("msg"); m.className = "msg " + kind; m.textContent = text; }
+
+  function busy(on) {
+    $("submit").disabled = on;
+    $("btnlabel").innerHTML = on ? '<span class="spin"></span>' : (mode === "signup" ? "Créer mon compte gratuitement" : "Se connecter");
+  }
+
+  async function submit() {
+    var email = $("email").value.trim();
+    var pw = $("pw").value;
+    if (!/\S+@\S+\.\S+/.test(email)) return showMsg("err", "Entre un email valide.");
+    var localNum = $("wa").value.replace(/\D/g, "");
+    if (mode === "signup" && localNum.length < 7) return showMsg("err", "Entre ton numéro WhatsApp.");
+    if (pw.length < 6) return showMsg("err", "Le mot de passe doit faire au moins 6 caractères.");
+    $("msg").className = "msg";
+    busy(true);
+    try {
+      if (mode === "signup") {
+        var whatsapp = "+" + dialCode() + localNum;
+        var res = await client.auth.signUp({
+          email: email,
+          password: pw,
+          options: { data: { country: $("country").value, whatsapp: whatsapp } },
+        });
+        if (res.error) throw res.error;
+        if (window.fbq) window.fbq("track", "CompleteRegistration");
+        if (res.data && res.data.session) {
+          window.location.replace("/"); // confirmation email désactivée → on entre
+        } else {
+          showMsg("ok", "Compte créé ! Vérifie ton email pour confirmer, puis connecte-toi.");
+          busy(false);
+          setMode("signin");
+        }
+      } else {
+        var r = await client.auth.signInWithPassword({ email: email, password: pw });
+        if (r.error) throw r.error;
+        window.location.replace("/");
+      }
+    } catch (e) {
+      busy(false);
+      var msg = (e && e.message) || "Une erreur est survenue. Réessaie.";
+      if (/already registered|already exists/i.test(msg)) msg = "Cet email a déjà un compte. Connecte-toi.";
+      if (/invalid login credentials/i.test(msg)) msg = "Email ou mot de passe incorrect.";
+      showMsg("err", msg);
+    }
+  }
+
+  $("submit").onclick = submit;
+  $("pw").addEventListener("keydown", function (e) { if (e.key === "Enter") submit(); });
+  $("eye").onclick = function () {
+    var i = $("pw"); var on = i.type === "password"; i.type = on ? "text" : "password"; $("eye").textContent = on ? "Cacher" : "Voir";
+  };
+  // Ouvrir directement en mode connexion via ?mode=signin
+  if (/[?&]mode=signin/.test(location.search)) setMode("signin"); else setMode("signup");
+</script>
+</body>
+</html>
