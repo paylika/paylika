@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { View, Text, ActivityIndicator, Pressable } from "react-native";
+import { View, Text, ActivityIndicator, Pressable, Linking, Platform } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { Screen } from "@/components/Screen";
 import { Card, Eyebrow } from "@/components/ui";
@@ -7,6 +7,14 @@ import { Icon, type IconName } from "@/components/Icon";
 import { colors } from "@/theme/colors";
 import { formatInt } from "@/components/cards";
 import { adminOverview, adminOwners, type AdminOverview, type AdminOwner } from "@/lib/admin";
+
+function openWa(number: string) {
+  const digits = number.replace(/\D/g, "");
+  if (!digits) return;
+  const url = `https://wa.me/${digits}`;
+  if (Platform.OS === "web" && typeof window !== "undefined") window.open(url, "_blank");
+  else Linking.openURL(url).catch(() => {});
+}
 
 function Kpi({ label, value, sub, accent }: { label: string; value: string; sub?: string; accent?: boolean }) {
   return (
@@ -70,6 +78,9 @@ export default function AdminPilotage() {
 
   const cur = ov?.currency ?? "XOF";
   const top = owners.slice(0, 3);
+  const recent = [...owners]
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 10);
 
   return (
     <Screen onRefresh={load}>
@@ -106,6 +117,47 @@ export default function AdminPilotage() {
           </View>
         </Card>
       )}
+
+      {/* Derniers inscrits — pour suivre l'effet des pubs en direct */}
+      {recent.length ? (
+        <Card>
+          <View className="flex-row items-center justify-between">
+            <Eyebrow>Derniers inscrits</Eyebrow>
+            <Text className="font-semibold text-[12px] text-ink-muted">
+              {ov?.owners ?? owners.length} au total
+            </Text>
+          </View>
+          <View className="mt-3" style={{ gap: 12 }}>
+            {recent.map((o) => (
+              <View key={o.id} className="flex-row items-center" style={{ gap: 10 }}>
+                <View className="flex-1">
+                  <Text numberOfLines={1} className="font-semibold text-[13px] text-ink">
+                    {o.email}
+                  </Text>
+                  <Text className="font-sans text-[11px] text-ink-muted">
+                    {o.country ? `${o.country} · ` : ""}
+                    {o.createdAt ? new Date(o.createdAt).toLocaleDateString("fr-FR") : "—"}
+                  </Text>
+                </View>
+                {o.whatsapp ? (
+                  <Pressable
+                    onPress={() => openWa(o.whatsapp!)}
+                    className="flex-row items-center rounded-full px-2.5 py-1"
+                    style={{ gap: 5, backgroundColor: colors.forest + "14" }}
+                  >
+                    <Icon name="whatsapp" size={13} color={colors.forest} />
+                    <Text className="font-semibold text-[11px]" style={{ color: colors.forest }}>
+                      {o.whatsapp}
+                    </Text>
+                  </Pressable>
+                ) : (
+                  <Text className="font-sans text-[11px] text-ink-muted">pas de WhatsApp</Text>
+                )}
+              </View>
+            ))}
+          </View>
+        </Card>
+      ) : null}
 
       {/* Accès rapides console */}
       <View className="flex-row flex-wrap" style={{ gap: 10 }}>
