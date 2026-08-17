@@ -4,6 +4,7 @@ import { useRouter } from "expo-router";
 import { Card, Button, Eyebrow } from "@/components/ui";
 import { Screen, PageHeader, useWide } from "@/components/Screen";
 import { SkeletonCard, SkeletonStatsGrid, SkeletonList, ErrorState } from "@/components/States";
+import { WhatsAppNudge } from "@/components/WhatsAppNudge";
 import { Icon } from "@/components/Icon";
 import { colors } from "@/theme/colors";
 import { useDashboard } from "@/data/useDashboard";
@@ -116,6 +117,7 @@ export function DashboardScreen() {
   if (empty) {
     return (
       <Screen onRefresh={refresh}>
+        <WhatsAppNudge />
         <View style={{ paddingTop: 24 }}>
           <Eyebrow>Bienvenue 👋</Eyebrow>
           <Text
@@ -204,6 +206,7 @@ export function DashboardScreen() {
 
   return (
     <Screen onRefresh={refresh}>
+      <WhatsAppNudge />
       <PageHeader
         eyebrow="Tableau de bord"
         title="Vue d'ensemble"

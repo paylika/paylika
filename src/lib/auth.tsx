@@ -126,3 +126,9 @@ export async function signInWithGoogle() {
 export async function signOut() {
   await supabase.auth.signOut();
 }
+
+/** Ajoute / met à jour le pays + WhatsApp d'un compte existant (métadonnées). */
+export async function updateWhatsApp(country: string, whatsapp: string) {
+  const { error } = await supabase.auth.updateUser({ data: { country, whatsapp } });
+  if (error) throw error;
+}
