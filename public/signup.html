@@ -91,8 +91,11 @@
     <div class="field su">
       <label for="wa">Numéro WhatsApp</label>
       <div class="phone">
-        <span class="prefix" id="prefix">+221</span>
-        <input id="wa" type="tel" inputmode="numeric" autocomplete="tel" placeholder="77 000 00 00" />
+        <span class="prefix">
+          <img id="pflag" src="/pk/flags/sn.png" alt="" style="width:22px;height:15px;border-radius:2px;object-fit:cover;margin-right:7px" />
+          <span id="pcode">+221</span>
+        </span>
+        <input id="wa" type="tel" inputmode="numeric" autocomplete="tel" placeholder="77 123 45 67" />
       </div>
     </div>
     <div class="field">
@@ -163,8 +166,17 @@
     document.getElementById("toggle").onclick = function () { setMode(m === "signup" ? "signin" : "signup"); };
   }
 
+  // Exemple de numéro adapté à chaque pays (par indicatif).
+  var EX = { "221": "77 123 45 67", "225": "07 12 34 56 78", "226": "70 12 34 56", "228": "90 12 34 56", "229": "01 23 45 67" };
   function dialCode() { return $("country").selectedOptions[0].getAttribute("data-code"); }
-  $("country").onchange = function () { $("prefix").textContent = "+" + dialCode(); };
+  function updateCountry() {
+    var code = dialCode();
+    $("pflag").src = "/pk/flags/" + $("country").value.toLowerCase() + ".png";
+    $("pcode").textContent = "+" + code;
+    $("wa").placeholder = EX[code] || "";
+  }
+  $("country").onchange = updateCountry;
+  updateCountry();
 
   function showMsg(kind, text) { var m = $("msg"); m.className = "msg " + kind; m.textContent = text; }
 

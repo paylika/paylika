@@ -4,20 +4,12 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Button } from "@/components/ui";
-import { Input, Chip, FieldLabel } from "@/components/form";
+import { Input } from "@/components/form";
+import { CountryPhone, countryDial } from "@/components/CountryPhone";
 import { Logo, Icon } from "@/components/Icon";
 import { colors } from "@/theme/colors";
 import { signInWithEmail, signUpWithEmail } from "@/lib/auth";
 import { trackSignup } from "@/lib/pixel";
-
-// Pays cibles + indicatif (l'indicatif s'ajoute automatiquement au numéro).
-const SIGNUP_COUNTRIES = [
-  { code: "SN", label: "Sénégal", dial: "221" },
-  { code: "CI", label: "Côte d'Ivoire", dial: "225" },
-  { code: "BF", label: "Burkina", dial: "226" },
-  { code: "TG", label: "Togo", dial: "228" },
-  { code: "BJ", label: "Bénin", dial: "229" },
-];
 
 const WAVE = require("../assets/operators/wave.png");
 const ORANGE = require("../assets/operators/orange.png");
@@ -187,7 +179,6 @@ export default function LoginScreen() {
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
 
-  const dial = SIGNUP_COUNTRIES.find((c) => c.code === country)?.dial ?? "221";
   const valid = /\S+@\S+\.\S+/.test(email) && password.length >= 6;
 
   async function submit() {
@@ -208,7 +199,7 @@ export default function LoginScreen() {
         }
         const { needsConfirmation } = await signUpWithEmail(email.trim(), password, {
           country,
-          whatsapp: "+" + dial + digits,
+          whatsapp: "+" + countryDial(country) + digits,
         });
         trackSignup(); // événement Meta « inscription » pour les pubs Facebook
         if (needsConfirmation) {
@@ -248,23 +239,7 @@ export default function LoginScreen() {
       <View style={{ marginTop: 22, gap: 14 }}>
         <Input label="Email" value={email} onChangeText={setEmail} placeholder="vous@exemple.com" />
         {!isSignin ? (
-          <>
-            <View>
-              <FieldLabel>Pays</FieldLabel>
-              <View className="mt-1 flex-row flex-wrap" style={{ gap: 8 }}>
-                {SIGNUP_COUNTRIES.map((c) => (
-                  <Chip key={c.code} label={c.label} active={country === c.code} onPress={() => setCountry(c.code)} />
-                ))}
-              </View>
-            </View>
-            <Input
-              label={`Numéro WhatsApp (+${dial})`}
-              value={wa}
-              onChangeText={setWa}
-              keyboardType="numeric"
-              placeholder="77 000 00 00"
-            />
-          </>
+          <CountryPhone country={country} onCountry={setCountry} value={wa} onChangeText={setWa} />
         ) : null}
         <Input label="Mot de passe" value={password} onChangeText={setPassword} placeholder="••••••••" secureTextEntry />
 
