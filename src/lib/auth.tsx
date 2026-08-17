@@ -10,6 +10,15 @@ type AuthState = {
   adminChecked: boolean;
 };
 
+// Emails admin connus côté client → routage INSTANTANÉ vers /admin, sans appeler
+// le serveur (le contrôle d'accès réel reste vérifié serveur-à-serveur par
+// admin-api ; ceci ne sert QU'À choisir l'écran). Optionnel : à définir dans
+// EXPO_PUBLIC_ADMIN_EMAILS (séparés par des virgules) au build.
+const ADMIN_EMAILS = (process.env.EXPO_PUBLIC_ADMIN_EMAILS ?? "")
+  .split(",")
+  .map((s: string) => s.trim().toLowerCase())
+  .filter(Boolean);
+
 /** Cache web du statut admin par utilisateur (évite le flash au retour). */
 function cachedAdmin(userId: string | undefined): boolean | null {
   if (!userId || typeof window === "undefined" || !window.localStorage) return null;
@@ -60,12 +69,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     const uid = session.user?.id;
-    const cached = cachedAdmin(uid);
-    if (cached !== null) {
-      setIsAdmin(cached);
-      setAdminChecked(true); // instantané via le cache
+    const email = session.user?.email?.toLowerCase();
+    // Signal instantané : email admin déclaré (env) OU dernier statut en cache.
+    const envKnown = ADMIN_EMAILS.length && email ? ADMIN_EMAILS.includes(email) : null;
+    const instant = envKnown !== null ? envKnown : cachedAdmin(uid);
+    if (instant !== null) {
+      setIsAdmin(instant);
+      setAdminChecked(true); // routage immédiat, aucune attente serveur
     } else {
-      setAdminChecked(false); // première fois : on attend la vérif (loader)
+      setAdminChecked(false); // 1re fois inconnue : on route en app (pas de blocage)
     }
     let alive = true;
     adminWhoami()
