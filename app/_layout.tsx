@@ -1,6 +1,6 @@
 import "../global.css";
 
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { View, ActivityIndicator, useWindowDimensions } from "react-native";
 import { Logo } from "@/components/Icon";
 import { colors } from "@/theme/colors";
@@ -52,12 +52,10 @@ function AppShell() {
   const isLogin = pathname === "/login";
   const isOnboarding = pathname === "/onboarding";
   const isAdminRoute = pathname.startsWith("/admin");
-  const routedAdmin = useRef(false); // n'envoie l'admin vers sa console qu'une fois
 
   useEffect(() => {
     if (loading || isPay || isLanding) return;
     if (!session) {
-      routedAdmin.current = false;
       if (isLogin) return;
       // Visiteur non connecté : la racine mène à la landing (pour les pubs) ;
       // les autres pages protégées mènent au login (avec retour).
@@ -75,28 +73,27 @@ function AppShell() {
       } else if (adminChecked && isAdmin) {
         router.replace("/admin" as any);
       } else {
-        // NON BLOQUANT : on entre dans l'app dès que la session existe, SANS
-        // attendre la vérif admin (une fonction edge au cold-start parfois lent).
-        // Un admin passera par "/" puis sera renvoyé vers /admin quand la vérif
-        // revient (bloc plus bas) — un mini-flash pour l'admin vaut mieux que de
-        // faire patienter CHAQUE inscrit (critique quand des pubs tournent).
+        // Non bloquant : on entre dès que la session existe (les inscrits venus
+        // des pubs passent de toute façon par /signup). L'admin sera VERROUILLÉ
+        // sur la console par le bloc ci-dessous dès que la vérif revient.
         router.replace("/" as any);
       }
       return;
     }
     if (adminChecked) {
-      // Non-admin qui tente la console → app propriétaire.
-      if (isAdminRoute && !isAdmin) {
-        router.replace("/");
+      // VERROU DÉTERMINISTE :
+      //  • l'admin reste TOUJOURS sur la console (jamais sur l'app propriétaire) ;
+      //  • un non-admin ne peut jamais entrer dans la console.
+      if (isAdmin && !isAdminRoute) {
+        router.replace("/admin" as any);
         return;
       }
-      // Admin : atterrissage sur sa console (une seule fois → « Vue app » reste possible).
-      if (isAdmin && pathname === "/" && !routedAdmin.current) {
-        routedAdmin.current = true;
-        router.replace("/admin");
+      if (!isAdmin && isAdminRoute) {
+        router.replace("/" as any);
+        return;
       }
     }
-  }, [loading, session, pathname, isPay, isLogin, isAdminRoute, isAdmin, adminChecked, nextParam, router]);
+  }, [loading, session, pathname, isPay, isLanding, isLogin, isAdminRoute, isAdmin, adminChecked, nextParam, router]);
 
   let content = null;
   if (isPay || isLanding || isLogin) {

@@ -46,18 +46,9 @@ export function AdminBar() {
               </Text>
             </View>
           </View>
-          <View className="flex-row items-center" style={{ gap: 8 }}>
-            <Pressable
-              onPress={() => router.replace("/")}
-              className="flex-row items-center rounded-full bg-white/10 px-3 py-2"
-            >
-              <Icon name="home" size={14} color={colors.white} />
-              <Text className="ml-1.5 font-semibold text-[12px] text-white">Vue app</Text>
-            </Pressable>
-            <Pressable onPress={logout} className="h-9 w-9 items-center justify-center rounded-full bg-white/10">
-              <Icon name="close" size={16} color={colors.white} />
-            </Pressable>
-          </View>
+          <Pressable onPress={logout} className="h-9 w-9 items-center justify-center rounded-full bg-white/10">
+            <Icon name="close" size={16} color={colors.white} />
+          </Pressable>
         </View>
 
         {/* Onglets console */}

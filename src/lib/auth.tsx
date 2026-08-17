@@ -65,8 +65,17 @@ export async function signInWithEmail(email: string, password: string) {
   if (error) throw error;
 }
 
-export async function signUpWithEmail(email: string, password: string) {
-  const { data, error } = await supabase.auth.signUp({ email, password });
+export async function signUpWithEmail(
+  email: string,
+  password: string,
+  meta?: { country?: string; whatsapp?: string },
+) {
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    // Pays + WhatsApp captés à l'inscription → visibles côté admin.
+    options: meta ? { data: meta } : undefined,
+  });
   if (error) throw error;
   // If email confirmation is enabled, session is null until confirmed.
   return { needsConfirmation: !data.session };

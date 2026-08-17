@@ -4,11 +4,20 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Button } from "@/components/ui";
-import { Input } from "@/components/form";
+import { Input, Chip, FieldLabel } from "@/components/form";
 import { Logo, Icon } from "@/components/Icon";
 import { colors } from "@/theme/colors";
 import { signInWithEmail, signUpWithEmail } from "@/lib/auth";
 import { trackSignup } from "@/lib/pixel";
+
+// Pays cibles + indicatif (l'indicatif s'ajoute automatiquement au numéro).
+const SIGNUP_COUNTRIES = [
+  { code: "SN", label: "Sénégal", dial: "221" },
+  { code: "CI", label: "Côte d'Ivoire", dial: "225" },
+  { code: "BF", label: "Burkina", dial: "226" },
+  { code: "TG", label: "Togo", dial: "228" },
+  { code: "BJ", label: "Bénin", dial: "229" },
+];
 
 const WAVE = require("../assets/operators/wave.png");
 const ORANGE = require("../assets/operators/orange.png");
@@ -172,10 +181,13 @@ export default function LoginScreen() {
   const [mode, setMode] = useState<"signin" | "signup">(params.mode === "signup" ? "signup" : "signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [country, setCountry] = useState("SN");
+  const [wa, setWa] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
 
+  const dial = SIGNUP_COUNTRIES.find((c) => c.code === country)?.dial ?? "221";
   const valid = /\S+@\S+\.\S+/.test(email) && password.length >= 6;
 
   async function submit() {
@@ -188,7 +200,16 @@ export default function LoginScreen() {
         await signInWithEmail(email.trim(), password);
         // La redirection (admin -> /admin, sinon -> /) est gérée par le layout.
       } else {
-        const { needsConfirmation } = await signUpWithEmail(email.trim(), password);
+        const digits = wa.replace(/\D/g, "");
+        if (digits.length < 7) {
+          setError("Entre ton numéro WhatsApp.");
+          setBusy(false);
+          return;
+        }
+        const { needsConfirmation } = await signUpWithEmail(email.trim(), password, {
+          country,
+          whatsapp: "+" + dial + digits,
+        });
         trackSignup(); // événement Meta « inscription » pour les pubs Facebook
         if (needsConfirmation) {
           setInfo("Compte créé ! Vérifiez votre email pour confirmer, puis connectez-vous.");
@@ -220,12 +241,31 @@ export default function LoginScreen() {
         <Text className="mt-1.5 font-sans text-[13.5px] text-ink-muted" style={{ lineHeight: 20 }}>
           {isSignin
             ? "Connectez-vous pour gérer vos abonnements et vos accès."
-            : "Il vous faut juste un email et un mot de passe pour démarrer."}
+            : "Crée ton compte en 30 secondes pour commencer à encaisser."}
         </Text>
       </View>
 
       <View style={{ marginTop: 22, gap: 14 }}>
         <Input label="Email" value={email} onChangeText={setEmail} placeholder="vous@exemple.com" />
+        {!isSignin ? (
+          <>
+            <View>
+              <FieldLabel>Pays</FieldLabel>
+              <View className="mt-1 flex-row flex-wrap" style={{ gap: 8 }}>
+                {SIGNUP_COUNTRIES.map((c) => (
+                  <Chip key={c.code} label={c.label} active={country === c.code} onPress={() => setCountry(c.code)} />
+                ))}
+              </View>
+            </View>
+            <Input
+              label={`Numéro WhatsApp (+${dial})`}
+              value={wa}
+              onChangeText={setWa}
+              keyboardType="numeric"
+              placeholder="77 000 00 00"
+            />
+          </>
+        ) : null}
         <Input label="Mot de passe" value={password} onChangeText={setPassword} placeholder="••••••••" secureTextEntry />
 
         {error ? <Text className="font-sans text-[12px] text-bordeaux-700">{error}</Text> : null}
