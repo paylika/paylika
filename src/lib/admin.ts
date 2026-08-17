@@ -45,7 +45,17 @@ export type AdminOwner = {
 };
 
 export type AdminOwnerDetail = {
-  groups: { id: string; name: string; kind: string }[];
+  owner: {
+    email: string;
+    whatsapp: string | null;
+    country: string | null;
+    createdAt: string | null;
+    revenue: number;
+    commission: number;
+    groups: number;
+    activeSubscribers: number;
+  };
+  groups: { id: string; name: string; kind: string; chatConnected: boolean; inviteLink: string | null }[];
   subscriptions: {
     id: string;
     status: string;
@@ -74,6 +84,8 @@ export const adminBan = (ownerId: string) => call<{ ok: boolean }>("ban", { owne
 export const adminUnban = (ownerId: string) => call<{ ok: boolean }>("unban", { ownerId });
 export const adminResendLink = (groupId: string, telegramUserId: number) =>
   call<{ ok: boolean }>("resend_link", { groupId, telegramUserId });
+export const adminGroupLink = (groupId: string) =>
+  call<{ ok: boolean; link: string }>("group_link", { groupId });
 export const adminTransactions = () => call<{ transactions: AdminTx[] }>("transactions").then((r) => r.transactions);
 
 export type AdminUser = {

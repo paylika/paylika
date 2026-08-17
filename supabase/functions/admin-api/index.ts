@@ -87,6 +87,8 @@ Deno.serve(async (req) => {
         return json(await removeMemberAdmin(String(body.groupId ?? ""), Number(body.telegramUserId ?? 0)));
       case "resend_link":
         return json(await resendLink(String(body.groupId ?? ""), Number(body.telegramUserId ?? 0)));
+      case "group_link":
+        return json(await groupLink(String(body.groupId ?? "")));
       default:
         return json({ error: "Action inconnue." }, 400);
     }
@@ -205,7 +207,7 @@ async function owners() {
 
 async function ownerDetail(ownerId: string) {
   if (!ownerId) return { error: "ownerId manquant" };
-  const [{ data: groups }, { data: subs }] = await Promise.all([
+  const [{ data: groups }, { data: subs }, { data: payments }, userRes] = await Promise.all([
     admin.from("groups").select("id, name, kind").eq("owner_id", ownerId),
     admin
       .from("subscriptions")
@@ -213,11 +215,72 @@ async function ownerDetail(ownerId: string) {
       .eq("owner_id", ownerId)
       .order("created_at", { ascending: false })
       .limit(100),
+    admin.from("payments").select("amount, commission, status").eq("owner_id", ownerId),
+    admin.auth.admin.getUserById(ownerId),
   ]);
   const { data: conns } = await admin
     .from("telegram_connections")
     .select("group_id, chat_id, title, status");
-  return { groups: groups ?? [], subscriptions: subs ?? [], connections: conns ?? [] };
+
+  const u: any = (userRes as any)?.data?.user ?? null;
+  const meta = u?.user_metadata ?? {};
+  const completed = (payments ?? []).filter((p: any) => p.status === "completed");
+  const revenue = completed.reduce((s: number, p: any) => s + num(p.amount), 0);
+  const commission = completed.reduce(
+    (s: number, p: any) => s + (p.commission != null ? num(p.commission) : Math.round(num(p.amount) * COMMISSION_RATE)),
+    0,
+  );
+  const now = Date.now();
+  const activeSubs = (subs ?? []).filter(
+    (s: any) => s.status === "active" && (!s.expires_at || new Date(s.expires_at).getTime() > now),
+  ).length;
+
+  // Lien primaire existant de chaque groupe connecté (lecture seule — ne crée
+  // pas de nouveau lien à chaque ouverture ; sinon bouton « Générer » côté UI).
+  const connByGroup = new Map((conns ?? []).map((c: any) => [c.group_id, c]));
+  const groupsOut: any[] = [];
+  for (const g of groups ?? []) {
+    const c: any = connByGroup.get(g.id);
+    let inviteLink: string | null = null;
+    if (c?.chat_id) {
+      try {
+        const chat = await tg("getChat", { chat_id: c.chat_id });
+        inviteLink = chat?.result?.invite_link ?? null;
+      } catch { /* ignore */ }
+    }
+    groupsOut.push({ id: g.id, name: g.name, kind: g.kind, chatConnected: !!c?.chat_id, inviteLink });
+  }
+
+  return {
+    owner: {
+      email: u?.email ?? "—",
+      whatsapp: meta.whatsapp ?? null,
+      country: meta.country ?? null,
+      createdAt: u?.created_at ?? null,
+      revenue,
+      commission,
+      groups: (groups ?? []).length,
+      activeSubscribers: activeSubs,
+    },
+    groups: groupsOut,
+    subscriptions: subs ?? [],
+    connections: conns ?? [],
+  };
+}
+
+/** Génère (à la demande) un lien d'invitation admin vers un groupe. */
+async function groupLink(groupId: string) {
+  if (!groupId) return { error: "groupId manquant" };
+  const { data: conn } = await admin
+    .from("telegram_connections")
+    .select("chat_id")
+    .eq("group_id", groupId)
+    .maybeSingle();
+  if (!conn?.chat_id) return { error: "Groupe non connecté à Telegram." };
+  const link = await tg("createChatInviteLink", { chat_id: conn.chat_id, name: "paylika-admin" });
+  const invite = link?.result?.invite_link;
+  if (!invite) return { error: "Création du lien impossible (droits du bot ?)." };
+  return { ok: true, link: invite };
 }
 
 async function transactions() {
