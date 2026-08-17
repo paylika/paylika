@@ -102,6 +102,11 @@ function AppShell() {
     content = <BrandLoader />; // vérification de session : loader de marque, pas un écran blanc
   } else if (!session) {
     content = null; // redirecting to /login
+  } else if (!adminChecked) {
+    // Statut admin encore inconnu → loader de marque, JAMAIS l'app normale.
+    // Évite le flash « app propriétaire » de quelques secondes avant /admin.
+    // (Avec le cache local du statut, c'est instantané pour un admin qui revient.)
+    content = <BrandLoader />;
   } else if (isOnboarding) {
     content = <Slot />; // logged in, focused wizard (no chrome)
   } else if (isAdminRoute) {

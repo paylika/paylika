@@ -10,6 +10,21 @@ type AuthState = {
   adminChecked: boolean;
 };
 
+/** Cache web du statut admin par utilisateur (évite le flash au retour). */
+function cachedAdmin(userId: string | undefined): boolean | null {
+  if (!userId || typeof window === "undefined" || !window.localStorage) return null;
+  const v = window.localStorage.getItem("pk_admin_" + userId);
+  return v === "1" ? true : v === "0" ? false : null;
+}
+function storeAdmin(userId: string | undefined, isAdmin: boolean): void {
+  if (!userId || typeof window === "undefined" || !window.localStorage) return;
+  try {
+    window.localStorage.setItem("pk_admin_" + userId, isAdmin ? "1" : "0");
+  } catch {
+    /* quota / mode privé : tant pis, on revalide juste côté serveur */
+  }
+}
+
 const AuthContext = createContext<AuthState>({
   session: null,
   loading: true,
@@ -35,17 +50,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // Statut super-admin : vérifié côté serveur à chaque changement de session.
+  // On garde un CACHE local (web) du dernier statut connu par utilisateur pour
+  // router INSTANTANÉMENT à la reconnexion (fini le flash « app normale » avant
+  // /admin). Le serveur reste la source de vérité : on revalide en arrière-plan.
   useEffect(() => {
     if (!session) {
       setIsAdmin(false);
       setAdminChecked(true);
       return;
     }
+    const uid = session.user?.id;
+    const cached = cachedAdmin(uid);
+    if (cached !== null) {
+      setIsAdmin(cached);
+      setAdminChecked(true); // instantané via le cache
+    } else {
+      setAdminChecked(false); // première fois : on attend la vérif (loader)
+    }
     let alive = true;
-    setAdminChecked(false);
     adminWhoami()
-      .then((w) => alive && (setIsAdmin(!!w.isAdmin), setAdminChecked(true)))
-      .catch(() => alive && (setIsAdmin(false), setAdminChecked(true)));
+      .then((w) => {
+        if (!alive) return;
+        setIsAdmin(!!w.isAdmin);
+        setAdminChecked(true);
+        storeAdmin(uid, !!w.isAdmin);
+      })
+      .catch(() => {
+        if (alive) setAdminChecked(true); // garde le cache si présent, sinon non-admin
+      });
     return () => {
       alive = false;
     };
